@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CampusPulse Register</title>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <h2>Register</h2>
+    <label for="regNo">Registration No.</label>
+    <input type="text" id="regNo" title="Registration Number" placeholder="Enter registration number" />
+    <label for="name">Name</label>
+    <input type="text" id="name" title="Name" placeholder="Enter your name" />
+    <label for="regEmail">Email</label>
+    <input type="email" id="regEmail" title="Email" placeholder="Enter your email" />
+    <label for="regPassword">Password</label>
+    <input type="password" id="regPassword" title="Password" placeholder="Enter your password" />
+    <label for="role">Role</label>
+    <select id="role" title="Role" aria-label="Role">
+      <option value="student">Student</option>
+      <option value="faculty">Faculty</option>
+      <option value="super-admin">Super Admin</option>
+    </select>
+    <button onclick="register()">Register</button>
+  </body>
+</html>
