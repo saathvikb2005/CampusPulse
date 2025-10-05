@@ -1,0 +1,313 @@
+/* Design Tokens - Campus Pulse Design System */
+/* Simplified Light-Only Theme with White, Grey, Blue, Dark Blue Palette */
+
+:root {
+  /* ============================================
+     SIMPLIFIED COLOR PALETTE - Light Theme Only
+     ============================================ */
+  
+  /* Primary Blues - Main Brand Colors */
+  --color-blue-50: #eff6ff;              /* Lightest blue background */
+  --color-blue-100: #dbeafe;             /* Very light blue */
+  --color-blue-200: #bfdbfe;             /* Light blue */
+  --color-blue-300: #93c5fd;             /* Medium light blue */
+  --color-blue-400: #60a5fa;             /* Medium blue */
+  --color-blue-500: #3b82f6;             /* Standard blue */
+  --color-blue-600: #2563eb;             /* Medium dark blue */
+  --color-blue-700: #1d4ed8;             /* Dark blue */
+  --color-blue-800: #1e40af;             /* Darker blue */
+  --color-blue-900: #1e3a8a;             /* Darkest blue */
+
+  /* Greys - Neutral Colors */
+  --color-white: #ffffff;                 /* Pure white */
+  --color-grey-50: #f9fafb;              /* Lightest grey */
+  --color-grey-100: #f3f4f6;             /* Very light grey */
+  --color-grey-200: #e5e7eb;             /* Light grey */
+  --color-grey-300: #d1d5db;             /* Medium light grey */
+  --color-grey-400: #9ca3af;             /* Medium grey */
+  --color-grey-500: #6b7280;             /* Medium dark grey */
+  --color-grey-600: #4b5563;             /* Dark grey */
+  --color-grey-700: #374151;             /* Darker grey */
+  --color-grey-800: #1f2937;             /* Very dark grey */
+  --color-grey-900: #111827;             /* Darkest grey */
+
+  /* Semantic Color Mappings */
+  --color-primary: var(--color-blue-600);           /* Main brand blue */
+  --color-primary-hover: var(--color-blue-700);     /* Hover state */
+  --color-primary-light: var(--color-blue-100);     /* Light backgrounds */
+  --color-primary-alpha: rgba(37, 99, 235, 0.1);   /* Transparent blue */
+  
+  --color-secondary: var(--color-blue-500);         /* Secondary blue */
+  --color-secondary-hover: var(--color-blue-600);   /* Secondary hover */
+  --color-secondary-light: var(--color-blue-50);    /* Secondary light */
+  
+  --color-accent: var(--color-blue-700);            /* Accent dark blue */
+  --color-accent-hover: var(--color-blue-800);      /* Accent hover */
+  --color-accent-light: var(--color-blue-100);      /* Accent light */
+  --color-accent-alpha: rgba(29, 78, 216, 0.1);    /* Transparent accent */
+
+  /* Status Colors - Using blue variations for consistency */
+  --color-success: var(--color-blue-600);
+  --color-warning: var(--color-blue-500);
+  --color-error: var(--color-blue-800);
+  --color-info: var(--color-blue-500);
+
+  /* Background Colors */
+  --color-background: var(--color-white);                /* Main background */
+  --color-background-secondary: var(--color-grey-50);    /* Secondary background */
+  --color-background-muted: var(--color-grey-100);       /* Muted background */
+  
+  --color-surface: var(--color-white);                   /* Card surfaces */
+  --color-surface-secondary: var(--color-grey-50);       /* Secondary surfaces */
+  --color-surface-muted: var(--color-grey-100);          /* Muted surfaces */
+
+  /* Text Colors */
+  --color-text-primary: var(--color-grey-900);           /* Main text */
+  --color-text-secondary: var(--color-grey-600);         /* Secondary text */
+  --color-text-muted: var(--color-grey-500);             /* Muted text */
+  --color-text-disabled: var(--color-grey-400);          /* Disabled text */
+  --color-text-inverse: var(--color-white);              /* Text on dark backgrounds */
+
+  /* Border Colors */
+  --color-border-light: var(--color-grey-200);           /* Light borders */
+  --color-border-medium: var(--color-grey-300);          /* Medium borders */
+  --color-border-dark: var(--color-grey-400);            /* Dark borders */
+
+  /* -------------------------
+     LEGACY ALIASES & HELPERS
+     Backwards-compatible aliases for previously used variable names
+     and commonly used gradients so we don't need to edit every file
+     ------------------------- */
+
+  /* Legacy aliases (map older names to canonical tokens) */
+  --primary-color: var(--color-primary);
+  --primary-main: var(--color-primary);
+  --color-primary-main: var(--color-primary);
+  --color-secondary-main: var(--color-secondary);
+  --primary-light: var(--color-primary-light);
+  --primary-dark: var(--color-primary-hover);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --bg-primary: var(--color-background);
+  --bg-secondary: var(--color-background-secondary);
+  --surface: var(--color-surface);
+  --border-color: var(--color-border-light);
+
+  /* Common gradients */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  --gradient-card: linear-gradient(180deg, var(--color-surface), var(--color-surface-secondary));
+  --gradient-accent: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+  --gradient-soft: linear-gradient(135deg, var(--color-blue-50), var(--color-blue-100));
+
+  /* Common UI helpers */
+  --nav-height: 72px;
+
+  /* ============================================
+     TYPOGRAPHY SYSTEM
+     ============================================ */
+  
+  /* Font Families */
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+
+  /* Font Sizes - Responsive Scale */
+  --font-size-xs: 0.75rem;      /* 12px */
+  --font-size-sm: 0.875rem;     /* 14px */
+  --font-size-base: 1rem;       /* 16px */
+  --font-size-lg: 1.125rem;     /* 18px */
+  --font-size-xl: 1.25rem;      /* 20px */
+  --font-size-2xl: 1.5rem;      /* 24px */
+  --font-size-3xl: 1.875rem;    /* 30px */
+  --font-size-4xl: 2.25rem;     /* 36px */
+  --font-size-5xl: 3rem;        /* 48px */
+  --font-size-6xl: 3.75rem;     /* 60px */
+  
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+
+  /* Letter Spacing */
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0em;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
+
+  /* ============================================
+     IMPROVED SPACING SYSTEM - Fix Cramped Layouts
+     ============================================ */
+  
+  /* Base spacing unit (4px) - More generous spacing */
+  --spacing-1: 0.25rem;    /* 4px */
+  --spacing-2: 0.5rem;     /* 8px */
+  --spacing-3: 0.75rem;    /* 12px */
+  --spacing-4: 1rem;       /* 16px */
+  --spacing-5: 1.25rem;    /* 20px */
+  --spacing-6: 1.5rem;     /* 24px */
+  --spacing-7: 1.75rem;    /* 28px */
+  --spacing-8: 2rem;       /* 32px */
+  --spacing-9: 2.25rem;    /* 36px */
+  --spacing-10: 2.5rem;    /* 40px */
+  --spacing-12: 3rem;      /* 48px */
+  --spacing-14: 3.5rem;    /* 56px */
+  --spacing-16: 4rem;      /* 64px */
+  --spacing-20: 5rem;      /* 80px */
+  --spacing-24: 6rem;      /* 96px */
+  --spacing-32: 8rem;      /* 128px */
+
+  /* Component specific spacing - Less cramped */
+  --spacing-xs: var(--spacing-3);    /* 12px */
+  --spacing-sm: var(--spacing-4);    /* 16px */
+  --spacing-md: var(--spacing-6);    /* 24px */
+  --spacing-lg: var(--spacing-8);    /* 32px */
+  --spacing-xl: var(--spacing-12);   /* 48px */
+  --spacing-2xl: var(--spacing-16);  /* 64px */
+  --spacing-3xl: var(--spacing-20);  /* 80px */
+
+  /* Layout spacing - Generous margins and padding */
+  --layout-padding-sm: var(--spacing-4);    /* 16px */
+  --layout-padding-md: var(--spacing-6);    /* 24px */
+  --layout-padding-lg: var(--spacing-8);    /* 32px */
+  --layout-padding-xl: var(--spacing-12);   /* 48px */
+  
+  --layout-margin-sm: var(--spacing-6);     /* 24px */
+  --layout-margin-md: var(--spacing-8);     /* 32px */
+  --layout-margin-lg: var(--spacing-12);    /* 48px */
+  --layout-margin-xl: var(--spacing-16);    /* 64px */
+
+  /* Content spacing - Prevent cramped content */
+  --content-gap-sm: var(--spacing-4);       /* 16px */
+  --content-gap-md: var(--spacing-6);       /* 24px */
+  --content-gap-lg: var(--spacing-8);       /* 32px */
+  --content-gap-xl: var(--spacing-12);      /* 48px */
+
+  /* ============================================
+     BORDER RADIUS SYSTEM
+     ============================================ */
+  
+  --border-radius-none: 0;
+  --border-radius-sm: 0.125rem;     /* 2px */
+  --border-radius-base: 0.25rem;    /* 4px */
+  --border-radius-md: 0.375rem;     /* 6px */
+  --border-radius-lg: 0.5rem;       /* 8px */
+  --border-radius-xl: 0.75rem;      /* 12px */
+  --border-radius-2xl: 1rem;        /* 16px */
+  --border-radius-3xl: 1.5rem;      /* 24px */
+  --border-radius-full: 9999px;     /* Fully rounded */
+
+  /* ============================================
+     SHADOW SYSTEM
+     ============================================ */
+  
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* Blue-tinted shadows for consistency */
+  --shadow-blue: 0 10px 25px rgba(59, 130, 246, 0.15);
+  --shadow-blue-lg: 0 20px 40px rgba(37, 99, 235, 0.2);
+
+  /* ============================================
+     ANIMATION & TRANSITIONS
+     ============================================ */
+  
+  /* Transition Durations */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+
+  /* Transition Easings */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Common transitions */
+  --transition-all: all var(--transition-normal) var(--ease-in-out);
+  --transition-colors: color var(--transition-fast) var(--ease-out), 
+                       background-color var(--transition-fast) var(--ease-out), 
+                       border-color var(--transition-fast) var(--ease-out);
+
+  /* ============================================
+     LAYOUT CONSTRAINTS - Prevent Cramped Layouts
+     ============================================ */
+  
+  --container-max-width: 1200px;       /* Main container */
+  --container-content-width: 800px;    /* Content width */
+  --container-narrow-width: 600px;     /* Narrow content */
+  
+  /* Minimum spacing for interactive elements */
+  --min-touch-target: 44px;            /* Minimum touch target size */
+  --min-spacing-between-elements: var(--spacing-4);  /* 16px minimum */
+  
+  /* Maximum content width to prevent overly wide text */
+  --content-max-width: 65ch;            /* Optimal reading width */
+  
+  /* ============================================
+     BREAKPOINTS (for reference in media queries)
+     ============================================ */
+  
+  --breakpoint-xs: 475px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* ============================================
+     LAYOUT CONSTRAINTS
+     ============================================ */
+  
+  --max-width-xs: 20rem;      /* 320px */
+  --max-width-sm: 24rem;      /* 384px */
+  --max-width-md: 28rem;      /* 448px */
+  --max-width-lg: 32rem;      /* 512px */
+  --max-width-xl: 36rem;      /* 576px */
+  --max-width-2xl: 42rem;     /* 672px */
+  --max-width-3xl: 48rem;     /* 768px */
+  --max-width-4xl: 56rem;     /* 896px */
+  --max-width-5xl: 64rem;     /* 1024px */
+  --max-width-6xl: 72rem;     /* 1152px */
+  --max-width-7xl: 80rem;     /* 1280px */
+  --max-width-screen: 100vw;
+  
+  /* Container max widths */
+  --container-sm: var(--max-width-2xl);
+  --container-md: var(--max-width-4xl);
+  --container-lg: var(--max-width-6xl);
+  --container-xl: var(--max-width-7xl);
+}
+
+/* ============================================
+   GLOBAL STYLES AND UTILITIES
+   ============================================ */
+
+/* Remove any remaining dark mode styles - Using simplified light theme only */
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: none;
+    --transition-normal: none;
+    --transition-slow: none;
+    --transition-colors: none;
+  }
+}

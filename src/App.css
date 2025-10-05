@@ -1,0 +1,124 @@
+/* App.css - Application-specific styles */
+
+/* Main application container */
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Page content wrapper - ensures footer sticks to bottom */
+.page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure pages account for fixed navigation */
+.page-with-nav {
+  padding-top: 72px; /* Height of fixed navigation */
+}
+
+/* Loading states */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border-light);
+  border-top: 3px solid var(--color-brand-primary);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Error states */
+.error-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.error-icon {
+  font-size: var(--font-size-4xl);
+  color: var(--color-error);
+}
+
+.error-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.error-message {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  max-width: 400px;
+  margin: 0;
+}
+
+/* Enhanced focus styles for the entire application */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-base);
+}
+
+/* Ensure all interactive elements meet minimum touch target size */
+button,
+[role="button"],
+input,
+select,
+textarea,
+a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Print styles */
+@media print {
+  .main-navigation,
+  .main-footer {
+    display: none;
+  }
+  
+  .page-with-nav {
+    padding-top: 0;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+  }
+  
+  .card {
+    break-inside: avoid;
+  }
+}
