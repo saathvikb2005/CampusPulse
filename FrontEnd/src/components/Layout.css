@@ -1,0 +1,82 @@
+/* src/components/Layout.css */
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+}
+
+.navigation-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.main-content {
+  flex: 1;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: #ffffff;
+}
+
+.content-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Ensure proper spacing when navigation is hidden */
+.app-layout:not(:has(.navigation-wrapper)) .main-content {
+  padding-top: 0;
+}
+
+/* Ensure proper spacing when footer is hidden */
+.app-layout:not(:has(.footer-wrapper)) .main-content {
+  padding-bottom: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 0;
+  }
+  
+  .content-container {
+    padding: 0;
+  }
+}
+
+/* Print styles */
+@media print {
+  .navigation-wrapper,
+  .footer-wrapper {
+    display: none;
+  }
+  
+  .main-content {
+    padding: 0;
+    margin: 0;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .navigation-wrapper {
+    border-bottom: 2px solid #000000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .app-layout * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

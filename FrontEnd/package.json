@@ -1,0 +1,72 @@
+{
+  "name": "campuspulse",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Campus Event Management Platform - Connecting Campus Life, One Event at a Time",
+  "author": "CampusPulse Team",
+  "license": "MIT",
+  "keywords": [
+    "campus",
+    "events",
+    "education",
+    "university",
+    "college",
+    "student-life",
+    "event-management"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/campuspulse.git"
+  },
+  "homepage": "https://campuspulse.app",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext js,jsx --fix",
+    "preview": "vite preview --host",
+    "preview:build": "npm run build && npm run preview",
+    "clean": "rm -rf dist node_modules/.vite",
+    "clean:install": "npm run clean && npm install",
+    "type-check": "tsc --noEmit",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist",
+    "test": "echo \"No tests specified\" && exit 0",
+    "format": "prettier --write \"src/**/*.{js,jsx,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css,md}\"",
+    "serve": "npm run build && npx serve dist"
+  },
+  "dependencies": {
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^6.30.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^9.33.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "vite": "^7.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
