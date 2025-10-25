@@ -2,40 +2,129 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
+import { getCurrentUser, isAuthenticated, logout, canManageEvents, canManageFeedback } from "../utils/auth";
+import { eventAPI, notificationAPI, analyticsAPI } from "../services/api";
+import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
 import "./Home.css";
 
 const Home = () => {
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
+  const [eventStats, setEventStats] = useState({
+    pastEvents: 0,
+    presentEvents: 0,
+    upcomingEvents: 0
+  });
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
   // Get user role for conditional rendering
-  const userRole = localStorage.getItem('userRole');
+  const userRole = getCurrentUser()?.role;
 
   useEffect(() => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    const userEmail = localStorage.getItem('userEmail');
-    const userRole = localStorage.getItem('userRole');
-    
-    if (isLoggedIn && userEmail) {
-      setUser({ email: userEmail, role: userRole || 'student' });
-      
-      // Load sample notifications
-      setNotifications([
-        { id: 1, message: "New event: Tech Fest 2025 registration open", type: "event", time: "2 hours ago" },
-        { id: 2, message: "Feedback requested for Recent Workshop", type: "feedback", time: "1 day ago" },
-        { id: 3, message: "Department meeting scheduled for next week", type: "announcement", time: "3 days ago" },
-      ]);
-    }
+    loadUserData();
+    loadDashboardData();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userRole');
-    setUser(null);
-    navigate('/');
+  const loadUserData = async () => {
+    if (isAuthenticated()) {
+      const currentUser = getCurrentUser();
+      setUser(currentUser);
+      
+      try {
+        // Load recent notifications for the user
+        const notificationResponse = await notificationAPI.getUserNotifications();
+        const notificationData = notificationResponse.data || notificationResponse || [];
+        
+        const recentNotifications = notificationData
+          .slice(0, 3)
+          .map(notif => ({
+            id: notif._id || notif.id,
+            message: notif.title || notif.message,
+            type: notif.type || 'general',
+            time: getTimeAgo(notif.createdAt || notif.timestamp)
+          }));
+        setNotifications(recentNotifications);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        // Set empty array if API fails - no fallback static data
+        setNotifications([]);
+      }
+    }
+  };
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load event statistics
+      const [pastEvents, presentEvents, upcomingEvents] = await Promise.all([
+        eventAPI.getPast(),
+        eventAPI.getPresent(), 
+        eventAPI.getUpcoming()
+      ]);
+
+      // Handle different response structures from backend
+      const pastData = pastEvents.data || pastEvents || [];
+      const presentData = presentEvents.data || presentEvents || [];
+      const upcomingData = upcomingEvents.data || upcomingEvents || [];
+
+      setEventStats({
+        pastEvents: Array.isArray(pastData) ? pastData.length : 0,
+        presentEvents: Array.isArray(presentData) ? presentData.length : 0,
+        upcomingEvents: Array.isArray(upcomingData) ? upcomingData.length : 0
+      });
+
+      // Load recent events for display
+      const allEventsResponse = await eventAPI.getAll();
+      const allEventsData = allEventsResponse.data || allEventsResponse || [];
+      
+      if (Array.isArray(allEventsData)) {
+        const recent = allEventsData
+          .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
+          .slice(0, 3);
+        setRecentEvents(recent);
+      }
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      showErrorToast('Failed to load some dashboard data');
+      // Set default values on error
+      setEventStats({ pastEvents: 0, presentEvents: 0, upcomingEvents: 0 });
+      setRecentEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTimeAgo = (timestamp) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diff = now - time;
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout(); // Use auth utility logout function
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback manual cleanup if auth logout fails
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('token');
+      setUser(null);
+      navigate('/');
+    }
   };
 
   return (
@@ -94,6 +183,7 @@ const Home = () => {
           <div className="card-icon">📅</div>
           <h3>Past Events</h3>
           <p>Explore details, photos, and blogs (no registrations).</p>
+          <div className="event-count">{loading ? '...' : eventStats.pastEvents} events</div>
           <Link to="/events/past" className="card-btn">View Past</Link>
         </article>
 
@@ -103,6 +193,7 @@ const Home = () => {
           <p>
             See what's happening now. Register only if spot registration is open.
           </p>
+          <div className="event-count">{loading ? '...' : eventStats.presentEvents} live now</div>
           <Link to="/events/present" className="card-btn">View Ongoing</Link>
         </article>
 
@@ -110,9 +201,46 @@ const Home = () => {
           <div className="card-icon">🚀</div>
           <h3>Upcoming Events</h3>
           <p>Browse details, register as a participant, or volunteer.</p>
+          <div className="event-count">{loading ? '...' : eventStats.upcomingEvents} upcoming</div>
           <Link to="/events/upcoming" className="card-btn">View Upcoming</Link>
         </article>
       </section>
+
+      {/* Recent Events Section */}
+      {recentEvents.length > 0 && (
+        <section className="recent-events-section">
+          <div className="container">
+            <h2 className="section-title">Recent Events</h2>
+            <div className="recent-events-grid">
+              {recentEvents.map(event => (
+                <div key={event._id} className="recent-event-card">
+                  <div className="event-image">
+                    {event.image ? (
+                      <img src={event.image} alt={event.title} />
+                    ) : (
+                      <div className="default-event-image">
+                        <i className="fas fa-calendar-alt"></i>
+                      </div>
+                    )}
+                  </div>
+                  <div className="event-info">
+                    <h4>{event.title}</h4>
+                    <p className="event-date">
+                      {new Date(event.date || event.startDate || event.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="event-description">
+                      {(event.description || '').substring(0, 100)}{event.description?.length > 100 ? '...' : ''}
+                    </p>
+                    <Link to={`/events/details/${event._id || event.id}`} className="event-link">
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section id="features" className="feature-section">
         <h2 className="section-title">Platform Features</h2>
@@ -138,12 +266,21 @@ const Home = () => {
             <Link to="/blogs" className="feature-link">Browse Blogs</Link>
           </div>
 
-          {(userRole === 'admin' || userRole === 'faculty' || userRole === 'event_manager') && (
+          {canManageEvents() && (
             <div className="feature-card">
               <div className="feature-icon">⚙️</div>
               <h4>Event Management</h4>
               <p>Create events, approve posts, and review feedback.</p>
-              <Link to="/admin" className="feature-link">Open Tools</Link>
+              <Link to="/events/manage" className="feature-link">Manage Events</Link>
+            </div>
+          )}
+
+          {canManageFeedback() && (
+            <div className="feature-card">
+              <div className="feature-icon">💬</div>
+              <h4>Feedback Management</h4>
+              <p>Review and respond to user feedback and suggestions.</p>
+              <Link to="/feedback/manage" className="feature-link">Manage Feedback</Link>
             </div>
           )}
         </div>

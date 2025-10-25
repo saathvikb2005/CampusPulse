@@ -240,24 +240,9 @@ const Login = () => {
             </form>
 
             {/* Demo Accounts Notice for Development */}
-            <div className="demo-accounts-notice" style={{
-              marginTop: '20px',
-              padding: '15px',
-              backgroundColor: '#f8f9fa',
-              border: '1px solid #e9ecef',
-              borderRadius: '8px',
-              fontSize: '14px'
-            }}>
-              <h4>🧪 Demo Accounts for Testing:</h4>
-              <ul style={{ margin: '10px 0', paddingLeft: '20px' }}>
-                <li><strong>Admin:</strong> admin@campuspulse.edu / admin123</li>
-                <li><strong>Faculty:</strong> faculty@campuspulse.edu / faculty123</li>
-                <li><strong>Event Manager:</strong> eventmanager@campuspulse.edu / eventmanager123</li>
-                <li><strong>Student:</strong> student@campuspulse.edu / student123</li>
-              </ul>
-              <p style={{ margin: '10px 0 0 0', color: '#6c757d' }}>
-                <em>Note: Create your own account or use these demo accounts to explore the system.</em>
-              </p>
+            <div>
+              
+              
             </div>
           </div>
         </div>

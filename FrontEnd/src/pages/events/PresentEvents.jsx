@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { eventAPI } from "../../services/api";
+import { showErrorToast } from "../../utils/toastUtils";
 import "./PresentEvents.css";
+import Navigation from "../../components/Navigation";
 
 const PresentEvents = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [presentEvents, setPresentEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   // Update current time every minute
@@ -15,63 +21,32 @@ const PresentEvents = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Sample present events data
-  const presentEvents = [
-    {
-      id: 1,
-      title: "Spring Hackathon 2025",
-      startDate: "2025-09-25T09:00:00",
-      endDate: "2025-09-27T18:00:00",
-      category: "technical",
-      description: "48-hour coding marathon to build innovative solutions for real-world problems.",
-      image: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=400&h=200&fit=crop",
-      location: "Tech Hub, Building A",
-      registered: 120,
-      maxParticipants: 150,
-      organizer: "IEEE Student Chapter",
-      status: "ongoing",
-      spotRegistration: true,
-      liveStream: true,
-      schedule: [
-        { time: "09:00", activity: "Registration & Team Formation" },
-        { time: "10:00", activity: "Opening Ceremony & Problem Statement" },
-        { time: "11:00", activity: "Coding Phase Begins" },
-        { time: "18:00", activity: "Day 1 Check-in" }
-      ],
-      updates: [
-        "Teams are working on innovative AI solutions",
-        "Mentorship sessions available every 2 hours",
-        "Pizza and refreshments being served"
-      ]
-    },
-    {
-      id: 2,
-      title: "International Food Festival",
-      startDate: "2025-09-25T11:00:00",
-      endDate: "2025-09-25T20:00:00",
-      category: "cultural",
-      description: "Taste authentic cuisines from around the world prepared by international students.",
-      image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop",
-      location: "Main Quad",
-      registered: 200,
-      maxParticipants: 300,
-      organizer: "International Students Association",
-      status: "ongoing",
-      spotRegistration: true,
-      liveStream: false,
-      schedule: [
-        { time: "11:00", activity: "Festival Opens - Asian Cuisine Corner" },
-        { time: "13:00", activity: "European Food Stalls Open" },
-        { time: "15:00", activity: "Cultural Performances Begin" },
-        { time: "17:00", activity: "Cooking Competition Finals" }
-      ],
-      updates: [
-        "Mexican food stall is extremely popular!",
-        "Live cooking demonstrations happening now",
-        "Cultural dance performance at 3 PM"
-      ]
-    }
-  ];
+  // Fetch present events from API
+  useEffect(() => {
+    const fetchPresentEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await eventAPI.getPresent();
+        
+        if (response.success) {
+          setPresentEvents(response.data || []);
+        } else {
+          setError('Failed to load events');
+          showErrorToast('Failed to load live events');
+        }
+      } catch (error) {
+        console.error('Error fetching present events:', error);
+        setError('Error loading events');
+        showErrorToast('Error loading live events');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPresentEvents();
+  }, []);
 
   const getTimeRemaining = (endDate) => {
     const now = currentTime.getTime();
@@ -94,8 +69,113 @@ const PresentEvents = () => {
     return now >= start && now <= end;
   };
 
+  const handleJoinEvent = (eventId, eventTitle) => {
+    const isLoggedIn = localStorage.getItem('token');
+    if (!isLoggedIn) {
+      showErrorToast('Please login first to join events!');
+      navigate('/login', { state: { returnUrl: `/events/present` } });
+      return;
+    }
+    navigate(`/events/join/${eventId}`);
+  };
+
+  const handleWatchStream = (eventId) => {
+    navigate(`/events/stream/${eventId}`);
+  };
+
+  const getEventImage = (event) => {
+    return event.image || 
+           event.images?.[0]?.url || 
+           `/api/placeholder/400/200?text=${encodeURIComponent(event.title)}`;
+  };
+
+  const getRegistrationCount = (event) => {
+    return event.registrations?.length || event.registeredCount || 0;
+  };
+
+  const getMaxParticipants = (event) => {
+    return event.maxParticipants || event.capacity || 100;
+  };
+
+  const isSpotRegistrationAvailable = (event) => {
+    const registrationCount = getRegistrationCount(event);
+    const maxParticipants = getMaxParticipants(event);
+    
+    return event.spotRegistrationAvailable !== false && 
+           registrationCount < maxParticipants;
+  };
+
+  const getEventSchedule = (event) => {
+    // Generate a simple schedule based on event timing
+    const startTime = new Date(event.startDate);
+    const endTime = new Date(event.endDate);
+    
+    return [
+      { time: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), activity: 'Event Starts' },
+      { time: endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), activity: 'Event Ends' }
+    ];
+  };
+
+  const getLiveUpdates = (event) => {
+    // Generate dynamic updates based on event status
+    const updates = [];
+    const registrationCount = getRegistrationCount(event);
+    const maxParticipants = getMaxParticipants(event);
+    
+    updates.push(`${registrationCount} participants joined so far`);
+    
+    if (registrationCount >= maxParticipants * 0.8) {
+      updates.push('Event is filling up quickly!');
+    }
+    
+    if (event.liveStreamUrl) {
+      updates.push('Live stream is active');
+    }
+    
+    updates.push('Spot registration available');
+    
+    return updates;
+  };
+
+  if (loading) {
+    return (
+      <div className="events-page">
+        <Navigation />
+        <div className="container">
+          <div className="loading-state">
+            <i className="fas fa-spinner fa-spin"></i>
+            <p>Loading live events...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="events-page">
+        <Navigation />
+        <div className="container">
+          <div className="error-state">
+            <i className="fas fa-exclamation-triangle"></i>
+            <h3>Unable to load events</h3>
+            <p>{error}</p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => window.location.reload()}
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="events-page">
+      <Navigation />
+
       {/* Header */}
       <header className="events-header present-header">
         <div className="container">
@@ -122,16 +202,21 @@ const PresentEvents = () => {
               {presentEvents.map(event => {
                 const timeRemaining = getTimeRemaining(event.endDate);
                 const isLive = isEventLive(event.startDate, event.endDate);
+                const registrationCount = getRegistrationCount(event);
+                const maxParticipants = getMaxParticipants(event);
+                const spotRegistrationAvailable = isSpotRegistrationAvailable(event);
+                const schedule = getEventSchedule(event);
+                const updates = getLiveUpdates(event);
                 
                 return (
-                  <div key={event.id} className="event-card present-event">
+                  <div key={event._id} className="event-card present-event">
                     <div className="event-image">
-                      <img src={event.image} alt={event.title} />
+                      <img src={getEventImage(event)} alt={event.title} />
                       <div className="event-status live">
                         <span className="live-dot"></span>
                         LIVE NOW
                       </div>
-                      {event.liveStream && (
+                      {event.liveStreamUrl && (
                         <div className="live-stream-btn">
                           <i className="fas fa-video"></i>
                           Watch Live
@@ -162,7 +247,7 @@ const PresentEvents = () => {
                       
                       <div className="event-location">
                         <i className="fas fa-map-marker-alt"></i>
-                        {event.location}
+                        {event.location || 'Location TBA'}
                       </div>
                       
                       <p className="event-description">{event.description}</p>
@@ -190,25 +275,25 @@ const PresentEvents = () => {
                       <div className="event-stats">
                         <div className="stat">
                           <i className="fas fa-users"></i>
-                          {event.registered}/{event.maxParticipants} Registered
+                          {registrationCount}/{maxParticipants} Registered
                         </div>
                         <div className="participation-bar">
                           <div 
                             className="participation-fill" 
-                            style={{width: `${(event.registered / event.maxParticipants) * 100}%`}}
+                            style={{width: `${(registrationCount / maxParticipants) * 100}%`}}
                           ></div>
                         </div>
                       </div>
                       
                       <div className="event-organizer">
-                        <small>Organized by: {event.organizer}</small>
+                        <small>Organized by: {event.organizer?.name || event.organizer || 'Campus Events'}</small>
                       </div>
                       
                       {/* Live Schedule */}
                       <div className="live-schedule">
                         <h5>Today's Schedule:</h5>
                         <div className="schedule-list">
-                          {event.schedule.map((item, index) => (
+                          {schedule.map((item, index) => (
                             <div key={index} className="schedule-item">
                               <span className="schedule-time">{item.time}</span>
                               <span className="schedule-activity">{item.activity}</span>
@@ -221,7 +306,7 @@ const PresentEvents = () => {
                       <div className="live-updates">
                         <h5>Live Updates:</h5>
                         <div className="updates-list">
-                          {event.updates.map((update, index) => (
+                          {updates.map((update, index) => (
                             <div key={index} className="update-item">
                               <i className="fas fa-circle"></i>
                               {update}
@@ -231,17 +316,10 @@ const PresentEvents = () => {
                       </div>
                       
                       <div className="event-actions">
-                        {event.spotRegistration && (
+                        {spotRegistrationAvailable && (
                           <button 
                             className="btn btn-primary" 
-                            onClick={() => {
-                              const isLoggedIn = localStorage.getItem('isLoggedIn');
-                              if (!isLoggedIn) {
-                                alert('Please login first to join events!');
-                                return;
-                              }
-                              navigate(`/events/join/${event.id}`);
-                            }}
+                            onClick={() => handleJoinEvent(event._id, event.title)}
                           >
                             <i className="fas fa-user-plus"></i>
                             Join Now
@@ -250,26 +328,29 @@ const PresentEvents = () => {
                         <button 
                           className="btn btn-outline" 
                           onClick={() => {
-                            // Open maps or provide directions
-                            const mapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(event.location)}`;
+                            const mapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(event.location || 'Campus')}`;
                             window.open(mapsUrl, '_blank');
                           }}
                         >
                           <i className="fas fa-directions"></i>
                           Get Directions
                         </button>
-                        {event.liveStream && (
+                        {event.liveStreamUrl && (
                           <button 
                             className="btn btn-secondary" 
-                            onClick={() => {
-                              // Navigate to live stream page
-                              navigate(`/events/stream/${event.id}`);
-                            }}
+                            onClick={() => handleWatchStream(event._id)}
                           >
                             <i className="fas fa-video"></i>
                             Watch Stream
                           </button>
                         )}
+                        <Link 
+                          to={`/events/${event._id}`} 
+                          className="btn btn-outline"
+                        >
+                          <i className="fas fa-info-circle"></i>
+                          Details
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -281,9 +362,14 @@ const PresentEvents = () => {
               <i className="fas fa-calendar-check"></i>
               <h3>No live events right now</h3>
               <p>Check back later or explore upcoming events</p>
-              <Link to="/events/upcoming" className="btn btn-primary">
-                View Upcoming Events
-              </Link>
+              <div className="no-events-actions">
+                <Link to="/events/upcoming" className="btn btn-primary">
+                  View Upcoming Events
+                </Link>
+                <Link to="/events/past" className="btn btn-outline">
+                  View Past Events
+                </Link>
+              </div>
             </div>
           )}
         </div>

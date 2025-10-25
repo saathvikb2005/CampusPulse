@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './EventRegister.css';
+import { eventAPI } from '../../services/api';
+import { getCurrentUser } from '../../utils/auth';
+import { showSuccessToast, showErrorToast } from '../../utils/toastUtils';
 
 const EventRegister = () => {
   const { eventId } = useParams();
@@ -31,42 +34,139 @@ const EventRegister = () => {
   });
   
   const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [event, setEvent] = useState(null);
+  const [user, setUser] = useState(null);
+  const [registrationCount, setRegistrationCount] = useState(0);
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
 
-  // Sample event data (in real app, fetch from API)
-  const eventData = {
-    id: eventId,
-    title: "Tech Innovation Summit 2024",
-    date: "2024-02-15",
-    time: "09:00 AM - 06:00 PM",
-    venue: "Tech Convention Center",
-    location: "Downtown Campus",
-    description: "Join industry leaders and innovators for a day of cutting-edge technology discussions, workshops, and networking opportunities.",
-    image: "https://via.placeholder.com/400x300/4361ee/ffffff?text=Tech+Summit",
-    ticketPrices: {
-      student: { price: 25, label: "Student" },
-      standard: { price: 75, label: "Standard" },
-      premium: { price: 150, label: "Premium" },
-      vip: { price: 300, label: "VIP" }
-    },
-    sessions: [
-      "AI and Machine Learning",
-      "Web Development Trends",
-      "Cybersecurity Best Practices",
-      "Data Science Applications",
-      "Cloud Computing",
-      "Mobile App Development",
-      "IoT and Smart Devices",
-      "Blockchain Technology"
-    ],
-    benefits: {
-      student: ["Event Access", "Basic Materials", "Lunch"],
-      standard: ["Event Access", "All Materials", "Lunch", "Coffee Breaks"],
-      premium: ["Event Access", "All Materials", "Lunch", "Coffee Breaks", "Workshop Access", "Networking Session"],
-      vip: ["All Premium Benefits", "VIP Lounge Access", "1-on-1 Sessions", "Special Dinner", "Priority Seating"]
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+    
+    if (!currentUser) {
+      showErrorToast('Please log in to register for events');
+      navigate('/login');
+      return;
+    }
+
+    fetchEventData();
+  }, [eventId, navigate]);
+
+  const fetchEventData = async () => {
+    try {
+      setLoading(true);
+      const response = await eventAPI.getById(eventId);
+      
+      if (response.success && response.data) {
+        setEvent(response.data);
+        
+        // Pre-fill form with user data
+        if (user) {
+          setRegistrationData(prev => ({
+            ...prev,
+            firstName: user.name?.split(' ')[0] || '',
+            lastName: user.name?.split(' ').slice(1).join(' ') || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            organization: user.university || user.organization || '',
+            designation: user.role === 'student' ? 'Student' : user.designation || ''
+          }));
+        }
+
+        // Check registration status
+        try {
+          const registrationsResponse = await eventAPI.getRegistrations(eventId);
+          if (registrationsResponse.success) {
+            const registrations = registrationsResponse.data.registrations || registrationsResponse.data;
+            setRegistrationCount(registrations.length);
+            
+            const userRegistration = registrations.find(reg => 
+              reg.userId === user?._id || reg.email === user?.email
+            );
+            setIsAlreadyRegistered(!!userRegistration);
+          }
+        } catch (error) {
+          console.log('Could not fetch registrations (permission issue)');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      showErrorToast('Failed to load event details');
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Generate dynamic event data based on API response
+  const getEventData = () => {
+    if (!event) {
+      return {
+        id: eventId,
+        title: "Event Loading...",
+        date: "TBA",
+        time: "TBA",
+        venue: "TBA",
+        location: "TBA",
+        description: "Loading event details...",
+        image: "https://via.placeholder.com/400x300/4361ee/ffffff?text=Loading...",
+        ticketPrices: {
+          student: { price: 25, label: "Student" },
+          standard: { price: 75, label: "Standard" },
+          premium: { price: 150, label: "Premium" },
+          vip: { price: 300, label: "VIP" }
+        },
+        sessions: [
+          "AI and Machine Learning",
+          "Web Development Trends",
+          "Cybersecurity Best Practices",
+          "Data Science Applications",
+          "Cloud Computing",
+          "Mobile App Development",
+          "IoT and Smart Devices",
+          "Blockchain Technology"
+        ],
+        benefits: {
+          student: ["Event Access", "Basic Materials", "Lunch"],
+          standard: ["Event Access", "All Materials", "Lunch", "Coffee Breaks"],
+          premium: ["Event Access", "All Materials", "Lunch", "Coffee Breaks", "Workshop Access", "Networking Session"],
+          vip: ["All Premium Benefits", "VIP Lounge Access", "1-on-1 Sessions", "Special Dinner", "Priority Seating"]
+        }
+      };
+    }
+
+    return {
+      id: event._id,
+      title: event.title,
+      date: new Date(event.startDate).toLocaleDateString(),
+      time: `${new Date(event.startDate).toLocaleTimeString()} - ${new Date(event.endDate).toLocaleTimeString()}`,
+      venue: event.location,
+      location: event.location,
+      description: event.description,
+      image: event.image || event.images?.[0]?.url || "https://via.placeholder.com/400x300/4361ee/ffffff?text=Event+Image",
+      ticketPrices: {
+        student: { price: event.ticketPrice?.student || 25, label: "Student" },
+        standard: { price: event.ticketPrice?.standard || 75, label: "Standard" },
+        premium: { price: event.ticketPrice?.premium || 150, label: "Premium" },
+        vip: { price: event.ticketPrice?.vip || 300, label: "VIP" }
+      },
+      sessions: event.sessions || [
+        "Main Event Session",
+        "Networking Opportunities",
+        "Workshop Activities",
+        "Panel Discussions"
+      ],
+      benefits: {
+        student: ["Event Access", "Basic Materials", "Refreshments"],
+        standard: ["Event Access", "All Materials", "Lunch", "Coffee Breaks"],
+        premium: ["Event Access", "All Materials", "Lunch", "Coffee Breaks", "Workshop Access", "Networking Session"],
+        vip: ["All Premium Benefits", "VIP Access", "Special Sessions", "Priority Seating"]
+      }
+    };
+  };
+
+  const eventData = getEventData();
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -127,32 +227,46 @@ const EventRegister = () => {
     setPaymentProcessing(true);
     
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Save registration data
-      const registrations = JSON.parse(localStorage.getItem('eventRegistrations') || '[]');
-      const newRegistration = {
-        ...registrationData,
-        eventId: eventId,
-        eventTitle: eventData.title,
-        registrationDate: new Date().toISOString(),
-        confirmationNumber: `CR-${Date.now()}`,
-        status: 'confirmed',
-        totalAmount: eventData.ticketPrices[registrationData.ticketType].price
-      };
-      
-      registrations.push(newRegistration);
-      localStorage.setItem('eventRegistrations', JSON.stringify(registrations));
-      
-      // Navigate to confirmation page
-      navigate(`/events/upcoming/register/${eventId}/confirmation`, {
-        state: { registration: newRegistration }
+      // Register for event via API
+      const response = await eventAPI.register(eventId, {
+        name: `${registrationData.firstName} ${registrationData.lastName}`,
+        email: registrationData.email,
+        phone: registrationData.phone,
+        department: registrationData.organization,
+        year: registrationData.designation,
+        dietaryRestrictions: registrationData.dietaryRestrictions,
+        specialNeeds: registrationData.specialNeeds,
+        sessionInterests: registrationData.sessionInterests,
+        ticketType: registrationData.ticketType,
+        newsletter: registrationData.newsletter
       });
+      
+      if (response.success) {
+        // Create registration confirmation data
+        const newRegistration = {
+          ...registrationData,
+          eventId: eventId,
+          eventTitle: eventData.title,
+          registrationDate: new Date().toISOString(),
+          confirmationNumber: response.data.confirmationNumber || `CR-${Date.now()}`,
+          status: 'confirmed',
+          totalAmount: calculateTotal(),
+          _id: response.data._id || Date.now().toString()
+        };
+        
+        // Navigate to confirmation page
+        navigate(`/events/register/${eventId}/confirmation`, {
+          state: { registration: newRegistration }
+        });
+        
+        showSuccessToast('Successfully registered for the event!');
+      } else {
+        throw new Error(response.message || 'Registration failed');
+      }
       
     } catch (error) {
       console.error('Registration failed:', error);
-      alert('Registration failed. Please try again.');
+      showErrorToast('Registration failed. Please try again.');
     } finally {
       setLoading(false);
       setPaymentProcessing(false);
@@ -171,6 +285,39 @@ const EventRegister = () => {
   const getProgressPercentage = () => {
     return (currentStep / 3) * 100;
   };
+
+  // Show loading state
+  if (loading && !event) {
+    return (
+      <div className="register-page">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading event details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if already registered
+  if (isAlreadyRegistered) {
+    return (
+      <div className="register-page">
+        <div className="container">
+          <div className="already-registered">
+            <i className="fas fa-check-circle"></i>
+            <h2>Already Registered</h2>
+            <p>You have already registered for this event.</p>
+            <button 
+              className="btn btn-primary"
+              onClick={() => navigate('/events/present')}
+            >
+              Back to Events
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="register-page">
@@ -225,7 +372,7 @@ const EventRegister = () => {
                     </div>
                     <div className="meta-item">
                       <i className="fas fa-users"></i>
-                      <span>500+ Attendees Expected</span>
+                      <span>{registrationCount}+ Attendees Expected</span>
                     </div>
                   </div>
                 </div>

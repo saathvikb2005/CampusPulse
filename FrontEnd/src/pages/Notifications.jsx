@@ -3,8 +3,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
-import { isAuthenticated, getCurrentUser } from "../utils/auth";
-import { notificationAPI } from "../services/api";
+import { isAuthenticated, getCurrentUser, canCreateNotifications } from "../utils/auth";
+import { notificationAPI, userAPI } from "../services/api";
 import "./Notifications.css";
 
 const Notifications = () => {
@@ -13,6 +13,18 @@ const Notifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  
+  // Notification creation form state
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    message: '',
+    type: 'general',
+    targetUsers: [],
+    targetRoles: [],
+    targetAll: false
+  });
 
   // Load notifications on component mount
   useEffect(() => {
@@ -24,6 +36,11 @@ const Notifications = () => {
     setUser(currentUser);
     loadNotifications();
     loadUnreadCount();
+    
+    // Load users if user can create notifications
+    if (canCreateNotifications()) {
+      loadAllUsers();
+    }
   }, []);
 
   const loadNotifications = async () => {
@@ -32,7 +49,13 @@ const Notifications = () => {
       const response = await notificationAPI.getUserNotifications();
       
       if (response.success) {
-        setNotifications(response.data?.notifications || response.notifications || []);
+        const notificationsData = response.data?.notifications || response.notifications || [];
+        setNotifications(notificationsData);
+        
+        // Update unread count from the response if available
+        if (response.data?.unreadCount !== undefined) {
+          setUnreadCount(response.data.unreadCount);
+        }
       } else {
         showErrorToast(response.message || 'Failed to load notifications');
       }
@@ -85,20 +108,109 @@ const Notifications = () => {
     try {
       const response = await notificationAPI.getUnreadCount();
       if (response.success) {
-        setUnreadCount(response.data?.count || response.count || 0);
+        setUnreadCount(response.data?.unreadCount || response.data?.count || response.count || 0);
       }
     } catch (error) {
       console.error('Error loading unread count:', error);
       // Calculate from notifications array as fallback
-      const unreadCount = notifications.filter(n => !n.isRead).length;
+      const unreadCount = notifications.filter(n => !(n.isRead || n.read)).length;
       setUnreadCount(unreadCount);
+    }
+  };
+
+  const loadAllUsers = async () => {
+    if (!canCreateNotifications()) return;
+    
+    try {
+      const response = await userAPI.getAllUsers();
+      if (response.success) {
+        setAllUsers(response.data?.users || response.users || []);
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
+  const handleCreateNotification = async (e) => {
+    e.preventDefault();
+    
+    if (!createForm.title.trim() || !createForm.message.trim()) {
+      showErrorToast('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Prepare notification data based on target selection
+      const notificationData = {
+        title: createForm.title.trim(),
+        message: createForm.message.trim(),
+        type: createForm.type
+      };
+
+      // Add targeting based on selection
+      if (createForm.targetAll) {
+        notificationData.targetAll = true;
+      } else {
+        if (createForm.targetUsers.length > 0) {
+          notificationData.targetUsers = createForm.targetUsers;
+        }
+        if (createForm.targetRoles.length > 0) {
+          notificationData.targetRoles = createForm.targetRoles;
+        }
+      }
+
+      const response = await notificationAPI.create(notificationData);
+      
+      if (response.success) {
+        showSuccessToast('Notification created successfully!');
+        setShowCreateModal(false);
+        setCreateForm({
+          title: '',
+          message: '',
+          type: 'general',
+          targetUsers: [],
+          targetRoles: [],
+          targetAll: false
+        });
+        // Reload notifications to show the new one if it applies to current user
+        loadNotifications();
+      } else {
+        showErrorToast(response.message || 'Failed to create notification');
+      }
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      showErrorToast('Failed to create notification. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (type === 'checkbox') {
+      if (name === 'targetAll') {
+        setCreateForm(prev => ({ ...prev, [name]: checked }));
+      } else if (name === 'targetRoles') {
+        const updatedRoles = checked 
+          ? [...createForm.targetRoles, value]
+          : createForm.targetRoles.filter(role => role !== value);
+        setCreateForm(prev => ({ ...prev, targetRoles: updatedRoles }));
+      }
+    } else if (name === 'targetUsers') {
+      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+      setCreateForm(prev => ({ ...prev, targetUsers: selectedOptions }));
+    } else {
+      setCreateForm(prev => ({ ...prev, [name]: value }));
     }
   };
 
   const filteredNotifications = notifications.filter(notification => {
     if (filter === "all") return true;
-    if (filter === "unread") return !notification.isRead;
-    return notification.category === filter;
+    if (filter === "unread") return !notification.read && !notification.isRead; // Handle both field names
+    return notification.type === filter; // Use 'type' instead of 'category'
   });
 
   const markAsRead = async (notificationId) => {
@@ -107,7 +219,7 @@ const Notifications = () => {
       if (response.success) {
         setNotifications(prev => prev.map(notification => 
           notification._id === notificationId 
-            ? { ...notification, isRead: true }
+            ? { ...notification, isRead: true, read: true } // Set both field names
             : notification
         ));
         setUnreadCount(prev => Math.max(0, prev - 1));
@@ -123,7 +235,7 @@ const Notifications = () => {
     try {
       const response = await notificationAPI.markAllAsRead();
       if (response.success) {
-        setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
+        setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true, read: true })));
         setUnreadCount(0);
         showSuccessToast('All notifications marked as read');
       }
@@ -243,6 +355,16 @@ const Notifications = () => {
               <p className="header-subtitle">Stay updated with campus activities and announcements</p>
             </div>
             <div className="header-actions">
+              {canCreateNotifications() && (
+                <button 
+                  className="create-notification-btn"
+                  onClick={() => setShowCreateModal(true)}
+                  title="Create new notification"
+                >
+                  <i className="fas fa-plus"></i>
+                  Create Notification
+                </button>
+              )}
               {unreadCount > 0 && (
                 <button 
                   className="mark-all-read-btn"
@@ -311,7 +433,7 @@ const Notifications = () => {
             filteredNotifications.map((notification) => (
               <div 
                 key={notification._id} 
-                className={`notification-item ${!notification.isRead ? 'unread' : ''}`}
+                className={`notification-item ${!(notification.isRead || notification.read) ? 'unread' : ''}`}
               >
                 <div className="notification-content">
                   <div className="notification-header">
@@ -340,7 +462,7 @@ const Notifications = () => {
                   <p className="notification-message">{notification.message}</p>
                   
                   <div className="notification-actions">
-                    {!notification.isRead && (
+                    {!(notification.isRead || notification.read) && (
                       <button 
                         className="mark-read-btn"
                         onClick={() => markAsRead(notification._id)}
@@ -373,6 +495,144 @@ const Notifications = () => {
           </div>
         )}
       </div>
+
+      {/* Create Notification Modal */}
+      {showCreateModal && canCreateNotifications() && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create New Notification</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowCreateModal(false)}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateNotification} className="notification-form">
+              <div className="form-group">
+                <label htmlFor="title">Title *</label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={createForm.title}
+                  onChange={handleFormChange}
+                  placeholder="Enter notification title"
+                  maxLength={100}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="message">Message *</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  value={createForm.message}
+                  onChange={handleFormChange}
+                  placeholder="Enter notification message"
+                  maxLength={500}
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="type">Type</label>
+                <select
+                  id="type"
+                  name="type"
+                  value={createForm.type}
+                  onChange={handleFormChange}
+                >
+                  <option value="general">General</option>
+                  <option value="system_announcement">System Announcement</option>
+                  <option value="event_created">Event Created</option>
+                  <option value="event_updated">Event Updated</option>
+                  <option value="event_cancelled">Event Cancelled</option>
+                  <option value="event_reminder">Event Reminder</option>
+                  <option value="feedback_response">Feedback Response</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Target Audience</label>
+                <div className="target-options">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="targetAll"
+                      checked={createForm.targetAll}
+                      onChange={handleFormChange}
+                    />
+                    Send to All Users
+                  </label>
+                </div>
+              </div>
+
+              {!createForm.targetAll && (
+                <>
+                  <div className="form-group">
+                    <label>Target Roles</label>
+                    <div className="checkbox-group">
+                      {['student', 'faculty', 'event_manager', 'admin'].map(role => (
+                        <label key={role} className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            name="targetRoles"
+                            value={role}
+                            checked={createForm.targetRoles.includes(role)}
+                            onChange={handleFormChange}
+                          />
+                          {role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ')}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="targetUsers">Specific Users (Optional)</label>
+                    <select
+                      id="targetUsers"
+                      name="targetUsers"
+                      multiple
+                      value={createForm.targetUsers}
+                      onChange={handleFormChange}
+                      size={5}
+                    >
+                      {allUsers.map(user => (
+                        <option key={user._id || user.id} value={user.email}>
+                          {user.firstName} {user.lastName} ({user.email})
+                        </option>
+                      ))}
+                    </select>
+                    <small>Hold Ctrl/Cmd to select multiple users</small>
+                  </div>
+                </>
+              )}
+
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  className="cancel-btn"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="submit-btn"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating...' : 'Create Notification'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,148 +12,86 @@ const UpcomingEvents = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedType, setSelectedType] = useState("all"); // individual, team, all
   const [registeredEvents, setRegisteredEvents] = useState(new Set());
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [registrationLoading, setRegistrationLoading] = useState({});
 
-  // Sample upcoming events data
-  const upcomingEvents = [
-    {
-      id: 1,
-      title: "AI & Machine Learning Workshop",
-      date: "2025-10-05",
-      time: "14:00",
-      endTime: "17:00",
-      category: "technical",
-      type: "individual", // individual or team
-      description: "Hands-on workshop on building ML models with Python and TensorFlow.",
-      image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop",
-      location: "Computer Lab 2, Building C",
-      maxParticipants: 50,
-      registered: 35,
-      organizer: "Data Science Club",
-      organizerContact: "datascienceclub@campuspulse.edu",
-      prerequisites: ["Basic Python knowledge", "Laptop required"],
-      agenda: ["Introduction to ML", "Hands-on Coding", "Project Showcase"],
-      registrationDeadline: "2025-10-03",
-      tags: ["AI", "Python", "Workshop"],
-      volunteerSpots: 5,
-      volunteerRegistered: 2,
-      teamSize: null // null for individual events
-    },
-    {
-      id: 2,
-      title: "Annual Science Fair",
-      date: "2025-10-12",
-      time: "09:00",
-      endTime: "18:00",
-      category: "academic",
-      type: "individual",
-      description: "Students showcase their innovative research projects and scientific experiments.",
-      image: "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400&h=200&fit=crop",
-      location: "Main Auditorium",
-      maxParticipants: 200,
-      registered: 87,
-      organizer: "Science Department",
-      organizerContact: "science@campuspulse.edu",
-      prerequisites: ["None"],
-      agenda: ["Project Presentations", "Judging Round", "Award Ceremony"],
-      registrationDeadline: "2025-10-10",
-      tags: ["Science", "Research", "Competition"],
-      volunteerSpots: 15,
-      volunteerRegistered: 8,
-      teamSize: null
-    },
-    {
-      id: 3,
-      title: "Photography Walk",
-      date: "2025-10-08",
-      time: "16:00",
-      endTime: "19:00",
-      category: "cultural",
-      type: "individual",
-      description: "Explore campus beauty through your lens with fellow photography enthusiasts.",
-      image: "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=400&h=200&fit=crop",
-      location: "Campus Grounds",
-      maxParticipants: 30,
-      registered: 18,
-      organizer: "Photography Club",
-      organizerContact: "photography@campuspulse.edu",
-      prerequisites: ["Camera/Phone with camera", "Basic photography interest"],
-      agenda: ["Photography Basics", "Campus Tour", "Photo Sharing Session"],
-      registrationDeadline: "2025-10-07",
-      tags: ["Photography", "Art", "Nature"],
-      volunteerSpots: 3,
-      volunteerRegistered: 1,
-      teamSize: null
-    },
-    {
-      id: 4,
-      title: "Startup Pitch Competition",
-      date: "2025-10-15",
-      time: "10:00",
-      endTime: "16:00",
-      category: "academic",
-      type: "team",
-      description: "Present your startup ideas to industry experts and compete for funding.",
-      image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=400&h=200&fit=crop",
-      location: "Innovation Center",
-      maxParticipants: 20, // 20 teams
-      registered: 14, // 14 teams registered
-      organizer: "Entrepreneurship Cell",
-      organizerContact: "entrepreneurship@campuspulse.edu",
-      prerequisites: ["Business plan", "Pitch deck"],
-      agenda: ["Pitch Presentations", "Investor Feedback", "Winner Announcement"],
-      registrationDeadline: "2025-10-12",
-      tags: ["Startup", "Business", "Competition"],
-      volunteerSpots: 8,
-      volunteerRegistered: 5,
-      teamSize: { min: 2, max: 5 } // team of 2-5 members
-    },
-    {
-      id: 5,
-      title: "Campus Cricket Tournament",
-      date: "2025-10-20",
-      time: "08:00",
-      endTime: "18:00",
-      category: "sports",
-      type: "team",
-      description: "Inter-department cricket tournament with exciting matches and prizes.",
-      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop",
-      location: "Sports Ground",
-      maxParticipants: 12, // 12 teams
-      registered: 8, // 8 teams registered
-      organizer: "Sports Committee",
-      organizerContact: "sports@campuspulse.edu",
-      prerequisites: ["Team registration (11 players + 4 substitutes)"],
-      agenda: ["Opening Ceremony", "League Matches", "Finals & Closing"],
-      registrationDeadline: "2025-10-18",
-      tags: ["Cricket", "Sports", "Tournament"],
-      volunteerSpots: 20,
-      volunteerRegistered: 12,
-      teamSize: { min: 11, max: 15 } // cricket team with substitutes
-    },
-    {
-      id: 6,
-      title: "Hackathon 2025",
-      date: "2025-10-25",
-      time: "09:00",
-      endTime: "21:00",
-      category: "technical",
-      type: "team",
-      description: "24-hour coding marathon to build innovative solutions to real-world problems.",
-      image: "https://images.unsplash.com/photo-1504384764586-bb4cdc1707b0?w=400&h=200&fit=crop",
-      location: "Tech Hub, Building A",
-      maxParticipants: 50, // 50 teams
-      registered: 32, // 32 teams registered
-      organizer: "Coding Club",
-      organizerContact: "coding@campuspulse.edu",
-      prerequisites: ["Laptop", "Programming knowledge", "Team formation"],
-      agenda: ["Problem Statement Release", "Coding Phase", "Presentation & Judging"],
-      registrationDeadline: "2025-10-22",
-      tags: ["Hackathon", "Programming", "Innovation"],
-      volunteerSpots: 15,
-      volunteerRegistered: 10,
-      teamSize: { min: 2, max: 4 } // hackathon teams of 2-4
+  // Fetch upcoming events from backend
+  const fetchUpcomingEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch upcoming events from backend API
+      const response = await eventAPI.getUpcoming();
+      
+      if (response.success) {
+        // Map backend data structure to frontend format
+        const mappedEvents = response.data.events.map(event => ({
+          id: event._id,
+          title: event.title,
+          date: event.date,
+          time: event.startTime,
+          endTime: event.endTime,
+          category: event.category,
+          type: event.isTeamEvent ? "team" : "individual",
+          description: event.description,
+          image: event.images && event.images.length > 0 
+            ? `http://localhost:5000${event.images[0].url}` 
+            : "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop",
+          location: event.venue,
+          maxParticipants: event.maxParticipants || event.capacity,
+          registered: event.registrationCount || event.registrations?.length || 0,
+          organizer: event.organizerId ? `${event.organizerId.firstName} ${event.organizerId.lastName}` : "Unknown Organizer",
+          organizerContact: event.organizerId?.email || "",
+          prerequisites: event.requirements ? [event.requirements] : ["None"],
+          agenda: ["Event details available upon registration"],
+          registrationDeadline: event.registrationDeadline,
+          tags: event.tags || [event.category],
+          volunteerSpots: 5, // Default value - backend doesn't have volunteer spots yet
+          volunteerRegistered: event.volunteers?.length || 0,
+          teamSize: event.isTeamEvent ? { min: 2, max: 5 } : null
+        }));
+        
+        setUpcomingEvents(mappedEvents);
+        
+        // Check which events user is registered for
+        if (isAuthenticated()) {
+          checkUserRegistrations(mappedEvents);
+        }
+      } else {
+        setError(response.message || "Failed to fetch events");
+      }
+    } catch (err) {
+      console.error("Error fetching upcoming events:", err);
+      setError(err.message || "Failed to connect to server");
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Check user registrations for events
+  const checkUserRegistrations = async (events) => {
+    try {
+      if (!isAuthenticated()) return;
+      
+      const response = await eventAPI.getUserRegistered();
+      if (response.success && response.data.events) {
+        const registeredEventIds = new Set(
+          response.data.events.map(reg => reg.event._id || reg.event)
+        );
+        setRegisteredEvents(registeredEventIds);
+      }
+    } catch (err) {
+      console.error("Error checking user registrations:", err);
+    }
+  };
+
+  // Load events when component mounts
+  useEffect(() => {
+    fetchUpcomingEvents();
+  }, []);
 
   const filteredEvents = upcomingEvents.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -164,33 +102,56 @@ const UpcomingEvents = () => {
     return matchesSearch && matchesCategory && matchesType;
   });
 
-  const handleRegister = (eventId, type = "participant") => {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
-      alert('Please login first to register for events!');
+  const handleRegister = async (eventId, type = "participant") => {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      showErrorToast('Please login first to register for events!');
+      navigate('/login');
       return;
     }
-    
-    setRegisteredEvents(prev => new Set([...prev, `${eventId}-${type}`]));
-    
-    // Store registration in localStorage
-    const userEmail = localStorage.getItem('userEmail');
-    const registrations = JSON.parse(localStorage.getItem('userRegistrations') || '[]');
-    registrations.push({
-      eventId,
-      type,
-      userEmail,
-      registrationDate: new Date().toISOString(),
-      eventTitle: upcomingEvents.find(e => e.id === eventId)?.title
-    });
-    localStorage.setItem('userRegistrations', JSON.stringify(registrations));
-    
-    alert(`Successfully registered as ${type} for the event! Check your notifications for updates.`);
+
+    // Prevent multiple simultaneous registration attempts
+    if (registrationLoading[eventId]) return;
+
+    try {
+      setRegistrationLoading(prev => ({ ...prev, [eventId]: true }));
+      
+      if (type === "volunteer") {
+        // TODO: Implement volunteer registration when backend supports it
+        showErrorToast('Volunteer registration is not yet available. Please contact the event organizer.');
+        return;
+      }
+
+      // Register for the event using backend API
+      const response = await eventAPI.register(eventId);
+      
+      if (response.success) {
+        // Update local state to reflect registration
+        setRegisteredEvents(prev => new Set([...prev, eventId]));
+        
+        // Show success message
+        const event = upcomingEvents.find(e => e.id === eventId);
+        showSuccessToast(`Successfully registered for "${event?.title}"! Check your notifications for updates.`);
+        
+        // Refresh events to get updated registration count
+        fetchUpcomingEvents();
+      } else {
+        showErrorToast(response.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      showErrorToast(error.message || 'Unable to register. Please check your connection and try again.');
+    } finally {
+      setRegistrationLoading(prev => ({ ...prev, [eventId]: false }));
+    }
   };
 
   const isRegistered = (eventId, type = "participant") => {
-    return registeredEvents.has(`${eventId}-${type}`);
+    if (type === "volunteer") {
+      // TODO: Check volunteer registration when backend supports it
+      return false;
+    }
+    return registeredEvents.has(eventId);
   };
 
   const getDaysUntilEvent = (eventDate) => {
@@ -240,10 +201,11 @@ const UpcomingEvents = () => {
               className="category-filter"
             >
               <option value="all">All Categories</option>
-              <option value="technical">Technical</option>
+              <option value="academic">Academic</option>
               <option value="cultural">Cultural</option>
               <option value="sports">Sports</option>
-              <option value="academic">Academic</option>
+              <option value="workshop">Workshop</option>
+              <option value="seminar">Seminar</option>
             </select>
             <select
               value={selectedType}
@@ -261,7 +223,22 @@ const UpcomingEvents = () => {
       {/* Events Grid */}
       <section className="events-grid-section">
         <div className="container">
-          {filteredEvents.length > 0 ? (
+          {loading ? (
+            <div className="loading-state">
+              <div className="loading-spinner"></div>
+              <p>Loading upcoming events...</p>
+            </div>
+          ) : error ? (
+            <div className="error-state">
+              <i className="fas fa-exclamation-triangle"></i>
+              <h3>Unable to load events</h3>
+              <p>{error}</p>
+              <button className="btn btn-primary" onClick={fetchUpcomingEvents}>
+                <i className="fas fa-refresh"></i>
+                Try Again
+              </button>
+            </div>
+          ) : filteredEvents.length > 0 ? (
             <div className="events-grid">
               {filteredEvents.map(event => {
                 const daysUntil = getDaysUntilEvent(event.date);
@@ -392,10 +369,15 @@ const UpcomingEvents = () => {
                             <button 
                               className={`btn ${isRegistered(event.id) ? 'btn-success' : 'btn-primary'}`}
                               onClick={() => handleRegister(event.id)}
-                              disabled={isRegistered(event.id) || spotsLeft <= 0}
+                              disabled={isRegistered(event.id) || spotsLeft <= 0 || registrationLoading[event.id]}
                             >
-                              <i className={`fas ${isRegistered(event.id) ? 'fa-check' : event.type === 'team' ? 'fa-users' : 'fa-user-plus'}`}></i>
-                              {isRegistered(event.id) 
+                              <i className={`fas ${
+                                registrationLoading[event.id] ? 'fa-spinner fa-spin' :
+                                isRegistered(event.id) ? 'fa-check' : 
+                                event.type === 'team' ? 'fa-users' : 'fa-user-plus'
+                              }`}></i>
+                              {registrationLoading[event.id] ? 'Registering...' :
+                               isRegistered(event.id) 
                                 ? (event.type === 'team' ? 'Team Registered' : 'Registered')
                                 : spotsLeft > 0 
                                   ? (event.type === 'team' ? 'Register Team' : 'Register') 

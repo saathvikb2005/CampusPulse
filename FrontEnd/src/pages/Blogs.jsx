@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { getCurrentUser, isAuthenticated } from "../utils/auth";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
-import { blogAPI } from "../services/api";
+import { blogAPI, eventAPI } from "../services/api";
 import "./Blogs.css";
 
 const Blogs = () => {
@@ -12,6 +12,7 @@ const Blogs = () => {
   const [selectedBlog, setSelectedBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [blogs, setBlogs] = useState([]);
+  const [events, setEvents] = useState([]);
   const [likedBlogs, setLikedBlogs] = useState(new Set());
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -21,10 +22,11 @@ const Blogs = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [likedGalleries, setLikedGalleries] = useState(new Set());
+  const [galleries, setGalleries] = useState([]);
   const [newBlog, setNewBlog] = useState({
     title: '',
     category: 'technical',
-    event: '',
+    eventId: '',
     excerpt: '',
     content: '',
     image: '',
@@ -32,91 +34,14 @@ const Blogs = () => {
   });
   const [newPhoto, setNewPhoto] = useState({
     title: '',
-    event: '',
+    eventId: '',
     description: '',
     category: 'events',
     images: []
   });
   const [tagInput, setTagInput] = useState('');
-
-  // Mock data for blogs
-  const blogPosts = [
-    {
-      id: 1,
-      title: "The Future of Campus Technology",
-      author: "Dr. Sarah Johnson",
-      authorRole: "Professor",
-      date: "2024-03-15",
-      category: "technical",
-      excerpt: "Exploring how emerging technologies are transforming the campus experience for students and faculty alike.",
-      content: "Technology continues to reshape the educational landscape, bringing new opportunities for learning and collaboration...",
-      image: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=600&h=300&fit=crop",
-      likes: 24,
-      comments: 8,
-      tags: ["technology", "education", "innovation"]
-    },
-    {
-      id: 2,
-      title: "Cultural Festival 2024 Highlights",
-      author: "Maria Rodriguez",
-      authorRole: "Student",
-      date: "2024-03-10",
-      category: "cultural",
-      excerpt: "A vibrant celebration of diversity through music, dance, and traditional cuisine from around the world.",
-      content: "Our annual cultural festival brought together students from diverse backgrounds to share their heritage...",
-      image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=300&fit=crop",
-      likes: 45,
-      comments: 12,
-      tags: ["culture", "festival", "diversity"]
-    },
-    {
-      id: 3,
-      title: "Championship Victory: Our Basketball Team",
-      author: "Coach Mike Williams",
-      authorRole: "Coach",
-      date: "2024-03-08",
-      category: "sports",
-      excerpt: "Celebrating our basketball team's incredible journey to winning the inter-university championship.",
-      content: "After months of intense training and dedication, our basketball team has achieved what seemed impossible...",
-      image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&h=300&fit=crop",
-      likes: 67,
-      comments: 23,
-      tags: ["basketball", "championship", "sports"]
-    }
-  ];
-
-  // Mock data for photo galleries
-  const galleryItems = [
-    {
-      id: 1,
-      title: "Tech Symposium 2024",
-      event: "Annual Technology Symposium",
-      description: "Highlights from our biggest tech event of the year",
-      category: "events",
-      author: "Photography Club",
-      date: "2024-03-12",
-      photographer: "Alex Chen",
-      likes: 32,
-      downloads: 15,
-      photos: [
-        {
-          id: 1,
-          url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop",
-          caption: "Opening ceremony keynote"
-        },
-        {
-          id: 2,
-          url: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop",
-          caption: "Interactive tech demonstrations"
-        },
-        {
-          id: 3,
-          url: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=400&h=300&fit=crop",
-          caption: "Student presentations"
-        }
-      ]
-    }
-  ];
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingBlogImage, setUploadingBlogImage] = useState(false);
 
   // Load user and blogs data
   useEffect(() => {
@@ -127,20 +52,17 @@ const Blogs = () => {
     setIsLoggedIn(loginStatus);
     setUserEmail(currentUser?.email || '');
     
+    // Load user's liked galleries from localStorage (will be replaced with backend later)
     if (loginStatus) {
-      // Load user's liked content from localStorage
-      const savedLikedBlogs = localStorage.getItem('likedBlogs');
       const savedLikedGalleries = localStorage.getItem('likedGalleries');
-      
-      if (savedLikedBlogs) {
-        setLikedBlogs(new Set(JSON.parse(savedLikedBlogs)));
-      }
       if (savedLikedGalleries) {
         setLikedGalleries(new Set(JSON.parse(savedLikedGalleries)));
       }
     }
     
     loadBlogs();
+    loadEvents();
+    loadGalleries();
   }, []);
 
   const loadBlogs = async () => {
@@ -149,17 +71,57 @@ const Blogs = () => {
       const response = await blogAPI.getAll();
       
       if (response.success) {
-        setBlogs(response.data?.blogs || response.blogs || []);
+        const blogs = response.data?.blogs || response.blogs || [];
+        setBlogs(blogs);
+        
+        // Extract user's liked blogs from backend data
+        if (isLoggedIn && user) {
+          const userLikedBlogs = new Set();
+          blogs.forEach(blog => {
+            if (blog.likes && blog.likes.some(like => like.user === user._id || like.user._id === user._id)) {
+              userLikedBlogs.add(blog._id);
+            }
+          });
+          setLikedBlogs(userLikedBlogs);
+        }
       } else {
-        // Use mock data as fallback
-        setBlogs(blogPosts);
+        showErrorToast('Failed to load blogs');
+        setBlogs([]);
       }
     } catch (error) {
       console.error('Error loading blogs:', error);
-      // Use mock data as fallback
-      setBlogs(blogPosts);
+      showErrorToast('Failed to load blogs. Please try again.');
+      setBlogs([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadEvents = async () => {
+    try {
+      const response = await eventAPI.getAll();
+      
+      if (response.success) {
+        setEvents(response.data?.events || response.events || []);
+      } else {
+        console.error('Failed to load events');
+        setEvents([]);
+      }
+    } catch (error) {
+      console.error('Error loading events:', error);
+      setEvents([]);
+    }
+  };
+
+  const loadGalleries = async () => {
+    try {
+      // Load user-created galleries from localStorage for now
+      // This can be replaced with backend API when gallery system is implemented
+      const userGalleries = JSON.parse(localStorage.getItem('userGalleries') || '[]');
+      setGalleries(userGalleries);
+    } catch (error) {
+      console.error('Error loading galleries:', error);
+      setGalleries([]);
     }
   };
 
@@ -173,37 +135,61 @@ const Blogs = () => {
     { value: 'social', label: 'Social' }
   ];
 
-  const filteredBlogs = blogs.length > 0 ? blogs.filter(blog => 
-    selectedCategory === "all" || blog.category === selectedCategory
-  ) : blogPosts.filter(blog => 
+  const filteredBlogs = blogs.filter(blog => 
     selectedCategory === "all" || blog.category === selectedCategory
   );
 
-  const filteredGallery = galleryItems.filter(item =>
+  // Combine static gallery items with user-created galleries
+  // Note: Static gallery removed - only showing user-created galleries
+  // This can be replaced with backend API when gallery system is implemented
+  const allGalleries = galleries;
+  const filteredGallery = allGalleries.filter(item =>
     selectedCategory === "all" || item.category === selectedCategory
   );
 
   // Handle blog actions
-  const handleBlogLike = (blogId) => {
+  const handleBlogLike = async (blogId) => {
     if (!isLoggedIn) {
       showErrorToast('Please log in to like posts. Redirecting to login...');
       window.location.href = '/login';
       return;
     }
 
-    const isLiked = likedBlogs.has(blogId);
-    const updatedLikedBlogs = new Set(likedBlogs);
+    try {
+      const response = await blogAPI.toggleLike(blogId);
+      
+      if (response.success) {
+        const wasLiked = likedBlogs.has(blogId);
+        const updatedLikedBlogs = new Set(likedBlogs);
 
-    if (isLiked) {
-      updatedLikedBlogs.delete(blogId);
-      showSuccessToast('Blog post unliked!');
-    } else {
-      updatedLikedBlogs.add(blogId);
-      showSuccessToast('Blog post liked!');
+        if (wasLiked) {
+          updatedLikedBlogs.delete(blogId);
+          showSuccessToast('Blog post unliked!');
+        } else {
+          updatedLikedBlogs.add(blogId);
+          showSuccessToast('Blog post liked!');
+        }
+
+        setLikedBlogs(updatedLikedBlogs);
+        
+        // Update blog in state with new like count
+        setBlogs(prevBlogs => 
+          prevBlogs.map(blog => 
+            blog._id === blogId 
+              ? { 
+                  ...blog, 
+                  likeCount: response.data?.likesCount || (wasLiked ? blog.likeCount - 1 : blog.likeCount + 1)
+                }
+              : blog
+          )
+        );
+      } else {
+        showErrorToast(response.message || 'Failed to like/unlike blog');
+      }
+    } catch (error) {
+      console.error('Blog like error:', error);
+      showErrorToast('Failed to like/unlike blog. Please try again.');
     }
-
-    setLikedBlogs(updatedLikedBlogs);
-    localStorage.setItem('likedBlogs', JSON.stringify([...updatedLikedBlogs]));
   };
 
   const handleGalleryLike = (galleryId) => {
@@ -246,100 +232,99 @@ const Blogs = () => {
     setShowPhotoModal(true);
   };
 
-  const handleSubmitBlog = () => {
+  const handleSubmitBlog = async () => {
     if (!newBlog.title || !newBlog.content || !newBlog.excerpt) {
       showErrorToast('Please fill in all required fields (title, excerpt, content)');
       return;
     }
 
     try {
-      const blogs = JSON.parse(localStorage.getItem('userBlogs') || '[]');
       const currentUser = getCurrentUser();
       
-      const blogPost = {
-        id: Date.now(),
+      const blogData = {
         title: newBlog.title,
-        author: currentUser?.name || `${currentUser?.firstName} ${currentUser?.lastName}`,
-        authorRole: currentUser?.role || 'Student',
-        date: new Date().toISOString().split('T')[0],
         category: newBlog.category,
-        event: newBlog.event,
+        eventId: newBlog.eventId || null,
         excerpt: newBlog.excerpt,
         content: newBlog.content,
-        image: newBlog.image || "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=600&h=300&fit=crop",
-        likes: 0,
-        comments: 0,
-        tags: newBlog.tags,
-        authorEmail: currentUser?.email
+        image: newBlog.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=250&fit=crop',
+        tags: newBlog.tags
       };
 
-      blogs.push(blogPost);
-      localStorage.setItem('userBlogs', JSON.stringify(blogs));
-
-      // Reset form
-      setNewBlog({
-        title: '',
-        category: 'technical',
-        event: '',
-        excerpt: '',
-        content: '',
-        image: '',
-        tags: []
-      });
-      setShowBlogModal(false);
-      showSuccessToast('Blog post published successfully!');
+      const response = await blogAPI.create(blogData);
       
-      // Refresh to show new blog
-      window.location.reload();
+      if (response.success) {
+        // Reset form
+        setNewBlog({
+          title: '',
+          category: 'technical',
+          eventId: '',
+          excerpt: '',
+          content: '',
+          image: '',
+          tags: []
+        });
+        setShowBlogModal(false);
+        showSuccessToast('Blog post published successfully!');
+        
+        // Reload blogs
+        loadBlogs();
+      } else {
+        showErrorToast(response.message || 'Failed to publish blog');
+      }
     } catch (error) {
       console.error('Blog submission error:', error);
       showErrorToast('Failed to publish blog. Please try again.');
     }
   };
 
-  const handleSubmitPhotos = () => {
+  const handleSubmitPhotos = async () => {
     if (!newPhoto.title || newPhoto.images.length === 0) {
-      alert('Please provide a title and select at least one image');
+      showErrorToast('Please provide a title and select at least one image');
       return;
     }
 
     try {
-      const galleries = JSON.parse(localStorage.getItem('userGalleries') || '[]');
       const currentUser = getCurrentUser();
       
       const galleryPost = {
         id: Date.now(),
         title: newPhoto.title,
-        event: newPhoto.event,
+        eventId: newPhoto.eventId,
+        eventName: newPhoto.eventId ? events.find(e => e._id === newPhoto.eventId)?.title || 'Unknown Event' : '',
         description: newPhoto.description,
         category: newPhoto.category,
         author: currentUser?.name || `${currentUser?.firstName} ${currentUser?.lastName}`,
         date: new Date().toISOString().split('T')[0],
+        photographer: currentUser?.name || `${currentUser?.firstName} ${currentUser?.lastName}`,
         images: newPhoto.images,
+        photos: newPhoto.images, // Keep both for compatibility
         likes: 0,
-        comments: 0,
+        downloads: 0,
         authorEmail: currentUser?.email
       };
 
+      // Save to localStorage for now (can be replaced with backend API later)
+      const galleries = JSON.parse(localStorage.getItem('userGalleries') || '[]');
       galleries.push(galleryPost);
       localStorage.setItem('userGalleries', JSON.stringify(galleries));
 
       // Reset form
       setNewPhoto({
         title: '',
-        event: '',
+        eventId: '',
         description: '',
         category: 'events',
         images: []
       });
       setShowPhotoModal(false);
-      alert('Photo gallery published successfully!');
+      showSuccessToast('Photo gallery published successfully!');
       
-      // Refresh to show new gallery
-      window.location.reload();
+      // Reload galleries
+      loadGalleries();
     } catch (error) {
       console.error('Photo submission error:', error);
-      alert('Failed to publish gallery. Please try again.');
+      showErrorToast('Failed to publish gallery. Please try again.');
     }
   };
 
@@ -361,16 +346,171 @@ const Blogs = () => {
   };
 
   const addImage = () => {
+    // Create file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    
+    input.onchange = (event) => {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+      
+      setUploadingImages(true);
+      
+      // Process each selected file
+      const processedImages = [];
+      let processedCount = 0;
+      
+      files.forEach((file, index) => {
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          showErrorToast(`File ${file.name} is too large. Maximum size is 5MB.`);
+          processedCount++;
+          if (processedCount === files.length) {
+            setUploadingImages(false);
+            if (processedImages.length > 0) {
+              setNewPhoto(prev => ({
+                ...prev,
+                images: [...prev.images, ...processedImages]
+              }));
+            }
+          }
+          return;
+        }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showErrorToast(`File ${file.name} is not a valid image.`);
+          processedCount++;
+          if (processedCount === files.length) {
+            setUploadingImages(false);
+            if (processedImages.length > 0) {
+              setNewPhoto(prev => ({
+                ...prev,
+                images: [...prev.images, ...processedImages]
+              }));
+            }
+          }
+          return;
+        }
+        
+        // Create FileReader to convert to base64
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          processedImages.push({
+            id: Date.now() + index,
+            url: e.target.result,
+            caption: file.name.replace(/\.[^/.]+$/, ''), // Remove file extension
+            file: file,
+            isLocal: true
+          });
+          
+          processedCount++;
+          if (processedCount === files.length) {
+            setUploadingImages(false);
+            setNewPhoto(prev => ({
+              ...prev,
+              images: [...prev.images, ...processedImages]
+            }));
+            showSuccessToast(`${processedImages.length} image(s) added successfully!`);
+          }
+        };
+        
+        reader.onerror = () => {
+          showErrorToast(`Failed to process ${file.name}`);
+          processedCount++;
+          if (processedCount === files.length) {
+            setUploadingImages(false);
+            if (processedImages.length > 0) {
+              setNewPhoto(prev => ({
+                ...prev,
+                images: [...prev.images, ...processedImages]
+              }));
+            }
+          }
+        };
+        
+        reader.readAsDataURL(file);
+      });
+    };
+    
+    input.click();
+  };
+
+  const addImageFromURL = () => {
     const imageUrl = prompt('Enter image URL:');
     if (imageUrl) {
-      setNewPhoto({
-        ...newPhoto,
-        images: [...newPhoto.images, {
-          url: imageUrl,
-          caption: ''
-        }]
-      });
+      // Validate URL format
+      try {
+        new URL(imageUrl);
+        setNewPhoto({
+          ...newPhoto,
+          images: [...newPhoto.images, {
+            id: Date.now(),
+            url: imageUrl,
+            caption: 'Image from URL',
+            isLocal: false
+          }]
+        });
+        showSuccessToast('Image URL added successfully!');
+      } catch (error) {
+        showErrorToast('Please enter a valid URL');
+      }
     }
+  };
+
+  const updateImageCaption = (imageId, caption) => {
+    setNewPhoto(prev => ({
+      ...prev,
+      images: prev.images.map(img => 
+        img.id === imageId ? { ...img, caption } : img
+      )
+    }));
+  };
+
+  const uploadBlogImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showErrorToast('Image is too large. Maximum size is 5MB.');
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showErrorToast('Please select a valid image file.');
+        return;
+      }
+      
+      setUploadingBlogImage(true);
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setNewBlog(prev => ({
+          ...prev,
+          image: e.target.result
+        }));
+        setUploadingBlogImage(false);
+        showSuccessToast('Blog image uploaded successfully!');
+      };
+      
+      reader.onerror = () => {
+        showErrorToast('Failed to process image');
+        setUploadingBlogImage(false);
+      };
+      
+      reader.readAsDataURL(file);
+    };
+    
+    input.click();
   };
 
   const handleShareBlog = (blog) => {
@@ -476,81 +616,111 @@ const Blogs = () => {
             </div>
             
             <div className="blogs-grid">
-              {filteredBlogs.map(blog => (
-                <article key={blog.id} className="blog-card">
-                  <div className="blog-image">
-                    <img src={blog.image} alt={blog.title} />
-                    <div className="blog-category">{blog.category}</div>
-                  </div>
-                  
-                  <div className="blog-content">
-                    <div className="blog-meta">
-                      <div className="author-info">
-                        <div className="author-avatar">
-                          {blog.author.charAt(0)}
+              {filteredBlogs.length > 0 ? (
+                filteredBlogs.map(blog => (
+                  <article key={blog._id} className="blog-card">
+                    <div className="blog-image">
+                      <img 
+                        src={blog.featuredImage || blog.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=250&fit=crop'} 
+                        alt={blog.title} 
+                      />
+                      <div className="blog-category">{blog.category}</div>
+                    </div>
+                    
+                    <div className="blog-content">
+                      <div className="blog-meta">
+                        <div className="author-info">
+                          <div className="author-avatar">
+                            {(blog.authorName || blog.author?.firstName || 'A').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="author-name">
+                              {blog.authorName || `${blog.author?.firstName || ''} ${blog.author?.lastName || ''}`.trim() || 'Anonymous'}
+                            </span>
+                            <span className="author-role">
+                              {blog.author?.role || 'Student'}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="author-name">{blog.author}</span>
-                          <span className="author-role">{blog.authorRole}</span>
-                        </div>
+                        <span className="blog-date">
+                          {new Date(blog.publishedAt || blog.createdAt).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </span>
                       </div>
-                      <span className="blog-date">
-                        {new Date(blog.date).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </span>
-                    </div>
-                    
-                    <h3 className="blog-title">{blog.title}</h3>
-                    <p className="blog-excerpt">{blog.excerpt}</p>
-                    
-                    <div className="blog-tags">
-                      {blog.tags.map((tag, index) => (
-                        <span key={index} className="tag">#{tag}</span>
-                      ))}
-                    </div>
-                    
-                    <div className="blog-actions">
-                      <button 
-                        className="btn btn-outline"
-                        onClick={() => setSelectedBlog(blog)}
-                      >
-                        Read More
-                      </button>
-                      <div className="blog-stats">
+                      
+                      <h3 className="blog-title">{blog.title}</h3>
+                      <p className="blog-excerpt">{blog.excerpt}</p>
+                      
+                      <div className="blog-tags">
+                        {(blog.tags || []).map((tag, index) => (
+                          <span key={index} className="tag">#{tag}</span>
+                        ))}
+                      </div>
+                      
+                      <div className="blog-actions">
                         <button 
-                          className={`stat-btn ${likedBlogs.has(blog.id) ? 'liked' : ''}`}
-                          onClick={() => handleBlogLike(blog.id)}
+                          className="btn btn-outline"
+                          onClick={() => setSelectedBlog(blog)}
                         >
-                          <i className={`fas fa-heart ${likedBlogs.has(blog.id) ? 'liked' : ''}`}></i>
-                          {blog.likes + (likedBlogs.has(blog.id) ? 1 : 0)}
+                          Read More
                         </button>
-                        <Link 
-                          to="/feedback"
-                          className="stat-btn"
-                          onClick={(e) => {
-                            if (!isLoggedIn) {
-                              e.preventDefault();
-                              alert('Please log in to comment. Redirecting to login...');
-                              window.location.href = '/login';
-                              return;
-                            }
-                            // Store context for feedback
-                            localStorage.setItem('feedbackEventId', blog.id);
-                            localStorage.setItem('feedbackEventTitle', blog.title);
-                            localStorage.setItem('feedbackType', 'blog');
-                          }}
-                        >
-                          <i className="fas fa-comments"></i>
-                          {blog.comments}
-                        </Link>
+                        <div className="blog-stats">
+                          <button 
+                            className={`stat-btn ${likedBlogs.has(blog._id) ? 'liked' : ''}`}
+                            onClick={() => handleBlogLike(blog._id)}
+                          >
+                            <i className={`fas fa-heart ${likedBlogs.has(blog._id) ? 'liked' : ''}`}></i>
+                            {(blog.likeCount || blog.likes?.length || 0)}
+                          </button>
+                          <Link 
+                            to="/feedback"
+                            className="stat-btn"
+                            onClick={(e) => {
+                              if (!isLoggedIn) {
+                                e.preventDefault();
+                                showErrorToast('Please log in to comment. Redirecting to login...');
+                                window.location.href = '/login';
+                                return;
+                              }
+                              // Store context for feedback
+                              localStorage.setItem('feedbackEventId', blog._id);
+                              localStorage.setItem('feedbackEventTitle', blog.title);
+                              localStorage.setItem('feedbackType', 'blog');
+                            }}
+                          >
+                            <i className="fas fa-comments"></i>
+                            {blog.commentCount || blog.comments?.length || 0}
+                          </Link>
+                        </div>
                       </div>
                     </div>
+                  </article>
+                ))
+              ) : (
+                <div className="no-blogs-message">
+                  <div className="empty-state">
+                    <i className="fas fa-blog"></i>
+                    <h3>No Blog Posts Yet</h3>
+                    <p>
+                      {selectedCategory === "all" 
+                        ? "Be the first to share your thoughts and experiences!" 
+                        : `No blog posts found in the "${selectedCategory}" category.`}
+                    </p>
+                    {isLoggedIn && (
+                      <button 
+                        className="btn btn-primary"
+                        onClick={handleWriteBlog}
+                      >
+                        <i className="fas fa-plus"></i>
+                        Write a Blog
+                      </button>
+                    )}
                   </div>
-                </article>
-              ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -572,74 +742,99 @@ const Blogs = () => {
             </div>
             
             <div className="gallery-grid">
-              {filteredGallery.map(gallery => (
-                <div key={gallery.id} className="gallery-card">
-                  <div className="gallery-header">
-                    <h3>{gallery.title}</h3>
-                    <div className="gallery-meta">
-                      <span className="gallery-event">{gallery.event}</span>
-                      <span className="gallery-date">
-                        {new Date(gallery.date).toLocaleDateString()}
-                      </span>
+              {filteredGallery.length > 0 ? (
+                filteredGallery.map(gallery => (
+                  <div key={gallery.id} className="gallery-card">
+                    <div className="gallery-header">
+                      <h3>{gallery.title}</h3>
+                      <div className="gallery-meta">
+                        <span className="gallery-event">
+                          {gallery.eventName || gallery.event || 'General Gallery'}
+                        </span>
+                        <span className="gallery-date">
+                          {new Date(gallery.date).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="photos-grid">
-                    {gallery.photos.map(photo => (
-                      <div key={photo.id} className="photo-item">
-                        <img src={photo.url} alt={photo.caption} />
-                        <div className="photo-overlay">
-                          <p className="photo-caption">{photo.caption}</p>
-                          <div className="photo-actions">
-                            <button 
-                              className="photo-btn"
-                              onClick={() => {
-                                setSelectedPhoto(photo);
-                                setShowPhotoViewer(true);
-                              }}
-                            >
-                              <i className="fas fa-expand"></i>
-                            </button>
-                            <button 
-                              className="photo-btn"
-                              onClick={() => {
-                                if (!isLoggedIn) {
-                                  alert('Please log in to download photos. Redirecting to login...');
-                                  window.location.href = '/login';
-                                  return;
-                                }
-                                alert('Photo downloaded! Check your downloads folder.');
-                              }}
-                            >
-                              <i className="fas fa-download"></i>
-                            </button>
+                    
+                    <div className="photos-grid">
+                      {(gallery.photos || gallery.images || []).map((photo, photoIndex) => (
+                        <div key={photo.id || photoIndex} className="photo-item">
+                          <img src={photo.url} alt={photo.caption || `Photo ${photoIndex + 1}`} />
+                          <div className="photo-overlay">
+                            <p className="photo-caption">{photo.caption || `Photo ${photoIndex + 1}`}</p>
+                            <div className="photo-actions">
+                              <button 
+                                className="photo-btn"
+                                onClick={() => {
+                                  setSelectedPhoto(photo);
+                                  setShowPhotoViewer(true);
+                                }}
+                              >
+                                <i className="fas fa-expand"></i>
+                              </button>
+                              <button 
+                                className="photo-btn"
+                                onClick={() => {
+                                  if (!isLoggedIn) {
+                                    showErrorToast('Please log in to download photos. Redirecting to login...');
+                                    window.location.href = '/login';
+                                    return;
+                                  }
+                                  showSuccessToast('Photo downloaded! Check your downloads folder.');
+                                }}
+                              >
+                                <i className="fas fa-download"></i>
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                    
+                    <div className="gallery-footer">
+                      <div className="photographer-info">
+                        <i className="fas fa-camera"></i>
+                        <span>Photos by {gallery.photographer || gallery.author}</span>
                       </div>
-                    ))}
+                      <div className="gallery-stats">
+                        <button 
+                          className={`stat-btn ${likedGalleries.has(gallery.id) ? 'liked' : ''}`}
+                          onClick={() => handleGalleryLike(gallery.id)}
+                        >
+                          <i className={`fas fa-heart ${likedGalleries.has(gallery.id) ? 'liked' : ''}`}></i>
+                          {(gallery.likes || 0) + (likedGalleries.has(gallery.id) ? 1 : 0)}
+                        </button>
+                        <span className="stat">
+                          <i className="fas fa-download"></i>
+                          {gallery.downloads || 0}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="gallery-footer">
-                    <div className="photographer-info">
-                      <i className="fas fa-camera"></i>
-                      <span>Photos by {gallery.photographer}</span>
-                    </div>
-                    <div className="gallery-stats">
+                ))
+              ) : (
+                <div className="no-galleries-message">
+                  <div className="empty-state">
+                    <i className="fas fa-images"></i>
+                    <h3>No Photo Galleries Yet</h3>
+                    <p>
+                      {selectedCategory === "all" 
+                        ? "Be the first to upload and share photos from campus events!" 
+                        : `No galleries found in the "${selectedCategory}" category.`}
+                    </p>
+                    {isLoggedIn && (
                       <button 
-                        className={`stat-btn ${likedGalleries.has(gallery.id) ? 'liked' : ''}`}
-                        onClick={() => handleGalleryLike(gallery.id)}
+                        className="btn btn-primary"
+                        onClick={handleUploadPhotos}
                       >
-                        <i className={`fas fa-heart ${likedGalleries.has(gallery.id) ? 'liked' : ''}`}></i>
-                        {gallery.likes + (likedGalleries.has(gallery.id) ? 1 : 0)}
+                        <i className="fas fa-upload"></i>
+                        Upload Photos
                       </button>
-                      <span className="stat">
-                        <i className="fas fa-download"></i>
-                        {gallery.downloads}
-                      </span>
-                    </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </section>
@@ -663,13 +858,17 @@ const Blogs = () => {
               <div className="blog-modal-meta">
                 <div className="author-info">
                   <div className="author-avatar large">
-                    {selectedBlog.author.charAt(0)}
+                    {(selectedBlog.authorName || selectedBlog.author?.firstName || 'A').charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <span className="author-name">{selectedBlog.author}</span>
-                    <span className="author-role">{selectedBlog.authorRole}</span>
+                    <span className="author-name">
+                      {selectedBlog.authorName || `${selectedBlog.author?.firstName || ''} ${selectedBlog.author?.lastName || ''}`.trim() || 'Anonymous'}
+                    </span>
+                    <span className="author-role">
+                      {selectedBlog.author?.role || 'Student'}
+                    </span>
                     <span className="blog-date">
-                      {new Date(selectedBlog.date).toLocaleDateString('en-US', { 
+                      {new Date(selectedBlog.publishedAt || selectedBlog.createdAt).toLocaleDateString('en-US', { 
                         weekday: 'long',
                         year: 'numeric', 
                         month: 'long', 
@@ -680,27 +879,33 @@ const Blogs = () => {
                 </div>
               </div>
               
-              <img src={selectedBlog.image} alt={selectedBlog.title} className="modal-image" />
+              <img 
+                src={selectedBlog.featuredImage || selectedBlog.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&h=400&fit=crop'} 
+                alt={selectedBlog.title} 
+                className="modal-image" 
+              />
               
               <div className="modal-text">
-                <p>{selectedBlog.content}</p>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                <div className="blog-full-content">
+                  {selectedBlog.content.split('\n').map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  ))}
+                </div>
               </div>
               
               <div className="modal-tags">
-                {selectedBlog.tags.map((tag, index) => (
+                {(selectedBlog.tags || []).map((tag, index) => (
                   <span key={index} className="tag">#{tag}</span>
                 ))}
               </div>
               
               <div className="modal-actions">
                 <button 
-                  className={`btn ${likedBlogs.has(selectedBlog.id) ? 'btn-primary liked' : 'btn-outline'}`}
-                  onClick={() => handleBlogLike(selectedBlog.id)}
+                  className={`btn ${likedBlogs.has(selectedBlog._id) ? 'btn-primary liked' : 'btn-outline'}`}
+                  onClick={() => handleBlogLike(selectedBlog._id)}
                 >
-                  <i className={`fas fa-heart ${likedBlogs.has(selectedBlog.id) ? 'liked' : ''}`}></i>
-                  {likedBlogs.has(selectedBlog.id) ? 'Liked' : 'Like'} ({selectedBlog.likes + (likedBlogs.has(selectedBlog.id) ? 1 : 0)})
+                  <i className={`fas fa-heart ${likedBlogs.has(selectedBlog._id) ? 'liked' : ''}`}></i>
+                  {likedBlogs.has(selectedBlog._id) ? 'Liked' : 'Like'} ({(selectedBlog.likeCount || selectedBlog.likes?.length || 0)})
                 </button>
                 <button 
                   className="btn btn-outline"
@@ -715,18 +920,18 @@ const Blogs = () => {
                   onClick={(e) => {
                     if (!isLoggedIn) {
                       e.preventDefault();
-                      alert('Please log in to comment. Redirecting to login...');
+                      showErrorToast('Please log in to comment. Redirecting to login...');
                       window.location.href = '/login';
                       return;
                     }
-                    localStorage.setItem('feedbackEventId', selectedBlog.id);
+                    localStorage.setItem('feedbackEventId', selectedBlog._id);
                     localStorage.setItem('feedbackEventTitle', selectedBlog.title);
                     localStorage.setItem('feedbackType', 'blog');
                     setSelectedBlog(null);
                   }}
                 >
                   <i className="fas fa-comments"></i>
-                  Comments ({selectedBlog.comments})
+                  Comments ({selectedBlog.commentCount || selectedBlog.comments?.length || 0})
                 </Link>
               </div>
             </div>
@@ -770,23 +975,67 @@ const Blogs = () => {
                 </div>
                 <div className="form-group">
                   <label>Related Event</label>
-                  <input
-                    type="text"
-                    value={newBlog.event}
-                    onChange={(e) => setNewBlog({...newBlog, event: e.target.value})}
-                    placeholder="Event name (optional)"
-                  />
+                  <select
+                    value={newBlog.eventId}
+                    onChange={(e) => setNewBlog({...newBlog, eventId: e.target.value})}
+                  >
+                    <option value="">Select an event (optional)</option>
+                    {events.map(event => (
+                      <option key={event._id} value={event._id}>
+                        {event.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Image URL</label>
-                <input
-                  type="url"
-                  value={newBlog.image}
-                  onChange={(e) => setNewBlog({...newBlog, image: e.target.value})}
-                  placeholder="https://example.com/image.jpg (optional)"
-                />
+                <label>Featured Image</label>
+                <div className="blog-image-upload">
+                  <div className="upload-buttons">
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={uploadBlogImage}
+                      disabled={uploadingBlogImage}
+                    >
+                      <i className="fas fa-upload"></i>
+                      {uploadingBlogImage ? 'Uploading...' : 'Upload Image'}
+                    </button>
+                    <span className="upload-divider">or</span>
+                    <input
+                      type="url"
+                      value={newBlog.image}
+                      onChange={(e) => setNewBlog({...newBlog, image: e.target.value})}
+                      placeholder="Enter image URL"
+                      className="url-input"
+                    />
+                  </div>
+                  {newBlog.image && (
+                    <div className="image-preview-section">
+                      <img 
+                        src={newBlog.image} 
+                        alt="Blog preview" 
+                        className="blog-image-preview"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          showErrorToast('Invalid image URL');
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="remove-blog-image"
+                        onClick={() => setNewBlog({...newBlog, image: ''})}
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  )}
+                  <p className="upload-info">
+                    <i className="fas fa-info-circle"></i>
+                    Upload an image or enter a URL. Recommended size: 800x400px
+                  </p>
+                </div>
               </div>
 
               <div className="form-group">
@@ -880,12 +1129,17 @@ const Blogs = () => {
                 </div>
                 <div className="form-group">
                   <label>Related Event</label>
-                  <input
-                    type="text"
-                    value={newPhoto.event}
-                    onChange={(e) => setNewPhoto({...newPhoto, event: e.target.value})}
-                    placeholder="Event name (optional)"
-                  />
+                  <select
+                    value={newPhoto.eventId}
+                    onChange={(e) => setNewPhoto({...newPhoto, eventId: e.target.value})}
+                  >
+                    <option value="">Select an event (optional)</option>
+                    {events.map(event => (
+                      <option key={event._id} value={event._id}>
+                        {event.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -901,26 +1155,86 @@ const Blogs = () => {
 
               <div className="form-group">
                 <label>Images *</label>
-                <button type="button" className="btn btn-outline" onClick={addImage}>
-                  Add Image URL
-                </button>
-                <div className="images-list">
-                  {newPhoto.images.map((image, index) => (
-                    <div key={index} className="image-item">
-                      <img src={image.url} alt={`Preview ${index + 1}`} className="image-preview" />
-                      <button 
-                        type="button" 
-                        className="remove-image"
-                        onClick={() => setNewPhoto({
-                          ...newPhoto,
-                          images: newPhoto.images.filter((_, i) => i !== index)
-                        })}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                <div className="image-upload-section">
+                  <div className="upload-buttons">
+                    <button 
+                      type="button" 
+                      className="btn btn-primary" 
+                      onClick={addImage}
+                      disabled={uploadingImages}
+                    >
+                      <i className="fas fa-upload"></i>
+                      {uploadingImages ? 'Uploading...' : 'Upload Images'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-outline" 
+                      onClick={addImageFromURL}
+                    >
+                      <i className="fas fa-link"></i>
+                      Add from URL
+                    </button>
+                  </div>
+                  <p className="upload-info">
+                    <i className="fas fa-info-circle"></i>
+                    Select multiple images (max 5MB each). Supported formats: JPG, PNG, GIF, WebP
+                  </p>
                 </div>
+                
+                {newPhoto.images.length > 0 && (
+                  <div className="images-list">
+                    <h4>Selected Images ({newPhoto.images.length})</h4>
+                    <div className="images-grid">
+                      {newPhoto.images.map((image, index) => (
+                        <div key={image.id || index} className="image-item">
+                          <div className="image-preview-container">
+                            <img 
+                              src={image.url} 
+                              alt={`Preview ${index + 1}`} 
+                              className="image-preview" 
+                            />
+                            <div className="image-overlay">
+                              <button 
+                                type="button" 
+                                className="remove-image"
+                                onClick={() => setNewPhoto({
+                                  ...newPhoto,
+                                  images: newPhoto.images.filter((_, i) => i !== index)
+                                })}
+                                title="Remove image"
+                              >
+                                <i className="fas fa-times"></i>
+                              </button>
+                            </div>
+                          </div>
+                          <div className="image-details">
+                            <input
+                              type="text"
+                              placeholder="Image caption..."
+                              value={image.caption || ''}
+                              onChange={(e) => updateImageCaption(image.id || index, e.target.value)}
+                              className="caption-input"
+                            />
+                            <div className="image-info">
+                              {image.isLocal && (
+                                <span className="file-info">
+                                  <i className="fas fa-file-image"></i>
+                                  {image.file?.name || 'Local file'}
+                                </span>
+                              )}
+                              {!image.isLocal && (
+                                <span className="url-info">
+                                  <i className="fas fa-link"></i>
+                                  External URL
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
@@ -951,7 +1265,7 @@ const Blogs = () => {
                 className="btn btn-primary"
                 onClick={() => {
                   if (!isLoggedIn) {
-                    alert('Please log in to download photos. Redirecting to login...');
+                    showErrorToast('Please log in to download photos. Redirecting to login...');
                     window.location.href = '/login';
                     return;
                   }
@@ -962,7 +1276,7 @@ const Blogs = () => {
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
-                  alert('Photo download started!');
+                  showSuccessToast('Photo download started!');
                 }}
               >
                 <i className="fas fa-download"></i> Download
@@ -977,7 +1291,7 @@ const Blogs = () => {
                     });
                   } else {
                     navigator.clipboard.writeText(selectedPhoto.url);
-                    alert('Photo URL copied to clipboard!');
+                    showSuccessToast('Photo URL copied to clipboard!');
                   }
                 }}
               >

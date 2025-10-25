@@ -10,6 +10,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Features from "./pages/Features";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import PastEvents from "./pages/events/PastEvents";
 import PresentEvents from "./pages/events/PresentEvents";
 import UpcomingEvents from "./pages/events/UpcomingEvents";
@@ -22,6 +23,7 @@ import EventDetails from "./pages/events/EventDetails";
 import EventManagement from "./pages/events/EventManagement";
 import RegistrationConfirmation from "./pages/events/RegistrationConfirmation";
 import Feedback from "./pages/Feedback";
+import FeedbackManagement from "./pages/FeedbackManagement";
 import Notifications from "./pages/Notifications";
 import Blogs from "./pages/Blogs";
 import Profile from "./pages/Profile";
@@ -145,12 +147,18 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/features" element={<Features />} />
@@ -258,6 +266,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Feedback />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/feedback/manage" 
+          element={
+            <ProtectedRoute requireEventManagement>
+              <FeedbackManagement />
             </ProtectedRoute>
           } 
         />

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../../components/Navigation';
 import { getCurrentUser, canManageEvents } from '../../utils/auth';
+import { eventAPI } from '../../services/api';
+import { showSuccessToast, showErrorToast } from '../../utils/toastUtils';
 import './EventManagement.css';
 
 const EventManagement = () => {
@@ -34,6 +36,7 @@ const EventManagement = () => {
   });
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -45,31 +48,53 @@ const EventManagement = () => {
     loadUserEvents();
   }, [navigate]);
 
-  const loadUserEvents = () => {
-    // In a real app, this would fetch from API
-    const mockEvents = [
-      {
-        id: 1,
-        title: "Tech Workshop Series",
-        date: "2025-10-15",
-        status: "upcoming",
-        registrations: 45,
-        volunteers: 8,
-        type: "individual",
-        organizer: getCurrentUser()?.name
-      },
-      {
-        id: 2,
-        title: "Hackathon 2025",
-        date: "2025-10-25",
-        status: "upcoming",
-        registrations: 32,
-        volunteers: 10,
-        type: "team",
-        organizer: getCurrentUser()?.name
+  const loadUserEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await eventAPI.getUserCreated();
+      if (response.success && response.data) {
+        const userEvents = response.data.map(event => ({
+          id: event._id,
+          title: event.title,
+          date: event.startDate,
+          status: getEventStatus(event.startDate, event.endDate),
+          registrations: event.registrations?.length || 0,
+          volunteers: event.volunteers?.length || 0,
+          type: event.type || 'individual',
+          category: event.category || 'technical',
+          description: event.description,
+          location: event.location,
+          maxParticipants: event.maxParticipants,
+          organizer: event.organizer?.name || getCurrentUser()?.name,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          image: event.image,
+          youtubeStreamUrl: event.youtubeStreamUrl,
+          streamTitle: event.streamTitle,
+          enableLiveStream: event.enableLiveStream
+        }));
+        setEvents(userEvents);
+      } else {
+        showErrorToast('Failed to load your events');
+        setEvents([]);
       }
-    ];
-    setEvents(mockEvents);
+    } catch (error) {
+      console.error('Error loading user events:', error);
+      showErrorToast('Failed to load events');
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getEventStatus = (startDate, endDate) => {
+    const now = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (now < start) return 'upcoming';
+    if (now >= start && now <= end) return 'live';
+    return 'ended';
   };
 
   const handleInputChange = (e) => {
@@ -116,97 +141,142 @@ const EventManagement = () => {
     e.preventDefault();
     
     try {
+      setLoading(true);
       // Validate form
       if (!eventForm.title || !eventForm.date || !eventForm.location) {
-        alert('Please fill in all required fields');
+        showErrorToast('Please fill in all required fields');
         return;
       }
 
-      // Create event object
-      const newEvent = {
-        ...eventForm,
-        id: Date.now(),
-        organizer: user.name,
-        registered: 0,
-        volunteerRegistered: 0,
-        status: 'upcoming',
-        createdBy: user.email,
-        createdAt: new Date().toISOString()
+      // Create event object for API
+      const eventData = {
+        title: eventForm.title,
+        description: eventForm.description,
+        category: eventForm.category,
+        type: eventForm.type,
+        startDate: `${eventForm.date}T${eventForm.time}:00.000Z`,
+        endDate: `${eventForm.date}T${eventForm.endTime}:00.000Z`,
+        location: eventForm.location,
+        maxParticipants: parseInt(eventForm.maxParticipants) || null,
+        volunteerSpots: parseInt(eventForm.volunteerSpots) || 0,
+        prerequisites: eventForm.prerequisites.filter(p => p.trim()),
+        agenda: eventForm.agenda.filter(a => a.trim()),
+        tags: eventForm.tags.filter(t => t.trim()),
+        registrationDeadline: eventForm.registrationDeadline ? `${eventForm.registrationDeadline}T23:59:59.000Z` : null,
+        teamSize: eventForm.type === 'team' ? eventForm.teamSize : null,
+        image: eventForm.image || null,
+        liveStreamUrl: eventForm.enableLiveStream ? eventForm.youtubeStreamUrl : null,
+        streamTitle: eventForm.enableLiveStream ? eventForm.streamTitle : null,
+        isLive: false // Initially not live
       };
 
-      // In a real app, this would be sent to API
-      console.log('Creating event:', newEvent);
-      alert('Event created successfully!');
+      const response = await eventAPI.create(eventData);
       
-      // Reset form
-      setEventForm({
-        title: '',
-        description: '',
-        category: 'technical',
-        type: 'individual',
-        date: '',
-        time: '',
-        endTime: '',
-        location: '',
-        maxParticipants: '',
-        volunteerSpots: '',
-        prerequisites: [''],
-        agenda: [''],
-        tags: [''],
-        registrationDeadline: '',
-        teamSize: { min: 2, max: 5 },
-        image: '',
-        youtubeStreamUrl: '',
-        streamTitle: '',
-        enableLiveStream: false
-      });
+      if (response.success) {
+        showSuccessToast('Event created successfully!');
+        
+        // Reset form
+        setEventForm({
+          title: '',
+          description: '',
+          category: 'technical',
+          type: 'individual',
+          date: '',
+          time: '',
+          endTime: '',
+          location: '',
+          maxParticipants: '',
+          volunteerSpots: '',
+          prerequisites: [''],
+          agenda: [''],
+          tags: [''],
+          registrationDeadline: '',
+          teamSize: { min: 2, max: 5 },
+          image: '',
+          youtubeStreamUrl: '',
+          streamTitle: '',
+          enableLiveStream: false
+        });
 
-      // Refresh events list
-      loadUserEvents();
-      setActiveTab('manage');
+        // Refresh events list
+        loadUserEvents();
+        setActiveTab('manage');
+      } else {
+        showErrorToast(response.message || 'Failed to create event');
+      }
 
     } catch (error) {
       console.error('Error creating event:', error);
-      alert('Failed to create event. Please try again.');
+      showErrorToast('Failed to create event. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const exportRegistrations = (eventId) => {
-    // Mock data - in real app, fetch from API
-    const registrationData = [
-      ['Name', 'Email', 'Phone', 'Department', 'Registration Date', 'Type'],
-      ['John Doe', 'john@example.com', '9876543210', 'Computer Science', '2025-10-01', 'Participant'],
-      ['Jane Smith', 'jane@example.com', '9876543211', 'Information Technology', '2025-10-02', 'Volunteer'],
-      // Add more mock data
-    ];
+  const exportRegistrations = async (eventId) => {
+    try {
+      const response = await eventAPI.getRegistrations(eventId);
+      
+      if (response.success && response.data) {
+        const registrations = response.data.registrations || response.data;
+        const registrationData = [
+          ['Name', 'Email', 'Phone', 'Department', 'Registration Date', 'Type']
+        ];
+        
+        registrations.forEach(reg => {
+          registrationData.push([
+            reg.name || reg.user?.name || 'N/A',
+            reg.email || reg.user?.email || 'N/A',
+            reg.phone || reg.user?.phone || 'N/A',
+            reg.department || reg.user?.department || 'N/A',
+            new Date(reg.createdAt || reg.registrationDate).toLocaleDateString(),
+            'Participant'
+          ]);
+        });
 
-    const csvContent = registrationData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `event_${eventId}_registrations.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+        const csvContent = registrationData.map(row => row.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `event_${eventId}_registrations.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showSuccessToast('Registration data exported successfully!');
+      } else {
+        showErrorToast('No registration data found');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showErrorToast('Failed to export registration data');
+    }
   };
 
-  const exportVolunteers = (eventId) => {
-    // Mock data - in real app, fetch from API
-    const volunteerData = [
-      ['Name', 'Email', 'Phone', 'Department', 'Registration Date', 'Skills'],
-      ['Alice Johnson', 'alice@example.com', '9876543212', 'Electronics', '2025-10-01', 'Event Management'],
-      ['Bob Wilson', 'bob@example.com', '9876543213', 'Mechanical', '2025-10-02', 'Technical Support'],
-      // Add more mock data
-    ];
+  const exportVolunteers = async (eventId) => {
+    try {
+      // In a real implementation, you would fetch volunteers from API
+      // For now, using mock data
+      const volunteerData = [
+        ['Name', 'Email', 'Phone', 'Department', 'Registration Date', 'Skills'],
+        ['Alice Johnson', 'alice@example.com', '9876543212', 'Electronics', '2025-10-01', 'Event Management'],
+        ['Bob Wilson', 'bob@example.com', '9876543213', 'Mechanical', '2025-10-02', 'Technical Support'],
+      ];
 
-    const csvContent = volunteerData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `event_${eventId}_volunteers.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      const csvContent = volunteerData.map(row => row.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `event_${eventId}_volunteers.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      showSuccessToast('Volunteer data exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      showErrorToast('Failed to export volunteer data');
+    }
   };
 
   const handleEditEvent = (event) => {
@@ -216,85 +286,115 @@ const EventManagement = () => {
       description: event.description || '',
       category: event.category || 'technical',
       type: event.type || 'individual',
-      date: event.date || '',
-      time: event.time || '',
-      endTime: event.endTime || '',
+      date: event.startDate ? event.startDate.split('T')[0] : '',
+      time: event.startDate ? event.startDate.split('T')[1].substring(0, 5) : '',
+      endTime: event.endDate ? event.endDate.split('T')[1].substring(0, 5) : '',
       location: event.location || '',
       maxParticipants: event.maxParticipants || '',
       volunteerSpots: event.volunteerSpots || '',
       prerequisites: event.prerequisites || [''],
       agenda: event.agenda || [''],
       tags: event.tags || [''],
-      registrationDeadline: event.registrationDeadline || '',
+      registrationDeadline: event.registrationDeadline ? event.registrationDeadline.split('T')[0] : '',
       teamSize: event.teamSize || { min: 2, max: 5 },
       image: event.image || '',
-      youtubeStreamUrl: event.youtubeStreamUrl || '',
+      youtubeStreamUrl: event.liveStreamUrl || event.youtubeStreamUrl || '',
       streamTitle: event.streamTitle || '',
-      enableLiveStream: event.enableLiveStream || false
+      enableLiveStream: !!event.liveStreamUrl || event.enableLiveStream || false
     });
     setActiveTab('edit');
   };
 
-  const handleUpdateEvent = () => {
+  const handleUpdateEvent = async () => {
     if (!eventForm.title || !eventForm.description || !eventForm.date) {
-      alert('Please fill in all required fields');
+      showErrorToast('Please fill in all required fields');
       return;
     }
 
     try {
-      const updatedEvents = events.map(event =>
-        event.id === editingEvent.id ? {
-          ...event,
-          ...eventForm,
-          lastModified: new Date().toISOString()
-        } : event
-      );
+      setLoading(true);
+      const eventData = {
+        title: eventForm.title,
+        description: eventForm.description,
+        category: eventForm.category,
+        type: eventForm.type,
+        startDate: `${eventForm.date}T${eventForm.time}:00.000Z`,
+        endDate: `${eventForm.date}T${eventForm.endTime}:00.000Z`,
+        location: eventForm.location,
+        maxParticipants: parseInt(eventForm.maxParticipants) || null,
+        volunteerSpots: parseInt(eventForm.volunteerSpots) || 0,
+        prerequisites: eventForm.prerequisites.filter(p => p.trim()),
+        agenda: eventForm.agenda.filter(a => a.trim()),
+        tags: eventForm.tags.filter(t => t.trim()),
+        registrationDeadline: eventForm.registrationDeadline ? `${eventForm.registrationDeadline}T23:59:59.000Z` : null,
+        teamSize: eventForm.type === 'team' ? eventForm.teamSize : null,
+        image: eventForm.image || null,
+        liveStreamUrl: eventForm.enableLiveStream ? eventForm.youtubeStreamUrl : null,
+        streamTitle: eventForm.enableLiveStream ? eventForm.streamTitle : null
+      };
+
+      const response = await eventAPI.update(editingEvent.id, eventData);
       
-      setEvents(updatedEvents);
-      localStorage.setItem('userEvents', JSON.stringify(updatedEvents));
-      
-      alert(`Event "${eventForm.title}" updated successfully!`);
-      
-      setEventForm({
-        title: '',
-        description: '',
-        category: 'technical',
-        type: 'individual',
-        date: '',
-        time: '',
-        endTime: '',
-        location: '',
-        maxParticipants: '',
-        volunteerSpots: '',
-        prerequisites: [''],
-        agenda: [''],
-        tags: [''],
-        registrationDeadline: '',
-        teamSize: { min: 2, max: 5 },
-        image: '',
-        youtubeStreamUrl: '',
-        streamTitle: '',
-        enableLiveStream: false
-      });
-      setEditingEvent(null);
-      setActiveTab('manage');
+      if (response.success) {
+        showSuccessToast(`Event "${eventForm.title}" updated successfully!`);
+        
+        // Reset form and state
+        setEventForm({
+          title: '',
+          description: '',
+          category: 'technical',
+          type: 'individual',
+          date: '',
+          time: '',
+          endTime: '',
+          location: '',
+          maxParticipants: '',
+          volunteerSpots: '',
+          prerequisites: [''],
+          agenda: [''],
+          tags: [''],
+          registrationDeadline: '',
+          teamSize: { min: 2, max: 5 },
+          image: '',
+          youtubeStreamUrl: '',
+          streamTitle: '',
+          enableLiveStream: false
+        });
+        setEditingEvent(null);
+        setActiveTab('manage');
+        
+        // Refresh events list
+        loadUserEvents();
+      } else {
+        showErrorToast(response.message || 'Failed to update event');
+      }
 
     } catch (error) {
       console.error('Error updating event:', error);
-      alert('Failed to update event. Please try again.');
+      showErrorToast('Failed to update event. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteEvent = (eventId) => {
+  const handleDeleteEvent = async (eventId) => {
     if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
       try {
-        const updatedEvents = events.filter(event => event.id !== eventId);
-        setEvents(updatedEvents);
-        localStorage.setItem('userEvents', JSON.stringify(updatedEvents));
-        alert('Event deleted successfully!');
+        setLoading(true);
+        const response = await eventAPI.delete(eventId);
+        
+        if (response.success) {
+          showSuccessToast('Event deleted successfully!');
+          // Refresh events list
+          loadUserEvents();
+        } else {
+          showErrorToast(response.message || 'Failed to delete event');
+        }
       } catch (error) {
         console.error('Error deleting event:', error);
-        alert('Failed to delete event. Please try again.');
+        showErrorToast('Failed to delete event. Please try again.');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -310,7 +410,15 @@ const EventManagement = () => {
   };
 
   if (!user) {
-    return <div>Loading...</div>;
+    return (
+      <div className="event-management-page">
+        <Navigation />
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -352,6 +460,13 @@ const EventManagement = () => {
             )}
           </div>
 
+          {loading && (
+            <div className="loading-overlay">
+              <div className="loading-spinner"></div>
+              <p>Processing...</p>
+            </div>
+          )}
+
           {activeTab === 'create' && (
             <div className="create-event-section">
               <form onSubmit={handleSubmit} className="event-form">
@@ -368,6 +483,7 @@ const EventManagement = () => {
                         onChange={handleInputChange}
                         placeholder="Enter event title"
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -377,11 +493,14 @@ const EventManagement = () => {
                         value={eventForm.category}
                         onChange={handleInputChange}
                         required
+                        disabled={loading}
                       >
                         <option value="technical">Technical</option>
                         <option value="cultural">Cultural</option>
                         <option value="sports">Sports</option>
                         <option value="academic">Academic</option>
+                        <option value="workshop">Workshop</option>
+                        <option value="seminar">Seminar</option>
                       </select>
                     </div>
                   </div>
@@ -394,6 +513,7 @@ const EventManagement = () => {
                         value={eventForm.type}
                         onChange={handleInputChange}
                         required
+                        disabled={loading}
                       >
                         <option value="individual">Individual Event</option>
                         <option value="team">Team Event</option>
@@ -408,6 +528,7 @@ const EventManagement = () => {
                         onChange={handleInputChange}
                         placeholder="Event venue"
                         required
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -422,6 +543,7 @@ const EventManagement = () => {
                           value={eventForm.teamSize.min}
                           onChange={handleInputChange}
                           min="2"
+                          disabled={loading}
                         />
                       </div>
                       <div className="form-group">
@@ -432,6 +554,7 @@ const EventManagement = () => {
                           value={eventForm.teamSize.max}
                           onChange={handleInputChange}
                           min="2"
+                          disabled={loading}
                         />
                       </div>
                     </div>
@@ -446,6 +569,7 @@ const EventManagement = () => {
                       placeholder="Event description"
                       rows="4"
                       required
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -462,6 +586,7 @@ const EventManagement = () => {
                         value={eventForm.date}
                         onChange={handleInputChange}
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -472,6 +597,7 @@ const EventManagement = () => {
                         value={eventForm.registrationDeadline}
                         onChange={handleInputChange}
                         required
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -485,6 +611,7 @@ const EventManagement = () => {
                         value={eventForm.time}
                         onChange={handleInputChange}
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -495,6 +622,7 @@ const EventManagement = () => {
                         value={eventForm.endTime}
                         onChange={handleInputChange}
                         required
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -510,6 +638,7 @@ const EventManagement = () => {
                         placeholder={eventForm.type === 'team' ? 'Number of teams' : 'Number of participants'}
                         min="1"
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -521,6 +650,7 @@ const EventManagement = () => {
                         onChange={handleInputChange}
                         placeholder="Number of volunteers needed"
                         min="0"
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -535,6 +665,7 @@ const EventManagement = () => {
                         type="checkbox"
                         checked={eventForm.enableLiveStream}
                         onChange={(e) => setEventForm({...eventForm, enableLiveStream: e.target.checked})}
+                        disabled={loading}
                       />
                       Enable Live Stream for this event
                     </label>
@@ -551,6 +682,7 @@ const EventManagement = () => {
                           onChange={handleInputChange}
                           placeholder="https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID"
                           required={eventForm.enableLiveStream}
+                          disabled={loading}
                         />
                         <small className="form-help">
                           Enter the YouTube video URL for live streaming. You can update this anytime before or during the event.
@@ -565,6 +697,7 @@ const EventManagement = () => {
                           value={eventForm.streamTitle}
                           onChange={handleInputChange}
                           placeholder="e.g., 🔴 LIVE: Annual Tech Conference 2025"
+                          disabled={loading}
                         />
                         <small className="form-help">
                           Custom title for the live stream (optional). If not provided, will use event title.
@@ -596,12 +729,14 @@ const EventManagement = () => {
                           value={prereq}
                           onChange={(e) => handleArrayChange('prerequisites', index, e.target.value)}
                           placeholder="Enter prerequisite"
+                          disabled={loading}
                         />
                         {eventForm.prerequisites.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeArrayItem('prerequisites', index)}
                             className="remove-btn"
+                            disabled={loading}
                           >
                             <i className="fas fa-times"></i>
                           </button>
@@ -612,6 +747,7 @@ const EventManagement = () => {
                       type="button"
                       onClick={() => addArrayItem('prerequisites')}
                       className="add-btn"
+                      disabled={loading}
                     >
                       <i className="fas fa-plus"></i> Add Prerequisite
                     </button>
@@ -626,12 +762,14 @@ const EventManagement = () => {
                           value={item}
                           onChange={(e) => handleArrayChange('agenda', index, e.target.value)}
                           placeholder="Enter agenda item"
+                          disabled={loading}
                         />
                         {eventForm.agenda.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeArrayItem('agenda', index)}
                             className="remove-btn"
+                            disabled={loading}
                           >
                             <i className="fas fa-times"></i>
                           </button>
@@ -642,6 +780,7 @@ const EventManagement = () => {
                       type="button"
                       onClick={() => addArrayItem('agenda')}
                       className="add-btn"
+                      disabled={loading}
                     >
                       <i className="fas fa-plus"></i> Add Agenda Item
                     </button>
@@ -656,12 +795,14 @@ const EventManagement = () => {
                           value={tag}
                           onChange={(e) => handleArrayChange('tags', index, e.target.value)}
                           placeholder="Enter tag"
+                          disabled={loading}
                         />
                         {eventForm.tags.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeArrayItem('tags', index)}
                             className="remove-btn"
+                            disabled={loading}
                           >
                             <i className="fas fa-times"></i>
                           </button>
@@ -672,6 +813,7 @@ const EventManagement = () => {
                       type="button"
                       onClick={() => addArrayItem('tags')}
                       className="add-btn"
+                      disabled={loading}
                     >
                       <i className="fas fa-plus"></i> Add Tag
                     </button>
@@ -685,14 +827,15 @@ const EventManagement = () => {
                       value={eventForm.image}
                       onChange={handleInputChange}
                       placeholder="https://example.com/image.jpg"
+                      disabled={loading}
                     />
                   </div>
                 </div>
 
                 <div className="form-actions">
-                  <button type="submit" className="btn btn-primary">
+                  <button type="submit" className="btn btn-primary" disabled={loading}>
                     <i className="fas fa-plus"></i>
-                    Create Event
+                    {loading ? 'Creating Event...' : 'Create Event'}
                   </button>
                 </div>
               </form>
@@ -740,6 +883,7 @@ const EventManagement = () => {
                                 className="btn btn-sm btn-outline"
                                 onClick={() => exportRegistrations(event.id)}
                                 title="Export Registrations"
+                                disabled={loading}
                               >
                                 <i className="fas fa-download"></i>
                                 Export
@@ -748,6 +892,7 @@ const EventManagement = () => {
                                 className="btn btn-sm btn-info"
                                 onClick={() => viewParticipants(event.id)}
                                 title="View Participants"
+                                disabled={loading}
                               >
                                 <i className="fas fa-users"></i>
                                 Participants
@@ -756,6 +901,7 @@ const EventManagement = () => {
                                 className="btn btn-sm btn-secondary"
                                 onClick={() => viewVolunteers(event.id)}
                                 title="View Volunteers"
+                                disabled={loading}
                               >
                                 <i className="fas fa-hands-helping"></i>
                                 Volunteers
@@ -764,6 +910,7 @@ const EventManagement = () => {
                                 className="btn btn-sm btn-warning"
                                 onClick={() => handleEditEvent(event)}
                                 title="Edit Event"
+                                disabled={loading}
                               >
                                 <i className="fas fa-edit"></i>
                                 Edit
@@ -772,6 +919,7 @@ const EventManagement = () => {
                                 className="btn btn-sm btn-danger"
                                 onClick={() => handleDeleteEvent(event.id)}
                                 title="Delete Event"
+                                disabled={loading}
                               >
                                 <i className="fas fa-trash"></i>
                                 Delete
@@ -791,6 +939,7 @@ const EventManagement = () => {
                   <button
                     className="btn btn-primary"
                     onClick={() => setActiveTab('create')}
+                    disabled={loading}
                   >
                     Create Event
                   </button>
@@ -809,6 +958,7 @@ const EventManagement = () => {
                     setActiveTab('manage');
                     setEditingEvent(null);
                   }}
+                  disabled={loading}
                 >
                   Cancel Edit
                 </button>
@@ -827,6 +977,7 @@ const EventManagement = () => {
                         value={eventForm.title}
                         onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -835,6 +986,7 @@ const EventManagement = () => {
                         name="category"
                         value={eventForm.category}
                         onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
+                        disabled={loading}
                       >
                         <option value="technical">Technical</option>
                         <option value="cultural">Cultural</option>
@@ -853,6 +1005,7 @@ const EventManagement = () => {
                       onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
                       rows="4"
                       required
+                      disabled={loading}
                     />
                   </div>
 
@@ -863,6 +1016,7 @@ const EventManagement = () => {
                         name="type"
                         value={eventForm.type}
                         onChange={(e) => setEventForm({ ...eventForm, type: e.target.value })}
+                        disabled={loading}
                       >
                         <option value="individual">Individual</option>
                         <option value="team">Team</option>
@@ -876,6 +1030,7 @@ const EventManagement = () => {
                         value={eventForm.image}
                         onChange={(e) => setEventForm({ ...eventForm, image: e.target.value })}
                         placeholder="https://example.com/image.jpg"
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -893,6 +1048,7 @@ const EventManagement = () => {
                         value={eventForm.date}
                         onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -903,6 +1059,7 @@ const EventManagement = () => {
                         value={eventForm.time}
                         onChange={(e) => setEventForm({ ...eventForm, time: e.target.value })}
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -912,6 +1069,7 @@ const EventManagement = () => {
                         name="endTime"
                         value={eventForm.endTime}
                         onChange={(e) => setEventForm({ ...eventForm, endTime: e.target.value })}
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -925,6 +1083,7 @@ const EventManagement = () => {
                         value={eventForm.location}
                         onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
                         required
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -935,6 +1094,7 @@ const EventManagement = () => {
                         value={eventForm.maxParticipants}
                         onChange={(e) => setEventForm({ ...eventForm, maxParticipants: e.target.value })}
                         min="1"
+                        disabled={loading}
                       />
                     </div>
                     <div className="form-group">
@@ -945,6 +1105,7 @@ const EventManagement = () => {
                         value={eventForm.volunteerSpots}
                         onChange={(e) => setEventForm({ ...eventForm, volunteerSpots: e.target.value })}
                         min="0"
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -956,6 +1117,7 @@ const EventManagement = () => {
                       name="registrationDeadline"
                       value={eventForm.registrationDeadline}
                       onChange={(e) => setEventForm({ ...eventForm, registrationDeadline: e.target.value })}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -964,11 +1126,11 @@ const EventManagement = () => {
                   <button type="button" className="btn btn-outline" onClick={() => {
                     setActiveTab('manage');
                     setEditingEvent(null);
-                  }}>
+                  }} disabled={loading}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary">
-                    Update Event
+                  <button type="submit" className="btn btn-primary" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Event'}
                   </button>
                 </div>
               </form>

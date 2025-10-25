@@ -855,13 +855,12 @@ const getUpcomingEvents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const category = req.query.category;
     
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     let filter = { 
       status: 'approved',
-      date: { $gte: tomorrow }
+      date: { $gte: today }
     };
     
     if (category && category !== 'all') {

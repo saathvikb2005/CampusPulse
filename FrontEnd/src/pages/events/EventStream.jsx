@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { eventAPI } from "../../services/api";
 import { getCurrentUser, canEditEvent } from "../../utils/auth";
+import { showErrorToast } from "../../utils/toastUtils";
 import "./EventStream.css";
 
 const EventStream = () => {
@@ -14,131 +16,62 @@ const EventStream = () => {
   const [viewerCount, setViewerCount] = useState(0);
   const [user, setUser] = useState(null);
   const [isEventOwner, setIsEventOwner] = useState(false);
-  const [showStreamManager, setShowStreamManager] = useState(false);
-  const [streamUrl, setStreamUrl] = useState('');
-  const [streamTitle, setStreamTitle] = useState('');
+  const [streamData, setStreamData] = useState({
+    youtubeStreamUrl: '',
+    youtubeVideoId: null,
+    isLive: false,
+    streamTitle: '',
+    streamDescription: ''
+  });
 
-  // Helper function to extract YouTube video ID from URL
-  const extractYouTubeId = (url) => {
-    if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-  };
-
-  // Sample event data with streaming info
-  const sampleEvents = {
-    1: {
-      id: 1,
-      title: "Spring Hackathon 2025",
-      startDate: "2025-09-25T09:00:00",
-      endDate: "2025-09-27T18:00:00",
-      description: "48-hour coding marathon to build innovative solutions for real-world problems.",
-      image: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=800&h=400&fit=crop",
-      location: "Tech Hub, Building A",
-      organizer: "IEEE Student Chapter",
-      // This would come from backend - YouTube video ID
-      youtubeVideoId: "dQw4w9WgXcQ", // Example YouTube video ID
-      streamTitle: "🔴 LIVE: Spring Hackathon 2025 - Day 1",
-      streamDescription: "Watch teams compete in real-time as they build innovative solutions during our 48-hour hackathon!",
-      streamSchedule: [
-        { time: "09:00 AM", activity: "Opening Ceremony" },
-        { time: "10:00 AM", activity: "Team Formation & Problem Reveal" },
-        { time: "11:00 AM", activity: "Coding Begins" },
-        { time: "01:00 PM", activity: "Lunch Break & Mentor Sessions" },
-        { time: "03:00 PM", activity: "Progress Check-ins" },
-        { time: "06:00 PM", activity: "Day 1 Wrap-up" }
-      ],
-      streamFeatures: [
-        "Live commentary from judges",
-        "Team interview sessions",
-        "Real-time leaderboard updates",
-        "Interactive Q&A sessions",
-        "Behind-the-scenes footage"
-      ]
-    }
-  };
-
-  // Sample chat messages
-  const sampleChatMessages = [
-    { id: 1, user: "Sarah_M", message: "This hackathon looks amazing! 🚀", timestamp: "10:30 AM", isOrganizer: false },
-    { id: 2, user: "HackathonHost", message: "Welcome everyone! The stream will start shortly.", timestamp: "10:31 AM", isOrganizer: true },
-    { id: 3, user: "DevMike", message: "Can't wait to see the projects!", timestamp: "10:32 AM", isOrganizer: false },
-    { id: 4, user: "TechGuru", message: "The energy here is incredible! 💻", timestamp: "10:33 AM", isOrganizer: false },
-    { id: 5, user: "CodeNinja", message: "Which team should I watch?", timestamp: "10:34 AM", isOrganizer: false },
-    { id: 6, user: "EventMod", message: "Team Alpha just had a breakthrough! 🎉", timestamp: "10:35 AM", isOrganizer: true }
-  ];
-
+  // Fetch event data from API
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    
-    const fetchEventData = () => {
-      setLoading(true);
-      
-      // Try to get from actual event data first
-      const upcomingEvents = JSON.parse(localStorage.getItem('upcomingEvents') || '[]');
-      const userEvents = JSON.parse(localStorage.getItem('userEvents') || '[]');
-      const allEvents = [...upcomingEvents, ...userEvents];
-      
-      let eventData = allEvents.find(e => e.id === parseInt(eventId));
-      
-      // Fallback to sample data if not found
-      if (!eventData) {
-        const sampleEvents = {
-          1: {
-            id: 1,
-            title: "AI & Machine Learning Workshop",
-            date: "2025-10-15",
-            time: "14:00",
-            endTime: "17:00",
-            description: "Hands-on workshop on building ML models with Python and TensorFlow.",
-            location: "Computer Lab 2, Building C",
-            organizer: "Data Science Club",
-            organizerId: "datascienceclub@campuspulse.edu",
-            enableLiveStream: true,
-            youtubeStreamUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            streamTitle: "🔴 LIVE: AI & Machine Learning Workshop"
-          },
-          4: {
-            id: 4,
-            title: "Startup Pitch Competition",
-            date: "2025-10-15",
-            time: "10:00",
-            endTime: "16:00",
-            description: "Present your startup ideas to industry experts and compete for funding.",
-            location: "Innovation Center",
-            organizer: "Entrepreneurship Cell",
-            organizerId: "entrepreneurship@campuspulse.edu",
-            enableLiveStream: true,
-            youtubeStreamUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            streamTitle: "🔴 LIVE: Startup Pitch Competition 2025"
+    const fetchEventData = async () => {
+      try {
+        setLoading(true);
+        const currentUser = getCurrentUser();
+        setUser(currentUser);
+        
+        // Fetch event details from API
+        const response = await eventAPI.getById(eventId);
+        
+        if (response.success) {
+          const eventData = response.data;
+          setEvent(eventData);
+          
+          // Set stream data from API response
+          setStreamData({
+            youtubeStreamUrl: eventData.liveStreamUrl || '',
+            youtubeVideoId: extractVideoId(eventData.liveStreamUrl),
+            isLive: eventData.isLive || false,
+            streamTitle: eventData.streamTitle || `🔴 LIVE: ${eventData.title}`,
+            streamDescription: eventData.streamDescription || eventData.description
+          });
+          
+          setIsStreamLive(eventData.isLive || false);
+          
+          // Check if user can manage this event
+          if (currentUser) {
+            const canEdit = canEditEvent(eventData.organizer?._id || eventData.organizer);
+            setIsEventOwner(canEdit);
           }
-        };
-        eventData = sampleEvents[eventId];
-      }
-      
-      if (eventData) {
-        setEvent(eventData);
-        setIsStreamLive(eventData.enableLiveStream || false);
-        setStreamUrl(eventData.youtubeStreamUrl || '');
-        setStreamTitle(eventData.streamTitle || `🔴 LIVE: ${eventData.title}`);
-        
-        // Check if user can manage this event
-        if (currentUser) {
-          setIsEventOwner(canEditEvent(eventData.organizerId));
+          
+          // Set viewer count
+          setViewerCount(eventData.viewerCount || Math.floor(Math.random() * 500) + 100);
+        } else {
+          showErrorToast('Failed to load event stream');
         }
-        
-        // Set viewer count
-        setViewerCount(Math.floor(Math.random() * 500) + 100);
+      } catch (error) {
+        console.error('Error fetching event data:', error);
+        showErrorToast('Error loading event stream');
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     fetchEventData();
     
-    // Load chat messages from localStorage
+    // Load chat messages from localStorage or initialize
     const savedMessages = JSON.parse(localStorage.getItem(`chat_${eventId}`) || '[]');
     if (savedMessages.length > 0) {
       setChatMessages(savedMessages);
@@ -189,12 +122,12 @@ const EventStream = () => {
       clearInterval(viewerInterval);
       clearInterval(chatInterval);
     };
-  }, [eventId]);
+  }, [eventId, isStreamLive]);
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (newMessage.trim()) {
-      const userName = localStorage.getItem('userName') || 'Anonymous';
+      const userName = user?.name || 'Anonymous';
       const message = {
         id: Date.now(),
         user: userName,
@@ -203,7 +136,9 @@ const EventStream = () => {
         isOrganizer: false,
         isCurrentUser: true
       };
-      setChatMessages(prev => [...prev, message]);
+      const updatedMessages = [...chatMessages, message];
+      setChatMessages(updatedMessages);
+      localStorage.setItem(`chat_${eventId}`, JSON.stringify(updatedMessages));
       setNewMessage('');
     }
   };
@@ -214,44 +149,58 @@ const EventStream = () => {
 
   const handleStreamUrlUpdate = async (newUrl) => {
     try {
-      const user = getCurrentUser();
       if (!user) {
-        alert('Please log in to update stream settings');
+        showErrorToast('Please log in to update stream settings');
         return;
       }
 
-      // For demo purposes, just update the local state
-      // In a real app, this would make an API call to update the event
-      setStreamData(prev => ({
-        ...prev,
-        youtubeStreamUrl: newUrl,
-        youtubeVideoId: extractVideoId(newUrl)
-      }));
+      // Update stream URL via API
+      const response = await eventAPI.update(eventId, {
+        liveStreamUrl: newUrl
+      });
 
-      alert('Stream URL updated successfully!');
+      if (response.success) {
+        setStreamData(prev => ({
+          ...prev,
+          youtubeStreamUrl: newUrl,
+          youtubeVideoId: extractVideoId(newUrl)
+        }));
+        // Show success message
+        alert('Stream URL updated successfully!');
+      } else {
+        showErrorToast('Failed to update stream URL');
+      }
     } catch (error) {
       console.error('Error updating stream URL:', error);
-      alert('Failed to update stream URL');
+      showErrorToast('Failed to update stream URL');
     }
   };
 
   const handleStreamToggle = async () => {
     try {
-      const user = getCurrentUser();
       if (!user) {
-        alert('Please log in to manage stream');
+        showErrorToast('Please log in to manage stream');
         return;
       }
 
-      setStreamData(prev => ({
-        ...prev,
-        isLive: !prev.isLive
-      }));
+      // Toggle stream status via API
+      const response = await eventAPI[streamData.isLive ? 'endLiveStream' : 'startLiveStream'](eventId);
 
-      alert(`Stream ${!streamData.isLive ? 'started' : 'stopped'} successfully!`);
+      if (response.success) {
+        setStreamData(prev => ({
+          ...prev,
+          isLive: !prev.isLive
+        }));
+        setIsStreamLive(!streamData.isLive);
+        
+        // Show success message
+        alert(`Stream ${!streamData.isLive ? 'started' : 'stopped'} successfully!`);
+      } else {
+        showErrorToast(`Failed to ${streamData.isLive ? 'stop' : 'start'} stream`);
+      }
     } catch (error) {
       console.error('Error toggling stream:', error);
-      alert('Failed to toggle stream');
+      showErrorToast(`Failed to ${streamData.isLive ? 'stop' : 'start'} stream`);
     }
   };
 
@@ -272,6 +221,50 @@ const EventStream = () => {
     }
     
     return null;
+  };
+
+  // Generate schedule based on event timing
+  const generateSchedule = () => {
+    if (!event) return [];
+    
+    const startTime = new Date(event.startDate);
+    const endTime = new Date(event.endDate);
+    const duration = endTime - startTime;
+    const hours = Math.floor(duration / (1000 * 60 * 60));
+    
+    const schedule = [];
+    for (let i = 0; i <= hours; i++) {
+      const time = new Date(startTime.getTime() + i * 60 * 60 * 1000);
+      schedule.push({
+        time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        activity: i === 0 ? 'Event Starts' : 
+                 i === hours ? 'Event Ends' : 
+                 `Session ${i}`
+      });
+    }
+    
+    return schedule;
+  };
+
+  // Generate stream features based on event category
+  const generateStreamFeatures = () => {
+    if (!event) return [];
+    
+    const baseFeatures = [
+      "Live commentary and updates",
+      "Interactive Q&A sessions",
+      "Real-time event coverage"
+    ];
+    
+    if (event.category === 'technical') {
+      return [...baseFeatures, "Live coding demonstrations", "Technical deep dives"];
+    } else if (event.category === 'cultural') {
+      return [...baseFeatures, "Live performances", "Cultural showcases"];
+    } else if (event.category === 'sports') {
+      return [...baseFeatures, "Live match coverage", "Player interviews"];
+    }
+    
+    return baseFeatures;
   };
 
   if (loading) {
@@ -296,6 +289,9 @@ const EventStream = () => {
     );
   }
 
+  const schedule = generateSchedule();
+  const streamFeatures = generateStreamFeatures();
+
   return (
     <div className="stream-page">
       {/* Header */}
@@ -307,8 +303,8 @@ const EventStream = () => {
               Back to Live Events
             </Link>
             <div className="stream-title">
-              <h1>{event.streamTitle}</h1>
-              <p>{event.streamDescription}</p>
+              <h1>{streamData.streamTitle}</h1>
+              <p>{streamData.streamDescription}</p>
             </div>
             <div className="stream-stats">
               <div className="live-indicator">
@@ -358,26 +354,26 @@ const EventStream = () => {
               {/* Stream Info */}
               <div className="stream-info">
                 <div className="stream-meta">
-                  <h2>{streamData.title}</h2>
+                  <h2>{event.title}</h2>
                   <div className="meta-details">
                     <span className="organizer">
                       <i className="fas fa-users"></i>
-                      {streamData.organizer}
+                      {event.organizer?.name || event.organizer}
                     </span>
                     <span className="location">
                       <i className="fas fa-map-marker-alt"></i>
-                      {streamData.location}
+                      {event.location}
                     </span>
                     <span className="date">
                       <i className="fas fa-calendar"></i>
-                      {new Date(streamData.startDate).toLocaleDateString()}
+                      {new Date(event.startDate).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="description">{streamData.description}</p>
+                  <p className="description">{event.description}</p>
                 </div>
 
                 {/* Stream Management - Only for organizers and admins */}
-                {(isStreamOwner || canEditEvent()) && (
+                {(isEventOwner) && (
                   <div className="stream-management">
                     <h3>Stream Management</h3>
                     <div className="management-controls">
@@ -422,17 +418,16 @@ const EventStream = () => {
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="stream-description">
-                  <p>{streamData.description}</p>
+                <div className="stream-description">
+                  <p>{event.description}</p>
                 </div>
 
                 {/* Stream Features */}
                 <div className="stream-features">
                   <h4>🎥 What You'll See</h4>
                   <ul>
-                    {streamData.streamFeatures && streamData.streamFeatures.map((feature, index) => (
+                    {streamFeatures.map((feature, index) => (
                       <li key={index}>{feature}</li>
                     ))}
                   </ul>
@@ -457,6 +452,7 @@ const EventStream = () => {
                     Join Event
                   </Link>
                 </div>
+              </div>
             </div>
 
             {/* Sidebar */}
@@ -465,7 +461,7 @@ const EventStream = () => {
               <div className="sidebar-section">
                 <h3>📅 Today's Schedule</h3>
                 <div className="schedule-list">
-                  {event.streamSchedule.map((item, index) => (
+                  {schedule.map((item, index) => (
                     <div 
                       key={index} 
                       className={`schedule-item ${new Date().getHours() >= parseInt(item.time) ? 'completed' : ''}`}

@@ -1,7 +1,8 @@
 // src/pages/EventBlogs.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { showSuccessToast } from '../../utils/toastUtils';
+import { showSuccessToast, showErrorToast } from '../../utils/toastUtils';
+import { blogAPI, eventAPI } from '../../services/api';
 import "./EventBlogs.css";
 
 const EventBlogs = () => {
@@ -13,152 +14,157 @@ const EventBlogs = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAuthor, setSelectedAuthor] = useState("all");
+  const [error, setError] = useState(null);
 
-  // ✅ Sample event data with blogs
-  const sampleEvents = {
-    1: {
-      id: 1,
-      title: "Tech Fest 2024",
-      date: "2024-03-15",
-      endDate: "2024-03-17",
-      blogs: [
-        {
-          id: 1,
-          title: "My First Hackathon Experience at Tech Fest 2024",
-          excerpt:
-            "An incredible journey of coding, learning, and networking during the 48-hour hackathon...",
-          content: `
-            <h2>An Unforgettable Weekend</h2>
-            <p>When I first heard about Tech Fest 2024's hackathon, I was both excited and nervous...</p>
-          `,
-          author: "Emma Johnson",
-          authorImage:
-            "https://images.unsplash.com/photo-1494790108755-2616b612b5cc?w=100&h=100&fit=crop&crop=face",
-          publishDate: "2024-03-20",
-          readTime: "5 min read",
-          category: "Experience",
-          tags: ["hackathon", "teamwork", "innovation"],
-          likes: 247,
-          comments: 18,
-          shares: 32,
-          featured: true,
-        },
-        {
-          id: 2,
-          title: "Industry Expert Talks: Key Insights from Tech Leaders",
-          excerpt:
-            "A comprehensive summary of the most impactful talks from industry leaders during Tech Fest 2024...",
-          content: `
-            <h2>Wisdom from the Best</h2>
-            <p>Tech Fest 2024 featured an impressive lineup of industry experts...</p>
-          `,
-          author: "David Chen",
-          authorImage:
-            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-          publishDate: "2024-03-18",
-          readTime: "7 min read",
-          category: "Insights",
-          tags: ["industry", "career", "advice"],
-          likes: 189,
-          comments: 23,
-          shares: 45,
-          featured: false,
-        },
-      ],
-    },
-    2: {
-      id: 2,
-      title: "Cultural Night",
-      date: "2024-02-20",
-      blogs: [
-        {
-          id: 4,
-          title: "Celebrating Diversity: A Night of Cultural Unity",
-          excerpt:
-            "How Cultural Night brought together students from different backgrounds in a beautiful celebration...",
-          content: "Full blog content would go here...",
-          author: "Maria Gonzalez",
-          authorImage:
-            "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face",
-          publishDate: "2024-02-22",
-          readTime: "4 min read",
-          category: "Experience",
-          tags: ["culture", "diversity", "unity"],
-          likes: 298,
-          comments: 34,
-          shares: 52,
-          featured: true,
-        },
-      ],
-    },
-  };
-
-  // ✅ Load event and blogs
+  // Load event and blogs from backend
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      const eventData = sampleEvents[eventId];
-      if (eventData) {
-        setEvent(eventData);
-        setBlogs(eventData.blogs);
-      }
-      setLoading(false);
-    }, 1000);
+    loadEventAndBlogs();
   }, [eventId]);
 
-  // ✅ Filters
+  const loadEventAndBlogs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load event data
+      const eventResponse = await eventAPI.getById(eventId);
+      if (eventResponse.success) {
+        const eventData = eventResponse.data || eventResponse.event;
+        setEvent(eventData);
+      } else {
+        throw new Error('Failed to load event data');
+      }
+
+      // Load blogs for this event
+      const blogsResponse = await blogAPI.getEventBlogs(eventId);
+      if (blogsResponse.success) {
+        const blogsData = blogsResponse.data?.blogs || blogsResponse.blogs || [];
+        setBlogs(blogsData);
+      } else {
+        // If no blogs API response, set empty array (not an error)
+        setBlogs([]);
+        console.log('No blogs found for this event');
+      }
+    } catch (error) {
+      console.error('Error loading event and blogs:', error);
+      setError(error.message || 'Failed to load event data');
+      showErrorToast('Failed to load event blogs. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filters
   const filteredBlogs = blogs.filter((blog) => {
+    const title = blog.title || '';
+    const excerpt = blog.excerpt || blog.description || '';
+    const tags = blog.tags || [];
+    const authorName = blog.author?.name || blog.author || '';
+    
     const matchesSearch =
-      blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      blog.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      blog.tags.some((tag) =>
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tags.some((tag) =>
         tag.toLowerCase().includes(searchTerm.toLowerCase())
       );
     const matchesAuthor =
-      selectedAuthor === "all" || blog.author === selectedAuthor;
+      selectedAuthor === "all" || authorName === selectedAuthor;
     return matchesSearch && matchesAuthor;
   });
 
-  const authors = ["all", ...new Set(blogs.map((blog) => blog.author))];
+  const authors = ["all", ...new Set(blogs.map((blog) => blog.author?.name || blog.author || 'Anonymous'))];
 
-  // ✅ Handle Like
-  const handleLike = (blogId) => {
-    setBlogs(
-      blogs.map((blog) =>
-        blog.id === blogId ? { ...blog, likes: blog.likes + 1 } : blog
-      )
-    );
-    if (selectedBlog && selectedBlog.id === blogId) {
-      setSelectedBlog({ ...selectedBlog, likes: selectedBlog.likes + 1 });
+  // Handle Like with backend integration
+  const handleLike = async (blogId) => {
+    try {
+      const response = await blogAPI.toggleLike(blogId);
+      if (response.success) {
+        // Update local state
+        setBlogs(blogs.map((blog) =>
+          blog._id === blogId || blog.id === blogId 
+            ? { ...blog, likes: (blog.likes || 0) + 1, isLiked: !blog.isLiked } 
+            : blog
+        ));
+        
+        if (selectedBlog && (selectedBlog._id === blogId || selectedBlog.id === blogId)) {
+          setSelectedBlog({ 
+            ...selectedBlog, 
+            likes: (selectedBlog.likes || 0) + 1,
+            isLiked: !selectedBlog.isLiked 
+          });
+        }
+        
+        showSuccessToast(response.data?.isLiked ? "Blog liked!" : "Blog unliked!");
+      } else {
+        showErrorToast('Failed to like blog');
+      }
+    } catch (error) {
+      console.error('Like error:', error);
+      showErrorToast('Failed to like blog. Please try again.');
     }
   };
 
-  // ✅ Handle Comment
-  const handleAddComment = (blogId) => {
-    setBlogs(
-      blogs.map((blog) =>
-        blog.id === blogId ? { ...blog, comments: blog.comments + 1 } : blog
-      )
-    );
-    if (selectedBlog && selectedBlog.id === blogId) {
-      setSelectedBlog({ ...selectedBlog, comments: selectedBlog.comments + 1 });
+  // Handle Comment with backend integration
+  const handleAddComment = async (blogId) => {
+    const commentText = prompt('Add your comment:');
+    if (!commentText || commentText.trim() === '') return;
+    
+    try {
+      const response = await blogAPI.addComment(blogId, { text: commentText.trim() });
+      if (response.success) {
+        // Update local state
+        setBlogs(blogs.map((blog) =>
+          blog._id === blogId || blog.id === blogId 
+            ? { ...blog, comments: (blog.comments || 0) + 1 } 
+            : blog
+        ));
+        
+        if (selectedBlog && (selectedBlog._id === blogId || selectedBlog.id === blogId)) {
+          setSelectedBlog({ ...selectedBlog, comments: (selectedBlog.comments || 0) + 1 });
+        }
+        
+        showSuccessToast("Comment added successfully!");
+      } else {
+        showErrorToast('Failed to add comment');
+      }
+    } catch (error) {
+      console.error('Comment error:', error);
+      showErrorToast('Failed to add comment. Please try again.');
     }
-    showSuccessToast("Comment added successfully!");
   };
 
-  // ✅ Handle Share
-  const handleShare = (blogId) => {
+  // Handle Share (client-side only - no backend needed)
+  const handleShare = async (blogId) => {
     const blogUrl = `${window.location.origin}/events/${eventId}/blog/${blogId}`;
-    navigator.clipboard.writeText(blogUrl);
-    setBlogs(
-      blogs.map((blog) =>
-        blog.id === blogId ? { ...blog, shares: blog.shares + 1 } : blog
-      )
-    );
-    if (selectedBlog && selectedBlog.id === blogId) {
-      setSelectedBlog({ ...selectedBlog, shares: selectedBlog.shares + 1 });
+    
+    try {
+      if (navigator.share) {
+        // Use native sharing if available
+        await navigator.share({
+          title: selectedBlog?.title || 'Event Blog',
+          text: selectedBlog?.excerpt || 'Check out this blog post',
+          url: blogUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(blogUrl);
+        showSuccessToast("Blog link copied to clipboard!");
+      }
+      
+      // Update share count locally
+      setBlogs(blogs.map((blog) =>
+        blog._id === blogId || blog.id === blogId 
+          ? { ...blog, shares: (blog.shares || 0) + 1 } 
+          : blog
+      ));
+      
+      if (selectedBlog && (selectedBlog._id === blogId || selectedBlog.id === blogId)) {
+        setSelectedBlog({ ...selectedBlog, shares: (selectedBlog.shares || 0) + 1 });
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      showErrorToast('Failed to share blog link.');
     }
-    showSuccessToast("Blog link copied to clipboard!");
   };
 
   // ✅ Blog Modal
@@ -191,14 +197,32 @@ const EventBlogs = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="error-container">
+        <i className="fas fa-exclamation-triangle"></i>
+        <h3>Error Loading Blogs</h3>
+        <p>{error}</p>
+        <div className="error-actions">
+          <button className="btn btn-primary" onClick={loadEventAndBlogs}>
+            Try Again
+          </button>
+          <button className="btn btn-outline" onClick={() => navigate("/events")}>
+            Back to Events
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!event) {
     return (
       <div className="error-container">
         <i className="fas fa-exclamation-triangle"></i>
         <h3>Event not found</h3>
         <p>The requested event blogs could not be loaded.</p>
-        <button className="btn btn-primary" onClick={() => navigate("/events/past")}>
-          Back to Past Events
+        <button className="btn btn-primary" onClick={() => navigate("/events")}>
+          Back to Events
         </button>
       </div>
     );
@@ -210,20 +234,24 @@ const EventBlogs = () => {
       <header className="blogs-header">
         <div className="container">
           <div className="header-content">
-            <button onClick={() => navigate("/events/past")} className="back-btn">
+            <button onClick={() => navigate("/events")} className="back-btn">
               <i className="fas fa-arrow-left"></i>
-              Back to Past Events
+              Back to Events
             </button>
             <div className="blogs-title">
-              <h1>📝 {event.title} Blogs</h1>
+              <h1>📝 {event.title || event.name} Blogs</h1>
               <p>{blogs.length} articles from participants and organizers</p>
             </div>
             <div className="blogs-actions">
-              <Link to={`/events/gallery/${eventId}`} className="btn btn-outline">
-                <i className="fas fa-images"></i>
-                View Gallery
+              <Link to={`/events/${eventId}`} className="btn btn-outline">
+                <i className="fas fa-eye"></i>
+                View Event
               </Link>
-              <button className="btn btn-primary" onClick={() => handleShare(0)}>
+              <button className="btn btn-primary" onClick={() => {
+                const eventUrl = `${window.location.origin}/events/${eventId}/blogs`;
+                navigator.clipboard.writeText(eventUrl);
+                showSuccessToast("Blogs link copied to clipboard!");
+              }}>
                 <i className="fas fa-share"></i>
                 Share Blogs
               </button>
@@ -272,23 +300,23 @@ const EventBlogs = () => {
           <h2>All Articles</h2>
           <div className="blogs-grid">
             {filteredBlogs.map((blog) => (
-              <article key={blog.id} className="blog-card">
+              <article key={blog._id || blog.id} className="blog-card">
                 <div className="blog-header">
                   <div className="blog-meta">
-                    <span className={`category ${blog.category.toLowerCase()}`}>
-                      {blog.category}
+                    <span className={`category ${(blog.category || 'general').toLowerCase()}`}>
+                      {blog.category || 'General'}
                     </span>
                     {blog.featured && (
                       <span className="featured-indicator">★</span>
                     )}
                   </div>
                   <h3 onClick={() => openBlogReader(blog)}>{blog.title}</h3>
-                  <p className="excerpt">{blog.excerpt}</p>
+                  <p className="excerpt">{blog.excerpt || blog.description || 'No excerpt available'}</p>
                 </div>
 
                 <div className="blog-tags">
-                  {blog.tags.map((tag) => (
-                    <span key={tag} className="tag">
+                  {(blog.tags || []).map((tag, index) => (
+                    <span key={index} className="tag">
                       #{tag}
                     </span>
                   ))}
@@ -296,40 +324,43 @@ const EventBlogs = () => {
 
                 <div className="blog-footer">
                   <div className="blog-author">
-                    <img src={blog.authorImage} alt={blog.author} />
+                    <img 
+                      src={blog.authorImage || blog.author?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'} 
+                      alt={blog.author?.name || blog.author || 'Author'} 
+                    />
                     <div className="author-info">
-                      <span className="author-name">{blog.author}</span>
+                      <span className="author-name">{blog.author?.name || blog.author || 'Anonymous'}</span>
                       <div className="blog-details">
                         <span>
-                          {new Date(blog.publishDate).toLocaleDateString()}
+                          {new Date(blog.publishDate || blog.createdAt).toLocaleDateString()}
                         </span>
                         <span>•</span>
-                        <span>{blog.readTime}</span>
+                        <span>{blog.readTime || '5 min read'}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="blog-actions">
                     <button
-                      className="action-btn like-btn"
-                      onClick={() => handleLike(blog.id)}
+                      className={`action-btn like-btn ${blog.isLiked ? 'liked' : ''}`}
+                      onClick={() => handleLike(blog._id || blog.id)}
                     >
-                      <i className="fas fa-heart"></i>
-                      {blog.likes}
+                      <i className={`fas fa-heart ${blog.isLiked ? 'text-red' : ''}`}></i>
+                      {blog.likes || 0}
                     </button>
                     <button
                       className="action-btn"
-                      onClick={() => handleAddComment(blog.id)}
+                      onClick={() => handleAddComment(blog._id || blog.id)}
                     >
                       <i className="fas fa-comment"></i>
-                      {blog.comments}
+                      {blog.comments || 0}
                     </button>
                     <button
                       className="action-btn"
-                      onClick={() => handleShare(blog.id)}
+                      onClick={() => handleShare(blog._id || blog.id)}
                     >
                       <i className="fas fa-share"></i>
-                      {blog.shares}
+                      {blog.shares || 0}
                     </button>
                   </div>
                 </div>
@@ -341,7 +372,11 @@ const EventBlogs = () => {
             <div className="no-blogs">
               <i className="fas fa-file-alt"></i>
               <h3>No blogs found</h3>
-              <p>Try adjusting your search criteria</p>
+              {blogs.length === 0 ? (
+                <p>No blog articles have been written for this event yet. Be the first to share your experience!</p>
+              ) : (
+                <p>Try adjusting your search criteria or filter settings</p>
+              )}
             </div>
           )}
         </div>
@@ -362,26 +397,26 @@ const EventBlogs = () => {
               <header className="reader-header">
                 <div className="reader-meta">
                   <span
-                    className={`category ${selectedBlog.category.toLowerCase()}`}
+                    className={`category ${(selectedBlog.category || 'general').toLowerCase()}`}
                   >
-                    {selectedBlog.category}
+                    {selectedBlog.category || 'General'}
                   </span>
-                  <span className="read-time">{selectedBlog.readTime}</span>
+                  <span className="read-time">{selectedBlog.readTime || '5 min read'}</span>
                 </div>
                 <h1>{selectedBlog.title}</h1>
 
                 <div className="reader-author">
                   <img
-                    src={selectedBlog.authorImage}
-                    alt={selectedBlog.author}
+                    src={selectedBlog.authorImage || selectedBlog.author?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'}
+                    alt={selectedBlog.author?.name || selectedBlog.author || 'Author'}
                   />
                   <div className="author-details">
-                    <h4>{selectedBlog.author}</h4>
+                    <h4>{selectedBlog.author?.name || selectedBlog.author || 'Anonymous'}</h4>
                     <div className="publish-info">
                       <span>
                         Published on{" "}
                         {new Date(
-                          selectedBlog.publishDate
+                          selectedBlog.publishDate || selectedBlog.createdAt
                         ).toLocaleDateString()}
                       </span>
                     </div>
@@ -390,19 +425,19 @@ const EventBlogs = () => {
 
                 <div className="reader-stats">
                   <button
-                    className="stat-btn primary"
-                    onClick={() => handleLike(selectedBlog.id)}
+                    className={`stat-btn primary ${selectedBlog.isLiked ? 'liked' : ''}`}
+                    onClick={() => handleLike(selectedBlog._id || selectedBlog.id)}
                   >
-                    <i className="fas fa-heart"></i>
-                    {selectedBlog.likes}
+                    <i className={`fas fa-heart ${selectedBlog.isLiked ? 'text-red' : ''}`}></i>
+                    {selectedBlog.likes || 0}
                   </button>
                   <span className="stat">
                     <i className="fas fa-comment"></i>
-                    {selectedBlog.comments}
+                    {selectedBlog.comments || 0}
                   </span>
                   <span className="stat">
                     <i className="fas fa-share"></i>
-                    {selectedBlog.shares}
+                    {selectedBlog.shares || 0}
                   </span>
                 </div>
               </header>
@@ -410,12 +445,12 @@ const EventBlogs = () => {
               <div className="reader-body">
                 <div
                   className="blog-content"
-                  dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
+                  dangerouslySetInnerHTML={{ __html: selectedBlog.content || selectedBlog.excerpt || '<p>No content available.</p>' }}
                 />
 
                 <div className="reader-tags">
-                  {selectedBlog.tags.map((tag) => (
-                    <span key={tag} className="tag">
+                  {(selectedBlog.tags || []).map((tag, index) => (
+                    <span key={index} className="tag">
                       #{tag}
                     </span>
                   ))}
@@ -423,22 +458,22 @@ const EventBlogs = () => {
 
                 <div className="reader-actions">
                   <button
-                    className="btn btn-primary"
-                    onClick={() => handleLike(selectedBlog.id)}
+                    className={`btn btn-primary ${selectedBlog.isLiked ? 'liked' : ''}`}
+                    onClick={() => handleLike(selectedBlog._id || selectedBlog.id)}
                   >
-                    <i className="fas fa-heart"></i>
-                    Like Article
+                    <i className={`fas fa-heart ${selectedBlog.isLiked ? 'text-red' : ''}`}></i>
+                    {selectedBlog.isLiked ? 'Liked' : 'Like Article'}
                   </button>
                   <button
                     className="btn btn-outline"
-                    onClick={() => handleAddComment(selectedBlog.id)}
+                    onClick={() => handleAddComment(selectedBlog._id || selectedBlog.id)}
                   >
                     <i className="fas fa-comment"></i>
                     Add Comment
                   </button>
                   <button
                     className="btn btn-outline"
-                    onClick={() => handleShare(selectedBlog.id)}
+                    onClick={() => handleShare(selectedBlog._id || selectedBlog.id)}
                   >
                     <i className="fas fa-share"></i>
                     Share

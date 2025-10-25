@@ -168,9 +168,9 @@ export const api = {
   // Feedback endpoints
   feedback: {
     create: (feedbackData) => post('/api/feedback', feedbackData),
-    getAll: () => get('/api/feedback'),
+    getAll: (queryParams = '') => get(`/api/feedback${queryParams}`),
     getById: (id) => get(`/api/feedback/${id}`),
-    updateStatus: (id, status) => put(`/api/feedback/${id}/status`, { status }),
+    updateStatus: (id, statusData) => put(`/api/feedback/${id}/status`, statusData),
     delete: (id) => del(`/api/feedback/${id}`),
     getUserFeedback: () => get('/api/feedback/user/my-feedback')
   },
@@ -183,6 +183,38 @@ export const api = {
     getSpecificEvent: (id) => get(`/api/analytics/events/${id}`),
     getFeedback: () => get('/api/analytics/feedback'),
     getRegistrations: () => get('/api/analytics/registrations')
+  },
+
+  // Metadata endpoints
+  metadata: {
+    getDepartments: () => {
+      // Return departments list - can be updated to use backend endpoint later
+      return Promise.resolve({
+        success: true,
+        data: [
+          'Computer Science',
+          'Information Technology',
+          'Electronics and Communication',
+          'Mechanical Engineering',
+          'Civil Engineering',
+          'Electrical Engineering',
+          'Chemical Engineering',
+          'Biotechnology',
+          'Mathematics',
+          'Physics',
+          'Chemistry',
+          'Management Studies',
+          'Other'
+        ]
+      });
+    },
+    getYears: () => {
+      // Return years list - can be updated to use backend endpoint later
+      return Promise.resolve({
+        success: true,
+        data: ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate', 'Post Graduate']
+      });
+    }
   }
 };
 
@@ -195,6 +227,7 @@ export const adminAPI = api.admin;
 export const notificationAPI = api.notifications;
 export const feedbackAPI = api.feedback;
 export const analyticsAPI = api.analytics;
+export const metadataAPI = api.metadata;
 
 // Default export
 export default api;

@@ -1,12 +1,22 @@
-// src/pages/LandingPage.jsx
+// src/pages/LandingPage.jsx - UPDATED FOR BACKEND INTEGRATION
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
+import { eventAPI, userAPI, notificationAPI, blogAPI, feedbackAPI } from "../services/api";
 import "./LandingPage.css";
 
 const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
+  const [stats, setStats] = useState({
+    activeStudents: '10K+',
+    monthlyEvents: '500+',
+    clubs: '50+'
+  });
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [recentNotifications, setRecentNotifications] = useState([]);
+  const [featureStats, setFeatureStats] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -16,6 +26,95 @@ const LandingPage = () => {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const fetchLandingPageData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch upcoming events for the events section
+        const eventsResponse = await eventAPI.getUpcoming();
+        const events = eventsResponse.data || eventsResponse || [];
+        setUpcomingEvents(events.slice(0, 3)); // Show only first 3 events
+
+        // Fetch recent notifications for hero cards
+        const notificationsResponse = await notificationAPI.getUserNotifications();
+        const notifications = notificationsResponse.data || notificationsResponse || [];
+        setRecentNotifications(notifications.slice(0, 3)); // Show only first 3 notifications
+
+        // Fetch stats (we can derive some stats from the data)
+        try {
+          const allEventsResponse = await eventAPI.getAll();
+          const allEvents = allEventsResponse.data || allEventsResponse || [];
+          
+          const usersResponse = await userAPI.getAllUsers();
+          const users = usersResponse.data || usersResponse || [];
+          
+          // Calculate real stats
+          const studentCount = users.filter(user => user.role === 'student').length;
+          const thisMonthEvents = allEvents.filter(event => {
+            const eventDate = new Date(event.date || event.createdAt);
+            const now = new Date();
+            return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+          }).length;
+
+          // Fetch additional stats for features
+          const blogsResponse = await blogAPI.getAll();
+          const blogs = blogsResponse.data || blogsResponse || [];
+          
+          const feedbackResponse = await feedbackAPI.getAll();
+          const feedbacks = feedbackResponse.data || feedbackResponse || [];
+
+          // Calculate unique organizers/clubs
+          const uniqueOrganizers = [...new Set(allEvents.map(event => event.organizer || event.createdBy).filter(Boolean))];
+
+          setStats({
+            activeStudents: studentCount > 0 ? `${studentCount}+` : '10K+',
+            monthlyEvents: thisMonthEvents > 0 ? `${thisMonthEvents}+` : '500+',
+            clubs: uniqueOrganizers.length > 0 ? `${uniqueOrganizers.length}+` : '50+'
+          });
+
+          // Set feature stats for dynamic features section
+          setFeatureStats({
+            totalAnnouncements: notifications.length,
+            totalEvents: allEvents.length,
+            totalFeedback: feedbacks.length,
+            totalBlogs: blogs.length,
+            activeUsers: users.length,
+            thisWeekEvents: allEvents.filter(event => {
+              const eventDate = new Date(event.date || event.createdAt);
+              const now = new Date();
+              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              return eventDate >= weekAgo && eventDate <= now;
+            }).length
+          });
+
+        } catch (statsError) {
+          console.warn('Could not fetch stats, using defaults:', statsError);
+          // Keep default stats if user doesn't have permission
+        }
+
+      } catch (error) {
+        console.error('Error fetching landing page data:', error);
+        // Set minimal fallback data if API fails
+        console.warn('Using fallback events due to API error');
+        setUpcomingEvents([
+          {
+            id: 'demo-event',
+            title: 'Campus Demo Event',
+            description: 'Explore Campus Pulse features and connect with the community.',
+            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
+            location: 'Campus Hub',
+            image: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60'
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLandingPageData();
   }, []);
 
   return (
@@ -50,15 +149,15 @@ const LandingPage = () => {
             </div>
             <div className="hero-stats">
               <div className="stat">
-                <div className="stat-number">10K+</div>
+                <div className="stat-number">{loading ? '...' : stats.activeStudents}</div>
                 <div className="stat-label">Active Students</div>
               </div>
               <div className="stat">
-                <div className="stat-number">500+</div>
+                <div className="stat-number">{loading ? '...' : stats.monthlyEvents}</div>
                 <div className="stat-label">Events Monthly</div>
               </div>
               <div className="stat">
-                <div className="stat-number">50+</div>
+                <div className="stat-number">{loading ? '...' : stats.clubs}</div>
                 <div className="stat-label">Clubs & Organizations</div>
               </div>
             </div>
@@ -66,32 +165,68 @@ const LandingPage = () => {
 
           <div className="hero-visual">
             <div className="hero-cards">
-              <div className="card card-1">
-                <div className="card-header">
-                  <div className="card-icon">📢</div>
-                  <span>New Announcement</span>
+              {loading ? (
+                // Loading state
+                <div className="card card-1">
+                  <div className="card-header">
+                    <div className="card-icon">⏳</div>
+                    <span>Loading...</span>
+                  </div>
+                  <p>Fetching latest updates...</p>
+                  <span className="card-time">...</span>
                 </div>
-                <p>Midterm schedule updates posted</p>
-                <span className="card-time">2 min ago</span>
-              </div>
-              
-              <div className="card card-2">
-                <div className="card-header">
-                  <div className="card-icon">🎭</div>
-                  <span>Drama Club</span>
-                </div>
-                <p>Auditions for Spring Play</p>
-                <span className="card-time">Tomorrow</span>
-              </div>
-              
-              <div className="card card-3">
-                <div className="card-header">
-                  <div className="card-icon">🏀</div>
-                  <span>Sports</span>
-                </div>
-                <p>Basketball Finals Live</p>
-                <span className="card-time">Live Now</span>
-              </div>
+              ) : recentNotifications.length > 0 ? (
+                // Real notification data
+                recentNotifications.map((notification, index) => (
+                  <div key={notification.id || notification._id} className={`card card-${index + 1}`}>
+                    <div className="card-header">
+                      <div className="card-icon">
+                        {notification.type === 'announcement' ? '📢' :
+                         notification.type === 'event' ? '🎭' :
+                         notification.type === 'urgent' ? '🚨' : '📝'}
+                      </div>
+                      <span>{notification.title?.substring(0, 20) || 'Notification'}</span>
+                    </div>
+                    <p>{notification.message?.substring(0, 50) || notification.content?.substring(0, 50) || 'New update available'}</p>
+                    <span className="card-time">
+                      {new Date(notification.createdAt || notification.timestamp || new Date()).toLocaleDateString() === new Date().toLocaleDateString() ? 
+                        'Today' : 
+                        new Date(notification.createdAt || notification.timestamp || new Date()).toLocaleDateString()
+                      }
+                    </span>
+                  </div>
+                ))
+              ) : (
+                // Fallback static data
+                <>
+                  <div className="card card-1">
+                    <div className="card-header">
+                      <div className="card-icon">📢</div>
+                      <span>Welcome</span>
+                    </div>
+                    <p>Welcome to Campus Pulse!</p>
+                    <span className="card-time">Today</span>
+                  </div>
+                  
+                  <div className="card card-2">
+                    <div className="card-header">
+                      <div className="card-icon">�</div>
+                      <span>Getting Started</span>
+                    </div>
+                    <p>Explore events and connect with peers</p>
+                    <span className="card-time">Now</span>
+                  </div>
+                  
+                  <div className="card card-3">
+                    <div className="card-header">
+                      <div className="card-icon">🌟</div>
+                      <span>Campus Life</span>
+                    </div>
+                    <p>Your journey begins here</p>
+                    <span className="card-time">Live</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -122,7 +257,12 @@ const LandingPage = () => {
                 </svg>
               </div>
               <h3>Centralized Announcements</h3>
-              <p>One place for official notices, exam updates, circulars, and urgent alerts with push notifications.</p>
+              <p>
+                {loading 
+                  ? 'One place for official notices, exam updates, circulars, and urgent alerts with push notifications.' 
+                  : `${featureStats.totalAnnouncements || 0} active announcements. Stay updated with official notices, exam updates, and urgent alerts.`
+                }
+              </p>
             </div>
 
             <div className="feature-card">
@@ -132,7 +272,12 @@ const LandingPage = () => {
                 </svg>
               </div>
               <h3>Event & Activity Hub</h3>
-              <p>Browse upcoming events, workshops, hackathons, and club meetings with direct registration.</p>
+              <p>
+                {loading 
+                  ? 'Browse upcoming events, workshops, hackathons, and club meetings with direct registration.' 
+                  : `${featureStats.totalEvents || 0} total events hosted. ${featureStats.thisWeekEvents || 0} events this week. Direct registration available.`
+                }
+              </p>
             </div>
 
             <div className="feature-card">
@@ -141,8 +286,13 @@ const LandingPage = () => {
                   <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
                 </svg>
               </div>
-              <h3>Feedback & Polls</h3>
-              <p>Anonymous feedback forms and quick polls to capture student opinions and help decision-making.</p>
+              <h3>Feedback & Surveys</h3>
+              <p>
+                {loading 
+                  ? 'Anonymous feedback forms and quick polls to capture student opinions and help decision-making.' 
+                  : `${featureStats.totalFeedback || 0} feedback submissions received. Anonymous forms and polls for better decision-making.`
+                }
+              </p>
             </div>
 
             <div className="feature-card">
@@ -151,8 +301,13 @@ const LandingPage = () => {
                   <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
                 </svg>
               </div>
-              <h3>Discussion Forums</h3>
-              <p>Spaces for clubs and interest groups to discuss ideas and collaborate on projects.</p>
+              <h3>Campus Blogs & Stories</h3>
+              <p>
+                {loading 
+                  ? 'Spaces for clubs and interest groups to share stories and collaborate on projects.' 
+                  : `${featureStats.totalBlogs || 0} blogs published. Share stories, experiences, and collaborate on projects.`
+                }
+              </p>
             </div>
 
             <div className="feature-card">
@@ -162,7 +317,12 @@ const LandingPage = () => {
                 </svg>
               </div>
               <h3>Personalized Dashboard</h3>
-              <p>Customized content for students, faculty, and admin with relevant information and insights.</p>
+              <p>
+                {loading 
+                  ? 'Customized content for students, faculty, and admin with relevant information and insights.' 
+                  : `${featureStats.activeUsers || 0} active users. Customized content for students, faculty, and admin with real-time insights.`
+                }
+              </p>
             </div>
 
             <div className="feature-card">
@@ -172,7 +332,12 @@ const LandingPage = () => {
                 </svg>
               </div>
               <h3>Smart Notifications</h3>
-              <p>Instant notifications and reminders with optional SMS or email integration for critical alerts.</p>
+              <p>
+                {loading 
+                  ? 'Instant notifications and reminders with optional SMS or email integration for critical alerts.' 
+                  : 'Real-time notifications and reminders. Stay connected with instant updates and critical alerts.'
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -189,107 +354,182 @@ const LandingPage = () => {
           </div>
 
           <div className="events-grid">
-            <div className="event-card">
-              <div className="event-image">
-                <img
-                  src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60"
-                  alt="Tech Conference"
-                />
-                <div className="event-date">
-                  <span className="date-day">15</span>
-                  <span className="date-month">OCT</span>
+            {loading ? (
+              // Loading state for events
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={`loading-${index}`} className="event-card">
+                  <div className="event-image">
+                    <div style={{ 
+                      width: '100%', 
+                      height: '200px', 
+                      background: '#f0f0f0', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center' 
+                    }}>
+                      Loading...
+                    </div>
+                  </div>
+                  <div className="event-content">
+                    <h3>Loading Event...</h3>
+                    <p>Please wait while we fetch the latest events.</p>
+                    <div className="event-meta">
+                      <span className="meta-item">Loading...</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="event-content">
-                <h3>Tech Innovation Summit</h3>
-                <p>Join us for a day of cutting-edge presentations, networking, and hands-on workshops.</p>
-                <div className="event-meta">
-                  <span className="meta-item">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    Tech Auditorium
-                  </span>
-                  <span className="meta-item">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                    </svg>
-                    9:00 AM
-                  </span>
+              ))
+            ) : upcomingEvents.length > 0 ? (
+              // Real event data
+              upcomingEvents.map((event) => {
+                const eventDate = new Date(event.date || event.startDate || new Date());
+                const timeString = event.time || eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                return (
+                  <div key={event.id || event._id} className="event-card">
+                    <div className="event-image">
+                      <img
+                        src={event.image || event.imageUrl || 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60'}
+                        alt={event.title || 'Campus Event'}
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60';
+                        }}
+                      />
+                      <div className="event-date">
+                        <span className="date-day">{eventDate.getDate()}</span>
+                        <span className="date-month">{eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</span>
+                      </div>
+                    </div>
+                    <div className="event-content">
+                      <h3>{event.title || 'Campus Event'}</h3>
+                      <p>{event.description?.substring(0, 100) || 'Join us for this exciting campus event.'}{event.description?.length > 100 ? '...' : ''}</p>
+                      <div className="event-meta">
+                        <span className="meta-item">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                          </svg>
+                          {event.location || 'Campus'}
+                        </span>
+                        <span className="meta-item">
+                          <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                          </svg>
+                          {timeString}
+                        </span>
+                      </div>
+                      <Link to={`/events/details/${event.id || event._id}`} className="btn btn-outline">
+                        View Details
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              // Fallback static events if no API data
+              <>
+                <div className="event-card">
+                  <div className="event-image">
+                    <img
+                      src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60"
+                      alt="Tech Conference"
+                    />
+                    <div className="event-date">
+                      <span className="date-day">15</span>
+                      <span className="date-month">OCT</span>
+                    </div>
+                  </div>
+                  <div className="event-content">
+                    <h3>Tech Innovation Summit</h3>
+                    <p>Join us for a day of cutting-edge presentations, networking, and hands-on workshops.</p>
+                    <div className="event-meta">
+                      <span className="meta-item">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        Tech Auditorium
+                      </span>
+                      <span className="meta-item">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                        </svg>
+                        9:00 AM
+                      </span>
+                    </div>
+                    <Link to="/events/upcoming" className="btn btn-outline">
+                      View Details
+                    </Link>
+                  </div>
                 </div>
-                <Link to="/events/upcoming" className="btn btn-outline">
-                  View Details
-                </Link>
-              </div>
-            </div>
 
-            <div className="event-card">
-              <div className="event-image">
-                <img
-                  src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=200&fit=crop&q=60"
-                  alt="Cultural Festival"
-                />
-                <div className="event-date">
-                  <span className="date-day">22</span>
-                  <span className="date-month">OCT</span>
+                <div className="event-card">
+                  <div className="event-image">
+                    <img
+                      src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=200&fit=crop&q=60"
+                      alt="Cultural Festival"
+                    />
+                    <div className="event-date">
+                      <span className="date-day">22</span>
+                      <span className="date-month">OCT</span>
+                    </div>
+                  </div>
+                  <div className="event-content">
+                    <h3>International Cultural Festival</h3>
+                    <p>Celebrate diversity with performances, food, and traditions from around the world.</p>
+                    <div className="event-meta">
+                      <span className="meta-item">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        Main Quad
+                      </span>
+                      <span className="meta-item">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                        </svg>
+                        6:00 PM
+                      </span>
+                    </div>
+                    <Link to="/events/upcoming" className="btn btn-outline">
+                      View Details
+                    </Link>
+                  </div>
                 </div>
-              </div>
-              <div className="event-content">
-                <h3>International Cultural Festival</h3>
-                <p>Celebrate diversity with performances, food, and traditions from around the world.</p>
-                <div className="event-meta">
-                  <span className="meta-item">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    Main Quad
-                  </span>
-                  <span className="meta-item">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                    </svg>
-                    6:00 PM
-                  </span>
-                </div>
-                <Link to="/events/upcoming" className="btn btn-outline">
-                  View Details
-                </Link>
-              </div>
-            </div>
 
-            <div className="event-card">
-              <div className="event-image">
-                <img
-                  src="https://images.unsplash.com/photo-1544717297-fa95b6ee9643?w=400&h=200&fit=crop&q=60"
-                  alt="Sports Championship"
-                />
-                <div className="event-date">
-                  <span className="date-day">28</span>
-                  <span className="date-month">OCT</span>
+                <div className="event-card">
+                  <div className="event-image">
+                    <img
+                      src="https://images.unsplash.com/photo-1544717297-fa95b6ee9643?w=400&h=200&fit=crop&q=60"
+                      alt="Sports Championship"
+                    />
+                    <div className="event-date">
+                      <span className="date-day">28</span>
+                      <span className="date-month">OCT</span>
+                    </div>
+                  </div>
+                  <div className="event-content">
+                    <h3>Inter-Department Sports Meet</h3>
+                    <p>Compete in various sports and show your department pride in our annual sports championship.</p>
+                    <div className="event-meta">
+                      <span className="meta-item">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                        </svg>
+                        Sports Complex
+                      </span>
+                      <span className="meta-item">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                        </svg>
+                        All Day
+                      </span>
+                    </div>
+                    <Link to="/events/upcoming" className="btn btn-outline">
+                      View Details
+                    </Link>
+                  </div>
                 </div>
-              </div>
-              <div className="event-content">
-                <h3>Inter-Department Sports Meet</h3>
-                <p>Compete in various sports and show your department pride in our annual sports championship.</p>
-                <div className="event-meta">
-                  <span className="meta-item">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    Sports Complex
-                  </span>
-                  <span className="meta-item">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                    </svg>
-                    All Day
-                  </span>
-                </div>
-                <Link to="/events/upcoming" className="btn btn-outline">
-                  View Details
-                </Link>
-              </div>
-            </div>
+              </>
+            )}
           </div>
 
           <div className="section-cta">
@@ -305,13 +545,18 @@ const LandingPage = () => {
         <div className="container">
           <div className="cta-content">
             <h2>Ready to Transform Your Campus Experience?</h2>
-            <p>Join thousands of students and faculty already using Campus Pulse to stay connected and engaged.</p>
+            <p>
+              {loading 
+                ? 'Join thousands of students and faculty already using Campus Pulse to stay connected and engaged.' 
+                : `Join ${featureStats.activeUsers || 'thousands of'} students and faculty already using Campus Pulse to stay connected and engaged.`
+              }
+            </p>
             <div className="cta-buttons">
               <Link to="/register" className="btn btn-primary btn-large">
                 Get Started Free
               </Link>
-              <Link to="/demo" className="btn btn-outline btn-large">
-                Schedule Demo
+              <Link to="/about" className="btn btn-outline btn-large">
+                Learn More
               </Link>
             </div>
           </div>

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
 import { feedbackAPI, eventAPI } from "../services/api";
+import { isAuthenticated } from "../utils/auth";
 import "./Feedback.css";
 
 const Feedback = () => {
@@ -12,6 +13,9 @@ const Feedback = () => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [recentEvents, setRecentEvents] = useState([]);
+  const [previousFeedback, setPreviousFeedback] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,8 +25,14 @@ const Feedback = () => {
     wouldRecommend: ""
   });
 
-  // Load pre-filled data from localStorage if coming from event page
-  React.useEffect(() => {
+  // Load events and user feedback on component mount
+  useEffect(() => {
+    loadRecentEvents();
+    if (isAuthenticated() && !isAnonymous) {
+      loadUserFeedback();
+    }
+    
+    // Load pre-filled data from localStorage if coming from event page
     const prefilledEventId = localStorage.getItem('feedbackEventId');
     const prefilledEventTitle = localStorage.getItem('feedbackEventTitle');
     const userEmail = localStorage.getItem('userEmail');
@@ -41,13 +51,42 @@ const Feedback = () => {
     }
   }, [isAnonymous]);
 
-  // Sample events for feedback
-  const recentEvents = [
-    { id: 1, title: "Tech Fest 2024", date: "2024-03-17" },
-    { id: 2, title: "Cultural Night", date: "2024-02-20" },
-    { id: 3, title: "Sports Championship", date: "2024-01-14" },
-    { id: 4, title: "Career Fair 2024", date: "2024-01-25" }
-  ];
+  const loadRecentEvents = async () => {
+    try {
+      const response = await eventAPI.getAll();
+      if (response.success && response.events) {
+        // Get recent events from the last 3 months
+        const recentEventsData = response.events
+          .filter(event => {
+            const eventDate = new Date(event.startDate);
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            return eventDate >= threeMonthsAgo;
+          })
+          .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+          .slice(0, 10);
+        
+        setRecentEvents(recentEventsData);
+      }
+    } catch (error) {
+      console.error('Error loading events:', error);
+      showErrorToast('Failed to load recent events. Please refresh the page.');
+      setRecentEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserFeedback = async () => {
+    try {
+      const response = await feedbackAPI.getUserFeedback();
+      if (response.success && response.data && response.data.feedback) {
+        setPreviousFeedback(response.data.feedback);
+      }
+    } catch (error) {
+      console.error('Error loading user feedback:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -61,6 +100,11 @@ const Feedback = () => {
     e.preventDefault();
     
     // Basic validation
+    if (feedbackType === "event" && recentEvents.length === 0) {
+      showErrorToast("No recent events available. Please select 'Campus Life' feedback instead.");
+      return;
+    }
+    
     if (feedbackType === "event" && !selectedEvent) {
       showErrorToast("Please select an event to provide feedback for.");
       return;
@@ -84,38 +128,42 @@ const Feedback = () => {
     setIsSubmitting(true);
 
     try {
-      // Prepare feedback data
+      // Prepare feedback data to match backend model
       const feedbackData = {
-        type: feedbackType,
-        anonymous: isAnonymous,
-        event: feedbackType === "event" ? selectedEvent : null,
-        rating: feedbackType === "event" ? rating : null,
-        name: isAnonymous ? null : formData.name,
-        email: isAnonymous ? null : formData.email,
-        department: formData.department,
-        feedback: formData.feedback,
-        suggestions: formData.suggestions,
-        wouldRecommend: formData.wouldRecommend
+        subject: feedbackType === "event" ? `Event Feedback: ${recentEvents.find(e => e._id === selectedEvent)?.title || 'Event'}` : "Campus Life Feedback",
+        message: formData.feedback,
+        category: feedbackType === "event" ? "event_feedback" : "general_feedback",
+        isAnonymous: isAnonymous
       };
 
-      const response = await feedbackAPI.submit(feedbackData);
+      // Add optional fields only if they have values
+      if (feedbackType === "event" && selectedEvent) {
+        feedbackData.relatedEvent = selectedEvent;
+      }
+      
+      if (feedbackType === "event" && rating > 0) {
+        feedbackData.rating = rating;
+      }
+
+      // Add metadata with additional info
+      feedbackData.metadata = {
+        pageUrl: window.location.href,
+        userAgent: navigator.userAgent,
+        deviceInfo: navigator.platform,
+        additionalInfo: {
+          department: formData.department || null,
+          suggestions: formData.suggestions || null,
+          wouldRecommend: formData.wouldRecommend || null,
+          contactName: isAnonymous ? null : (formData.name || null),
+          contactEmail: isAnonymous ? null : (formData.email || null)
+        }
+      };
+
+      const response = await feedbackAPI.create(feedbackData);
 
       if (response.success) {
         showSuccessToast("Feedback submitted successfully! Thank you for your input.");
         
-        // Store feedback in localStorage for history
-        const historyData = {
-          id: Date.now(),
-          ...feedbackData,
-          submittedAt: new Date().toISOString()
-        };
-
-      if (!isAnonymous) {
-        const feedbackHistory = JSON.parse(localStorage.getItem('userFeedbackHistory') || '[]');
-        feedbackHistory.unshift(feedbackData);
-        localStorage.setItem('userFeedbackHistory', JSON.stringify(feedbackHistory.slice(0, 10))); // Keep last 10
-      }
-
         // Reset form
         setFormData({
           name: "",
@@ -127,6 +175,11 @@ const Feedback = () => {
         });
         setRating(0);
         setSelectedEvent("");
+        
+        // Reload user feedback if not anonymous
+        if (!isAnonymous && isAuthenticated()) {
+          loadUserFeedback();
+        }
       } else {
         showErrorToast(response.message || "Failed to submit feedback. Please try again.");
       }
@@ -263,14 +316,32 @@ const Feedback = () => {
                       onChange={(e) => setSelectedEvent(e.target.value)}
                       className="form-select"
                       required
+                      disabled={loading || recentEvents.length === 0}
                     >
-                      <option value="">Choose an event...</option>
+                      <option value="">
+                        {loading 
+                          ? "Loading events..." 
+                          : recentEvents.length === 0 
+                            ? "No recent events available" 
+                            : "Choose an event..."
+                        }
+                      </option>
                       {recentEvents.map(event => (
-                        <option key={event.id} value={event.id}>
-                          {event.title} - {new Date(event.date).toLocaleDateString()}
+                        <option key={event._id} value={event._id}>
+                          {event.title} - {new Date(event.startDate).toLocaleDateString()}
                         </option>
                       ))}
                     </select>
+                    {recentEvents.length === 0 && !loading && (
+                      <p style={{ 
+                        color: '#6b7280', 
+                        fontSize: '0.875rem', 
+                        marginTop: '0.5rem',
+                        fontStyle: 'italic'
+                      }}>
+                        No recent events found. Try selecting "Campus Life" feedback instead.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -460,29 +531,42 @@ const Feedback = () => {
       </section>
 
       {/* Previous Feedback (if not anonymous) */}
-      {!isAnonymous && (
+      {!isAnonymous && isAuthenticated() && (
         <section className="previous-feedback-section">
           <div className="container">
             <h2>Your Previous Feedback</h2>
             <div className="feedback-history">
-              <div className="feedback-item">
-                <div className="feedback-header">
-                  <h4>Tech Fest 2024</h4>
-                  <span className="feedback-date">March 17, 2024</span>
-                  <div className="feedback-rating">
-                    <i className="fas fa-star"></i>
-                    <i className="fas fa-star"></i>
-                    <i className="fas fa-star"></i>
-                    <i className="fas fa-star"></i>
-                    <i className="far fa-star"></i>
+              {previousFeedback.length > 0 ? (
+                previousFeedback.map((feedback) => (
+                  <div key={feedback._id} className="feedback-item">
+                    <div className="feedback-header">
+                      <h4>{feedback.relatedEvent?.title || feedback.subject || 'General Feedback'}</h4>
+                      <span className="feedback-date">
+                        {new Date(feedback.createdAt).toLocaleDateString()}
+                      </span>
+                      {feedback.rating && (
+                        <div className="feedback-rating">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <i 
+                              key={star}
+                              className={`fas fa-star ${star <= feedback.rating ? '' : 'far'}`}
+                            ></i>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="feedback-text">{feedback.message}</p>
+                    <div className="feedback-status">
+                      <i className="fas fa-check-circle"></i>
+                      <span style={{ textTransform: 'capitalize' }}>
+                        {feedback.status?.replace('_', ' ') || 'Submitted'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <p className="feedback-text">Great event with amazing workshops and networking opportunities...</p>
-                <div className="feedback-status">
-                  <i className="fas fa-check-circle"></i>
-                  Reviewed by organizers
-                </div>
-              </div>
+                ))
+              ) : (
+                <p>No previous feedback found.</p>
+              )}
             </div>
           </div>
         </section>

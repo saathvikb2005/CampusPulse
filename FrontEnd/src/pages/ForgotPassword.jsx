@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { authAPI } from "../services/api";
+import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -23,12 +25,22 @@ const ForgotPassword = () => {
     setIsLoading(true);
     setError("");
 
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setIsSubmitted(true);
+      // Call backend API for password reset
+      const response = await authAPI.forgotPassword(email);
+      
+      if (response.success) {
+        setIsSubmitted(true);
+        showSuccessToast('Password reset email sent successfully!');
+      } else {
+        setError(response.message || "Failed to send reset email. Please try again.");
+        showErrorToast(response.message || "Failed to send reset email");
+      }
     } catch (err) {
-      setError("Failed to send reset email. Please try again.");
+      console.error('Forgot password error:', err);
+      const errorMessage = err.message || "Failed to send reset email. Please try again.";
+      setError(errorMessage);
+      showErrorToast(errorMessage);
     } finally {
       setIsLoading(false);
     }

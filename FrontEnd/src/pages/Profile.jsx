@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { showSuccessToast, showErrorToast } from '../utils/toastUtils';
-import { getCurrentUser, isAuthenticated } from '../utils/auth';
+import { getCurrentUser, isAuthenticated, logout } from '../utils/auth';
 import { userAPI, eventAPI, blogAPI } from '../services/api';
 import './Profile.css';
 
@@ -61,12 +61,12 @@ const Profile = () => {
       
       // Load profile data from backend API
       const profileResponse = await userAPI.getProfile();
-      if (profileResponse.success && profileResponse.user) {
-        const userData = profileResponse.user;
+      if (profileResponse.success && profileResponse.data?.user) {
+        const userData = profileResponse.data.user;
         setProfile({
           name: `${userData.firstName} ${userData.lastName}`,
           email: userData.email,
-          regNumber: userData.regNumber || '',
+          regNumber: userData.studentId || '',
           department: userData.department || '',
           year: userData.year || '',
           phone: userData.phone || '',
@@ -83,7 +83,8 @@ const Profile = () => {
       // Load user's registered events
       const registeredEventsResponse = await eventAPI.getUserRegistered();
       if (registeredEventsResponse.success) {
-        const eventRegistrations = registeredEventsResponse.events.map(event => ({
+        const events = registeredEventsResponse.data?.events || registeredEventsResponse.events || [];
+        const eventRegistrations = events.map(event => ({
           id: event._id,
           title: event.title,
           date: event.startDate,
@@ -101,7 +102,8 @@ const Profile = () => {
       
       // Add event registrations to activity
       if (registeredEventsResponse.success) {
-        registeredEventsResponse.events.forEach(event => {
+        const registeredEvents = registeredEventsResponse.data?.events || registeredEventsResponse.events || [];
+        registeredEvents.forEach(event => {
           activities.push({
             type: 'registration',
             event: event.title,
@@ -113,7 +115,8 @@ const Profile = () => {
 
       // Add created events to activity
       if (createdEventsResponse.success) {
-        createdEventsResponse.events.forEach(event => {
+        const createdEvents = createdEventsResponse.data?.events || createdEventsResponse.events || [];
+        createdEvents.forEach(event => {
           activities.push({
             type: 'event_created',
             event: event.title,
@@ -125,7 +128,8 @@ const Profile = () => {
 
       // Add user blogs to activity
       if (userBlogsResponse.success) {
-        userBlogsResponse.blogs.forEach(blog => {
+        const blogs = userBlogsResponse.data?.blogs || userBlogsResponse.blogs || [];
+        blogs.forEach(blog => {
           activities.push({
             type: 'blog',
             title: blog.title,
@@ -176,7 +180,7 @@ const Profile = () => {
         firstName: firstName || '',
         lastName: lastName || '',
         email: profile.email,
-        regNumber: profile.regNumber,
+        studentId: profile.regNumber, // Map regNumber to studentId for backend
         department: profile.department,
         year: profile.year,
         phone: profile.phone,
@@ -217,10 +221,7 @@ const Profile = () => {
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userRole');
-      navigate('/login');
+      logout(); // Use the auth utility's logout function which handles backend logout and localStorage cleanup
     }
   };
 

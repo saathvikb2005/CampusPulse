@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { isAuthenticated, getCurrentUser, canAccessAdmin, canManageEvents, logout } from '../utils/auth';
+import { isAuthenticated, getCurrentUser, canAccessAdmin, canManageEvents, canManageFeedback, logout } from '../utils/auth';
 import './Navigation.css';
 
 const Navigation = () => {
@@ -11,6 +11,7 @@ const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const loggedIn = isAuthenticated();
@@ -18,6 +19,11 @@ const Navigation = () => {
     
     setIsLoggedIn(loggedIn);
     setUser(currentUser);
+    
+    // Fetch notification count if logged in
+    if (loggedIn) {
+      fetchNotificationCount();
+    }
   }, [location]);
 
   useEffect(() => {
@@ -29,10 +35,43 @@ const Navigation = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.nav-dropdown')) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const fetchNotificationCount = async () => {
+    try {
+      // This would be replaced with actual API call
+      // const response = await notificationAPI.getUnreadCount();
+      // setNotificationCount(response.data.count || 0);
+      setNotificationCount(3); // Mock data for now
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+    }
+  };
+
   const handleLogout = async () => {
-    await logout(); // This will now call the backend API and handle redirection
-    setIsLoggedIn(false);
-    setUser(null);
+    try {
+      await logout();
+      setIsLoggedIn(false);
+      setUser(null);
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: clear local storage and redirect
+      localStorage.clear();
+      setIsLoggedIn(false);
+      setUser(null);
+      navigate('/');
+    }
   };
 
   const toggleMenu = () => {
@@ -49,12 +88,27 @@ const Navigation = () => {
     closeMenu();
   };
 
-  const toggleDropdown = (dropdownName) => {
+  const toggleDropdown = (dropdownName, event) => {
+    if (event) {
+      event.stopPropagation();
+    }
     setActiveDropdown(activeDropdown === dropdownName ? null : dropdownName);
   };
 
   const isDropdownActive = (dropdownName) => {
     return activeDropdown === dropdownName;
+  };
+
+  // Check if current path matches event routes
+  const isEventRouteActive = () => {
+    return location.pathname.startsWith('/events/');
+  };
+
+  // Check if current path matches admin routes
+  const isAdminRouteActive = () => {
+    return location.pathname.startsWith('/admin') || 
+           location.pathname.startsWith('/events/manage') || 
+           location.pathname.startsWith('/feedback/manage');
   };
 
   return (
@@ -100,8 +154,8 @@ const Navigation = () => {
                 {/* Events Dropdown */}
                 <div className="nav-dropdown">
                   <button 
-                    className={`nav-link dropdown-trigger ${isDropdownActive('events') ? 'active' : ''}`}
-                    onClick={() => toggleDropdown('events')}
+                    className={`nav-link dropdown-trigger ${isEventRouteActive() ? 'active' : ''} ${isDropdownActive('events') ? 'dropdown-active' : ''}`}
+                    onClick={(e) => toggleDropdown('events', e)}
                     aria-haspopup="true"
                     aria-expanded={isDropdownActive('events')}
                   >
@@ -112,7 +166,7 @@ const Navigation = () => {
                   <div className={`dropdown-menu ${isDropdownActive('events') ? 'active' : ''}`} role="menu">
                     <Link 
                       to="/events/upcoming" 
-                      className="dropdown-link"
+                      className={`dropdown-link ${location.pathname === '/events/upcoming' ? 'active' : ''}`}
                       onClick={closeMenu}
                       role="menuitem"
                     >
@@ -121,22 +175,36 @@ const Navigation = () => {
                     </Link>
                     <Link 
                       to="/events/present" 
-                      className="dropdown-link"
+                      className={`dropdown-link ${location.pathname === '/events/present' ? 'active' : ''}`}
                       onClick={closeMenu}
                       role="menuitem"
                     >
                       <i className="fas fa-play"></i>
-                      <span>Present Events</span>
+                      <span>Live Events</span>
                     </Link>
                     <Link 
                       to="/events/past" 
-                      className="dropdown-link"
+                      className={`dropdown-link ${location.pathname === '/events/past' ? 'active' : ''}`}
                       onClick={closeMenu}
                       role="menuitem"
                     >
                       <i className="fas fa-history"></i>
                       <span>Past Events</span>
                     </Link>
+                    {canManageEvents() && (
+                      <div className="dropdown-divider"></div>
+                    )}
+                    {canManageEvents() && (
+                      <Link 
+                        to="/events/create" 
+                        className="dropdown-link create-event-link"
+                        onClick={closeMenu}
+                        role="menuitem"
+                      >
+                        <i className="fas fa-plus-circle"></i>
+                        <span>Create Event</span>
+                      </Link>
+                    )}
                   </div>
                 </div>
 
@@ -147,7 +215,9 @@ const Navigation = () => {
                 >
                   <i className="fas fa-bell"></i>
                   <span>Notifications</span>
-                  <span className="notification-badge">3</span>
+                  {notificationCount > 0 && (
+                    <span className="notification-badge">{notificationCount}</span>
+                  )}
                 </Link>
 
                 <Link 
@@ -169,11 +239,11 @@ const Navigation = () => {
                 </Link>
 
                 {/* Admin & Management Dropdown */}
-                {(canManageEvents() || canAccessAdmin()) && (
+                {(canManageEvents() || canAccessAdmin() || canManageFeedback()) && (
                   <div className="nav-dropdown">
                     <button 
-                      className={`nav-link dropdown-trigger admin-dropdown-trigger ${isDropdownActive('admin') ? 'active' : ''}`}
-                      onClick={() => toggleDropdown('admin')}
+                      className={`nav-link dropdown-trigger admin-dropdown-trigger ${isAdminRouteActive() ? 'active' : ''} ${isDropdownActive('admin') ? 'dropdown-active' : ''}`}
+                      onClick={(e) => toggleDropdown('admin', e)}
                       aria-haspopup="true"
                       aria-expanded={isDropdownActive('admin')}
                     >
@@ -185,7 +255,7 @@ const Navigation = () => {
                       {canManageEvents() && (
                         <Link 
                           to="/events/manage" 
-                          className="dropdown-link"
+                          className={`dropdown-link ${location.pathname === '/events/manage' ? 'active' : ''}`}
                           onClick={closeMenu}
                           role="menuitem"
                         >
@@ -193,16 +263,30 @@ const Navigation = () => {
                           <span>Manage Events</span>
                         </Link>
                       )}
-                      {canAccessAdmin() && (
+                      {canManageFeedback() && (
                         <Link 
-                          to="/admin" 
-                          className="dropdown-link admin-link"
+                          to="/feedback/manage" 
+                          className={`dropdown-link ${location.pathname === '/feedback/manage' ? 'active' : ''}`}
                           onClick={closeMenu}
                           role="menuitem"
                         >
-                          <i className="fas fa-shield-alt"></i>
-                          <span>Admin Panel</span>
+                          <i className="fas fa-comments"></i>
+                          <span>Manage Feedback</span>
                         </Link>
+                      )}
+                      {canAccessAdmin() && (
+                        <>
+                          <div className="dropdown-divider"></div>
+                          <Link 
+                            to="/admin" 
+                            className={`dropdown-link admin-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
+                            onClick={closeMenu}
+                            role="menuitem"
+                          >
+                            <i className="fas fa-shield-alt"></i>
+                            <span>Admin Panel</span>
+                          </Link>
+                        </>
                       )}
                     </div>
                   </div>
@@ -213,7 +297,11 @@ const Navigation = () => {
               <div className="user-menu">
                 <div className="user-profile" onClick={handleProfileClick} style={{cursor: 'pointer'}}>
                   <div className="user-avatar">
-                    <i className="fas fa-user"></i>
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name} />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
                   </div>
                   <div className="user-info">
                     <span className="user-name">{user ? user.name : 'Guest'}</span>
@@ -260,6 +348,14 @@ const Navigation = () => {
                 >
                   <i className="fas fa-star"></i>
                   <span>Features</span>
+                </Link>
+                <Link 
+                  to="/contact" 
+                  className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
+                  onClick={closeMenu}
+                >
+                  <i className="fas fa-envelope"></i>
+                  <span>Contact</span>
                 </Link>
               </div>
 

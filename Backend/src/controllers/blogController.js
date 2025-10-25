@@ -30,7 +30,7 @@ const getAllBlogs = async (req, res) => {
     
     const blogs = await Blog.find(query)
       .populate('author', 'firstName lastName avatar')
-      .populate('event', 'title')
+      .populate('relatedEvent', 'title')
       .sort({ publishedAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -94,7 +94,7 @@ const createBlog = async (req, res) => {
           message: 'Event not found'
         });
       }
-      blogData.event = eventId;
+      blogData.relatedEvent = eventId;
     }
     
     if (featured && (req.user.role === 'admin' || req.user.role === 'faculty')) {
@@ -104,7 +104,7 @@ const createBlog = async (req, res) => {
     const blog = await Blog.create(blogData);
     
     await blog.populate('author', 'firstName lastName avatar');
-    await blog.populate('event', 'title');
+    await blog.populate('relatedEvent', 'title');
     
     res.status(201).json({
       success: true,
@@ -128,7 +128,7 @@ const getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id)
       .populate('author', 'firstName lastName avatar bio')
-      .populate('event', 'title date venue')
+      .populate('relatedEvent', 'title date venue')
       .populate('comments.user', 'firstName lastName avatar');
     
     if (!blog) {
@@ -454,7 +454,7 @@ const getUserBlogs = async (req, res) => {
       status: 'published'
     })
       .populate('author', 'firstName lastName avatar')
-      .populate('event', 'title')
+      .populate('relatedEvent', 'title')
       .sort({ publishedAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -499,7 +499,7 @@ const getBlogsByCategory = async (req, res) => {
       status: 'published'
     })
       .populate('author', 'firstName lastName avatar')
-      .populate('event', 'title')
+      .populate('relatedEvent', 'title')
       .sort({ publishedAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -537,11 +537,11 @@ const getBlogsByCategory = async (req, res) => {
 const getEventBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find({
-      event: req.params.eventId,
+      relatedEvent: req.params.eventId,
       status: 'published'
     })
       .populate('author', 'firstName lastName avatar')
-      .populate('event', 'title')
+      .populate('relatedEvent', 'title')
       .sort({ publishedAt: -1 });
     
     res.json({

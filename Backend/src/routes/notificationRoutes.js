@@ -12,9 +12,9 @@ const validate = require('../middleware/validation');
 router.get('/', auth, notificationController.getUserNotifications);
 
 // @route   POST /api/notifications
-// @desc    Create notification (Admin only)
-// @access  Private/Admin
-router.post('/', auth, authorize('admin'), validate.validateNotificationCreate, notificationController.createNotification);
+// @desc    Create notification (Admin, Faculty, Event Manager)
+// @access  Private/Admin/Faculty/EventManager
+router.post('/', auth, authorize('admin', 'faculty', 'event_manager'), validate.validateNotificationCreate, notificationController.createNotification);
 
 // @route   PUT /api/notifications/:id/read
 // @desc    Mark notification as read

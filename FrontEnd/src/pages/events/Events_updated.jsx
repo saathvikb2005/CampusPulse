@@ -58,7 +58,7 @@ const Events = () => {
       }
 
       if (response.success) {
-        setEvents(response.events || []);
+        setEvents(response.data || []);
       } else {
         setError(response.message || 'Failed to load events');
       }
@@ -74,7 +74,7 @@ const Events = () => {
     try {
       const response = await eventAPI.getUserRegistered();
       if (response.success) {
-        const registeredIds = new Set(response.events.map(event => event._id));
+        const registeredIds = new Set(response.data.map(event => event._id));
         setRegisteredEvents(registeredIds);
       }
     } catch (err) {
@@ -144,6 +144,20 @@ const Events = () => {
     if (now < start) return { status: 'upcoming', color: '#3b82f6' };
     if (now >= start && now <= end) return { status: 'live', color: '#ef4444' };
     return { status: 'ended', color: '#6b7280' };
+  };
+
+  const getEventImage = (event) => {
+    return event.image || 
+           event.images?.[0]?.url || 
+           `/api/placeholder/400/200?text=${encodeURIComponent(event.title)}`;
+  };
+
+  const getRegistrationCount = (event) => {
+    return event.registrations?.length || event.registeredCount || 0;
+  };
+
+  const getMaxParticipants = (event) => {
+    return event.maxParticipants || event.capacity || 100;
   };
 
   if (loading) {
@@ -258,19 +272,13 @@ const Events = () => {
           filteredEvents.map(event => {
             const eventStatus = getEventStatus(event.startDate, event.endDate);
             const isRegistered = registeredEvents.has(event._id);
+            const registrationCount = getRegistrationCount(event);
+            const maxParticipants = getMaxParticipants(event);
             
             return (
               <div key={event._id} className="event-card">
                 <div className="event-image">
-                  {event.image ? (
-                    <img src={event.image} alt={event.title} />
-                  ) : (
-                    <div className="default-image">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
-                      </svg>
-                    </div>
-                  )}
+                  <img src={getEventImage(event)} alt={event.title} />
                   
                   <div className="event-status" style={{ backgroundColor: eventStatus.color }}>
                     {eventStatus.status}
@@ -299,14 +307,14 @@ const Events = () => {
                       <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                       </svg>
-                      {event.location}
+                      {event.location || 'Location TBA'}
                     </div>
 
                     <div className="event-participants">
                       <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A3.01 3.01 0 0 0 17.08 7c-.46 0-.91.18-1.24.51L14.9 8.45c-.39.39-.39 1.02 0 1.41s1.02.39 1.41 0l.92-.92 1.42 4.27V22h2zm-3.5 0v-6h-2.25l-.75-2.25L12.5 16v6h2zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zm-6 0c.83 0 1.5-.67 1.5-1.5S7.33 8.5 6.5 8.5 5 9.17 5 10s.67 1.5 1.5 1.5zM12 13c-2 0-6 1-6 3v6h4v-6.04c-.17-.17-.28-.41-.28-.66 0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .25-.11.49-.28.66V22h4v-6c0-2-4-3-6-3z" />
                       </svg>
-                      {event.registrations?.length || 0} / {event.maxParticipants} registered
+                      {registrationCount} / {maxParticipants} registered
                     </div>
                   </div>
 

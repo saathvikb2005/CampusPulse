@@ -296,7 +296,19 @@ const validateNotificationCreate = [
     .withMessage('Notification message must be between 1 and 500 characters'),
   
   body('type')
-    .isIn(['info', 'warning', 'success', 'error'])
+    .isIn([
+      'event_created',
+      'event_updated', 
+      'event_cancelled',
+      'event_reminder',
+      'registration_confirmed',
+      'registration_cancelled',
+      'stream_started',
+      'stream_ended',
+      'feedback_response',
+      'system_announcement',
+      'general'
+    ])
     .withMessage('Invalid notification type'),
   
   body('targetUsers')
@@ -316,22 +328,45 @@ const validateNotificationCreate = [
 const validateFeedbackCreate = [
   body('subject')
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Feedback subject must be between 1 and 100 characters'),
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Feedback subject must be between 1 and 200 characters'),
   
   body('message')
     .trim()
-    .isLength({ min: 1, max: 1000 })
-    .withMessage('Feedback message must be between 1 and 1000 characters'),
+    .isLength({ min: 1, max: 2000 })
+    .withMessage('Feedback message must be between 1 and 2000 characters'),
   
   body('category')
-    .isIn(['Bug Report', 'Feature Request', 'General Feedback', 'Complaint', 'Suggestion'])
+    .isIn([
+      'bug_report',
+      'feature_request', 
+      'general_feedback',
+      'event_feedback',
+      'ui_ux',
+      'performance',
+      'content',
+      'technical_issue',
+      'suggestion',
+      'complaint',
+      'compliment',
+      'other'
+    ])
     .withMessage('Invalid feedback category'),
   
-  body('priority')
+  body('rating')
     .optional()
-    .isIn(['Low', 'Medium', 'High'])
-    .withMessage('Invalid feedback priority'),
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Rating must be an integer between 1 and 5'),
+  
+  body('relatedEvent')
+    .optional({ nullable: true, checkFalsy: true })
+    .isMongoId()
+    .withMessage('Invalid event ID'),
+  
+  body('isAnonymous')
+    .optional({ nullable: true, checkFalsy: true })
+    .isBoolean()
+    .withMessage('isAnonymous must be a boolean'),
   
   checkValidation
 ];
@@ -339,7 +374,7 @@ const validateFeedbackCreate = [
 // Validation rules for feedback status update
 const validateFeedbackStatusUpdate = [
   body('status')
-    .isIn(['Open', 'In Progress', 'Resolved', 'Closed'])
+    .isIn(['pending', 'in_review', 'resolved', 'closed', 'rejected'])
     .withMessage('Invalid feedback status'),
   
   body('adminResponse')

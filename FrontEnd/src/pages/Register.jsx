@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../utils/auth";
+import { metadataAPI } from "../services/api";
 import "./Register.css";
 
 const Register = () => {
@@ -24,24 +25,41 @@ const Register = () => {
     feedback: []
   });
 
-  const departments = [
-    "Computer Science & Engineering",
-    "Information Technology", 
-    "Electronics & Communication",
-    "Mechanical Engineering",
-    "Civil Engineering",
-    "Electrical Engineering",
-    "Chemical Engineering",
-    "Biotechnology",
-    "Mathematics",
-    "Physics",
-    "Chemistry",
-    "English",
-    "Business Administration",
-    "Other"
-  ];
+  const [departments, setDepartments] = useState([]);
+  const [years, setYears] = useState([]);
 
-  const years = ["1st Year", "2nd Year", "3rd Year", "4th Year", "Graduate"];
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const depts = await metadataAPI.getDepartments();
+        setDepartments(depts.data || depts || []);
+
+        const yrs = await metadataAPI.getYears();
+        setYears(yrs.data || yrs || []);
+      } catch (error) {
+        console.error("Error fetching metadata:", error);
+        // Set fallback data if API fails
+        setDepartments([
+          'Computer Science',
+          'Information Technology',
+          'Electronics and Communication',
+          'Mechanical Engineering',
+          'Civil Engineering',
+          'Electrical Engineering',
+          'Chemical Engineering',
+          'Biotechnology',
+          'Mathematics',
+          'Physics',
+          'Chemistry',
+          'Management Studies',
+          'Other'
+        ]);
+        setYears(['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate', 'Post Graduate']);
+      }
+    };
+
+    fetchMetadata();
+  }, []);
 
   const checkPasswordStrength = (password) => {
     let score = 0;
@@ -67,78 +85,53 @@ const Register = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = "Full name is required";
-    } else if (formData.name.length < 2) {
-      newErrors.name = "Name must be at least 2 characters";
-    }
 
-    if (!formData.regNo.trim()) {
-      newErrors.regNo = "Registration number is required";
-    } else if (!/^[A-Z0-9]{6,15}$/.test(formData.regNo.toUpperCase())) {
+    if (!formData.name.trim()) newErrors.name = "Full name is required";
+    else if (formData.name.length < 2) newErrors.name = "Name must be at least 2 characters";
+
+    if (!formData.regNo.trim()) newErrors.regNo = "Registration number is required";
+    else if (!/^[A-Z0-9]{6,15}$/.test(formData.regNo.toUpperCase()))
       newErrors.regNo = "Invalid registration number format";
-    }
-    
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email format is invalid";
-    }
-    
-    if (!formData.phone) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ""))) {
+
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email format is invalid";
+
+    if (!formData.phone) newErrors.phone = "Phone number is required";
+    else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, "")))
       newErrors.phone = "Phone number must be 10 digits";
-    }
 
-    if (formData.role === "student" && !formData.department) {
+    if (formData.role === "student" && !formData.department)
       newErrors.department = "Department is required for students";
-    }
 
-    if (formData.role === "student" && !formData.year) {
+    if (formData.role === "student" && !formData.year)
       newErrors.year = "Year is required for students";
-    }
-    
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    } else if (passwordStrength.score < 3) {
-      newErrors.password = "Password is too weak";
-    }
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.password !== formData.confirmPassword) {
+    if (!formData.password) newErrors.password = "Password is required";
+    else if (passwordStrength.score < 3) newErrors.password = "Password is too weak";
+
+    if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password";
+    else if (formData.password !== formData.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
-    }
 
-    if (!formData.agreeTerms) {
-      newErrors.agreeTerms = "You must agree to the terms and conditions";
-    }
-    
+    if (!formData.agreeTerms) newErrors.agreeTerms = "You must agree to the terms and conditions";
+
     return newErrors;
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === "checkbox" ? checked : value;
-    
-    setFormData({ ...formData, [name]: newValue });
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: "" });
-    }
 
-    // Check password strength
-    if (name === "password") {
-      setPasswordStrength(checkPasswordStrength(value));
-    }
+    setFormData({ ...formData, [name]: newValue });
+
+    if (errors[name]) setErrors({ ...errors, [name]: "" });
+
+    if (name === "password") setPasswordStrength(checkPasswordStrength(value));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
@@ -147,9 +140,8 @@ const Register = () => {
 
     setIsLoading(true);
     setErrors({});
-    
+
     try {
-      // Prepare data for backend API
       const [firstName, ...lastNameParts] = formData.name.split(' ');
       const lastName = lastNameParts.join(' ');
 
@@ -159,16 +151,16 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         role: formData.role,
-        regNumber: formData.regNo,
+        regNumber: formData.regNo, // Map regNo to regNumber for auth utility
         phone: formData.phone,
         department: formData.department,
         year: formData.year
       };
 
       const result = await register(registrationData);
-      
+
       if (result.success) {
-        // Navigate based on user role
+        // Navigation is handled by auth utility
         const userRole = localStorage.getItem('userRole');
         if (userRole === "admin") {
           navigate("/admin");
@@ -176,15 +168,11 @@ const Register = () => {
           navigate("/home");
         }
       } else {
-        setErrors({ 
-          submit: result.message || "Registration failed. Please try again." 
-        });
+        setErrors({ submit: result.message || "Registration failed. Please try again." });
       }
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ 
-        submit: "Registration failed. Please check your information and try again." 
-      });
+      setErrors({ submit: "Registration failed. Please check your information and try again." });
     } finally {
       setIsLoading(false);
     }
@@ -197,7 +185,7 @@ const Register = () => {
           <h2>Join Campus Pulse</h2>
           <p>Create your account to get started</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="register-form-content">
           <div className="form-row">
             <div className="form-group">
@@ -264,7 +252,7 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="form-group full-width">
             <label htmlFor="role">Role *</label>
             <select
               id="role"
@@ -293,7 +281,7 @@ const Register = () => {
                   disabled={isLoading}
                 >
                   <option value="">Select Department</option>
-                  {departments.map(dept => (
+                  {Array.isArray(departments) && departments.map(dept => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>
@@ -311,7 +299,7 @@ const Register = () => {
                   disabled={isLoading}
                 >
                   <option value="">Select Year</option>
-                  {years.map(year => (
+                  {Array.isArray(years) && years.map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
@@ -370,7 +358,7 @@ const Register = () => {
             </div>
           </div>
 
-          <div className="form-group checkbox-group">
+          <div className="form-group checkbox-group full-width">
             <label className="checkbox-label">
               <input
                 type="checkbox"
@@ -385,14 +373,10 @@ const Register = () => {
             {errors.agreeTerms && <span className="error-text">{errors.agreeTerms}</span>}
           </div>
 
-          {errors.submit && (
-            <div className="error-message">
-              {errors.submit}
-            </div>
-          )}
+          {errors.submit && <div className="error-message">{errors.submit}</div>}
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className={`register-btn ${isLoading ? 'loading' : ''}`}
             disabled={isLoading}
           >

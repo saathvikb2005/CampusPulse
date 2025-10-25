@@ -8,13 +8,13 @@ const validate = require('../middleware/validation');
 
 // @route   POST /api/feedback
 // @desc    Submit feedback
-// @access  Private
-router.post('/', auth, validate.validateFeedbackCreate, feedbackController.createFeedback);
+// @access  Public
+router.post('/', validate.validateFeedbackCreate, feedbackController.createFeedback);
 
 // @route   GET /api/feedback
-// @desc    Get all feedback (Admin only)
-// @access  Private/Admin
-router.get('/', auth, authorize('admin'), feedbackController.getAllFeedback);
+// @desc    Get all feedback (Admin/Faculty/Event Manager)
+// @access  Private/Admin/Faculty/Event Manager
+router.get('/', auth, authorize(['admin', 'faculty', 'event_manager']), feedbackController.getAllFeedback);
 
 // @route   GET /api/feedback/:id
 // @desc    Get feedback by ID
@@ -22,9 +22,9 @@ router.get('/', auth, authorize('admin'), feedbackController.getAllFeedback);
 router.get('/:id', auth, feedbackController.getFeedbackById);
 
 // @route   PUT /api/feedback/:id/status
-// @desc    Update feedback status (Admin only)
-// @access  Private/Admin
-router.put('/:id/status', auth, authorize('admin'), validate.validateFeedbackStatusUpdate, feedbackController.updateFeedbackStatus);
+// @desc    Update feedback status (Admin/Faculty/Event Manager)
+// @access  Private/Admin/Faculty/Event Manager
+router.put('/:id/status', auth, authorize(['admin', 'faculty', 'event_manager']), validate.validateFeedbackStatusUpdate, feedbackController.updateFeedbackStatus);
 
 // @route   DELETE /api/feedback/:id
 // @desc    Delete feedback

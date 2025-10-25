@@ -4,10 +4,10 @@ const User = require('../models/User');
 
 // @desc    Submit feedback
 // @route   POST /api/feedback
-// @access  Private
+// @access  Public (supports anonymous feedback)
 const createFeedback = async (req, res) => {
   try {
-    const { subject, message, category, relatedEvent, rating } = req.body;
+    const { subject, message, category, relatedEvent, rating, isAnonymous, metadata, name, email } = req.body;
 
     // Validate required fields
     if (!subject || !message || !category) {
@@ -28,14 +28,40 @@ const createFeedback = async (req, res) => {
       }
     }
 
-    const feedback = await Feedback.create({
-      user: req.user._id,
+    // For anonymous feedback, use an existing anonymous user
+    let userId = null;
+    if (req.user) {
+      // User is logged in
+      userId = req.user._id;
+    } else {
+      // Anonymous feedback - find existing anonymous user or use admin
+      let guestUser = await User.findOne({ email: 'admin@campuspulse.edu' });
+      if (!guestUser) {
+        return res.status(500).json({
+          success: false,
+          message: 'System error: No default user found for anonymous feedback'
+        });
+      }
+      userId = guestUser._id;
+    }
+
+    const feedbackData = {
+      user: userId,
       subject,
       message,
       category,
       relatedEvent,
-      rating
-    });
+      rating,
+      isAnonymous: isAnonymous || !req.user, // Auto-anonymous if not logged in
+      metadata: {
+        ...(metadata || {}),
+        // Store original submitter info for anonymous feedback
+        ...(name && { submitterName: name }),
+        ...(email && { submitterEmail: email })
+      }
+    };
+
+    const feedback = await Feedback.create(feedbackData);
 
     const populatedFeedback = await Feedback.findById(feedback._id)
       .populate('user', 'firstName lastName email')
@@ -80,6 +106,11 @@ const getAllFeedback = async (req, res) => {
     // Filter by rating
     if (req.query.rating) {
       query.rating = parseInt(req.query.rating);
+    }
+
+    // Filter by event
+    if (req.query.event) {
+      query.relatedEvent = req.query.event;
     }
 
     const totalFeedback = await Feedback.countDocuments(query);

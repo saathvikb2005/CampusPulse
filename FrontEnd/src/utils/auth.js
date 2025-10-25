@@ -67,7 +67,8 @@ export const register = async (userData) => {
       role: userData.role,
       department: userData.department,
       studentId: userData.regNumber, // Map regNumber to studentId
-      phone: userData.phone
+      phone: userData.phone,
+      year: userData.year
     };
 
     const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
@@ -119,7 +120,8 @@ const getRolePermissions = (role) => {
       'create_events', 'manage_own_events', 'view_analytics'
     ],
     student: [
-      'create_events', 'manage_own_events'
+      // Students can only view and register for events, not create or manage them
+      'view_events', 'register_for_events'
     ]
   };
   
@@ -138,6 +140,11 @@ export const getCurrentUser = () => {
     department: localStorage.getItem('userDepartment'),
     permissions: JSON.parse(localStorage.getItem('userPermissions') || '[]')
   };
+};
+
+// Get current user role
+export const getUserRole = () => {
+  return localStorage.getItem('userRole');
 };
 
 // Logout function - Backend API integration
@@ -191,10 +198,34 @@ export const canAccessAdmin = () => {
   return isAdmin() && hasPermission('admin_panel');
 };
 
-// Check if user can manage events
+// Check if user can manage events (students cannot manage events)
 export const canManageEvents = () => {
-  return isAdmin() || isFaculty() || isEventManager() || 
-         hasPermission('create_events') || hasPermission('manage_own_events');
+  return isAdmin() || isFaculty() || isEventManager();
+};
+
+// Check if user can create notifications
+export const canCreateNotifications = () => {
+  return isAdmin() || isFaculty() || isEventManager();
+};
+
+// Check if user can create events (students cannot create events)
+export const canCreateEvents = () => {
+  return isAdmin() || isFaculty() || isEventManager();
+};
+
+// Check if user can manage feedback (students cannot manage feedback)
+export const canManageFeedback = () => {
+  return isAdmin() || isFaculty() || isEventManager();
+};
+
+// Check if user can view events (all authenticated users can view events)
+export const canViewEvents = () => {
+  return isAuthenticated();
+};
+
+// Check if user can register for events (all authenticated users can register)
+export const canRegisterForEvents = () => {
+  return isAuthenticated();
 };
 
 // Admin override functions - admins can do anything
