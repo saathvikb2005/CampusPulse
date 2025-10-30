@@ -31,6 +31,11 @@ router.put('/read-all', auth, notificationController.markAllAsRead);
 // @access  Private
 router.put('/mark-all-read', auth, notificationController.markAllAsRead);
 
+// @route   PATCH /api/notifications/mark-all-read
+// @desc    Mark all notifications as read (PATCH method)
+// @access  Private
+router.patch('/mark-all-read', auth, notificationController.markAllAsRead);
+
 // @route   DELETE /api/notifications/:id
 // @desc    Delete notification
 // @access  Private
@@ -45,5 +50,10 @@ router.get('/unread-count', auth, notificationController.getUnreadCount);
 // @desc    Get unread notifications count (alternative endpoint)
 // @access  Private
 router.get('/unread/count', auth, notificationController.getUnreadCount);
+
+// @route   GET /api/notifications/count
+// @desc    Get notifications count
+// @access  Private
+router.get('/count', auth, notificationController.getUnreadCount);
 
 module.exports = router;

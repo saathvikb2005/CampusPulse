@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Navigation from '../../components/Navigation';
 import { getCurrentUser, canManageEvents } from '../../utils/auth';
 import { eventAPI } from '../../services/api';
@@ -8,6 +8,7 @@ import './EventManagement.css';
 
 const EventManagement = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('create');
   const [editingEvent, setEditingEvent] = useState(null);
@@ -46,7 +47,14 @@ const EventManagement = () => {
     }
     setUser(currentUser);
     loadUserEvents();
-  }, [navigate]);
+
+    // Check for edit parameter in URL
+    const searchParams = new URLSearchParams(location.search);
+    const editEventId = searchParams.get('edit');
+    if (editEventId) {
+      loadEventForEdit(editEventId);
+    }
+  }, [navigate, location.search]);
 
   const loadUserEvents = async () => {
     try {
@@ -95,6 +103,56 @@ const EventManagement = () => {
     if (now < start) return 'upcoming';
     if (now >= start && now <= end) return 'live';
     return 'ended';
+  };
+
+  const loadEventForEdit = async (eventId) => {
+    try {
+      setLoading(true);
+      const response = await eventAPI.getById(eventId);
+      
+      if (response.success) {
+        const event = response.data?.event || response.event;
+        if (event) {
+          // Convert event data to form format
+          const eventDate = new Date(event.startDate);
+          const eventEndDate = new Date(event.endDate);
+          
+          setEventForm({
+            title: event.title || '',
+            description: event.description || '',
+            category: event.category || 'technical',
+            type: event.type || 'individual',
+            date: eventDate.toISOString().split('T')[0],
+            time: eventDate.toTimeString().slice(0, 5),
+            endTime: eventEndDate.toTimeString().slice(0, 5),
+            location: event.location || '',
+            maxParticipants: event.maxParticipants || '',
+            volunteerSpots: event.volunteerSpots || '',
+            prerequisites: event.prerequisites || [''],
+            agenda: event.agenda || [''],
+            tags: event.tags || [''],
+            registrationDeadline: event.registrationDeadline ? 
+              new Date(event.registrationDeadline).toISOString().split('T')[0] : '',
+            teamSize: event.teamSize || { min: 2, max: 5 },
+            image: event.image || '',
+            youtubeStreamUrl: event.youtubeStreamUrl || '',
+            streamTitle: event.streamTitle || '',
+            enableLiveStream: event.enableLiveStream || false
+          });
+          
+          setEditingEvent(event);
+          setActiveTab('create'); // Switch to form tab
+          showSuccessToast('Event loaded for editing');
+        }
+      } else {
+        showErrorToast('Failed to load event for editing');
+      }
+    } catch (error) {
+      console.error('Error loading event for edit:', error);
+      showErrorToast('Failed to load event for editing');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (e) => {

@@ -8,7 +8,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 
-// Load environment variables with explicit path
+// Load environment variables
 require('dotenv').config({ 
   path: path.join(__dirname, '..', '.env') 
 });
@@ -26,9 +26,11 @@ const feedbackRoutes = require('./routes/feedbackRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 const server = http.createServer(app);
+
 const io = socketIo(server, {
   cors: {
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
@@ -48,17 +50,32 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.',
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
+// Rate limiting (relaxed in development)
+const isDev = (process.env.NODE_ENV || 'development') === 'development';
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || (15 * 60 * 1000);
+const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '', 10) || 100;
+
+if (!isDev) {
+  const limiter = rateLimit({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: RATE_LIMIT_MAX_REQUESTS,
+    message: {
+      error: 'Too many requests from this IP, please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(limiter);
+} else {
+  // In development, still guard against accidental floods with a very generous limit
+  const devLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 5000, // effectively disabled for local testing
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(devLimiter);
+}
 
 // CORS configuration
 app.use(cors({
@@ -81,13 +98,36 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static files (uploads)
 app.use('/uploads', express.static('uploads'));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
+// Health check endpoint (two paths for convenience)
+const healthHandler = (req, res) => {
   res.status(200).json({
     status: 'OK',
     message: 'CampusPulse API is running',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
+  });
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to CampusPulse API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      events: '/api/events',
+      blogs: '/api/blogs',
+      feedback: '/api/feedback',
+      notifications: '/api/notifications',
+      analytics: '/api/analytics',
+      admin: '/api/admin',
+      upload: '/api/upload'
+    }
   });
 });
 
@@ -100,6 +140,7 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // 404 handler for all unmatched routes
 app.use((req, res) => {

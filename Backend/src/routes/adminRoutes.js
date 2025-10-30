@@ -26,6 +26,11 @@ router.get('/pending-events', auth, authorize('admin', 'event_manager'), adminCo
 // @access  Private/Admin/Event Manager
 router.get('/events/pending', auth, authorize('admin', 'event_manager'), adminController.getPendingEvents);
 
+// @route   GET /api/admin/pending-approvals
+// @desc    Get items pending approval
+// @access  Private/Admin/Event Manager
+router.get('/pending-approvals', auth, authorize('admin', 'event_manager'), adminController.getPendingEvents);
+
 // @route   PUT /api/admin/approve-event/:id
 // @desc    Approve event
 // @access  Private/Admin/Event Manager
@@ -35,6 +40,11 @@ router.put('/approve-event/:id', auth, authorize('admin', 'event_manager'), admi
 // @desc    Reject event
 // @access  Private/Admin/Event Manager
 router.put('/reject-event/:id', auth, authorize('admin', 'event_manager'), validate.validateRejectionReason, adminController.rejectEvent);
+
+// @route   POST /api/admin/bulk-approve
+// @desc    Bulk approve/reject events
+// @access  Private/Admin/Event Manager
+router.post('/bulk-approve', auth, authorize('admin', 'event_manager'), adminController.bulkApproveEvents);
 
 // @route   GET /api/admin/users
 // @desc    Get all users for management
@@ -95,6 +105,16 @@ router.get('/system-settings', auth, authorize('admin'), adminController.getSyst
 // @desc    Update system settings
 // @access  Private/Admin
 router.put('/system-settings', auth, authorize('admin'), validate.validateSystemSettings, adminController.updateSystemSettings);
+
+// @route   GET /api/admin/settings
+// @desc    Get system settings (alias)
+// @access  Private/Admin
+router.get('/settings', auth, authorize('admin'), adminController.getSystemSettings);
+
+// @route   PUT /api/admin/settings
+// @desc    Update system settings (alias)
+// @access  Private/Admin
+router.put('/settings', auth, authorize('admin'), adminController.updateSystemSettings);
 
 // @route   POST /api/admin/backup
 // @desc    Create system backup

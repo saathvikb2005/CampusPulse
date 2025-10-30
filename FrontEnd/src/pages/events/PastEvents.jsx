@@ -21,9 +21,19 @@ const PastEvents = () => {
         const response = await eventAPI.getPast();
         
         if (response.success) {
+          // Handle different possible data structures
+          const events = response.data?.events || response.events || response.data || [];
+          
+          if (!Array.isArray(events)) {
+            console.error('Events data is not an array:', events);
+            showErrorToast('Invalid events data format');
+            setPastEvents([]);
+            return;
+          }
+          
           // Map API response to match the existing structure
           const eventsWithDetails = await Promise.all(
-            response.data.map(async (event) => {
+            events.map(async (event) => {
               try {
                 // Fetch additional details for each event
                 const [galleryResponse, blogsResponse, analyticsResponse] = await Promise.all([
@@ -33,12 +43,12 @@ const PastEvents = () => {
                 ]);
 
                 return {
-                  id: event._id,
-                  title: event.title,
-                  date: event.startDate,
+                  id: event._id || event.id,
+                  title: event.title || 'Untitled Event',
+                  date: event.startDate || event.date,
                   endDate: event.endDate,
                   category: event.category || "technical",
-                  description: event.description,
+                  description: event.description || 'No description available',
                   image: event.image || event.images?.[0]?.url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop",
                   attendees: analyticsResponse.success ? analyticsResponse.data.attendees || Math.floor(Math.random() * 500) + 100 : Math.floor(Math.random() * 500) + 100,
                   rating: analyticsResponse.success ? analyticsResponse.data.averageRating || 4.5 : 4.5,
@@ -78,6 +88,11 @@ const PastEvents = () => {
           );
           
           setPastEvents(eventsWithDetails);
+          
+          // Show informative message if no past events found
+          if (eventsWithDetails.length === 0) {
+            console.log('No past events found - this might be normal if events haven\'t ended yet');
+          }
         } else {
           showErrorToast('Failed to load past events');
         }
@@ -261,8 +276,18 @@ const PastEvents = () => {
           ) : (
             <div className="no-events">
               <i className="fas fa-calendar-times"></i>
-              <h3>No events found</h3>
-              <p>Try adjusting your search criteria</p>
+              <h3>No past events found</h3>
+              {searchTerm || selectedCategory !== "all" ? (
+                <p>Try adjusting your search criteria</p>
+              ) : (
+                <div>
+                  <p>No completed events are available yet.</p>
+                  <p>Events will appear here after they have ended.</p>
+                  <Link to="/events/present" className="btn btn-primary" style={{ marginTop: '16px' }}>
+                    View Upcoming Events
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

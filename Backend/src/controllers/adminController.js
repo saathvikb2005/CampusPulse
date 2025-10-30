@@ -76,6 +76,13 @@ const getDashboardStats = async (req, res) => {
       memoryUsage: process.memoryUsage()
     };
     
+    // Prevent caching for admin dashboard to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     res.json({
       success: true,
       data: {
@@ -145,6 +152,13 @@ const getAuditLog = async (req, res) => {
       }
     ];
     
+    // Prevent caching for audit log to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     res.json({
       success: true,
       data: {
@@ -175,6 +189,13 @@ const getPendingEvents = async (req, res) => {
     const pendingEvents = await Event.find({ status: 'pending' })
       .populate('organizerId', 'firstName lastName email')
       .sort({ createdAt: -1 });
+    
+    // Prevent caching for pending events to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
     res.json({
       success: true,
@@ -334,6 +355,13 @@ const getAllUsers = async (req, res) => {
       .skip((page - 1) * limit);
     
     const total = await User.countDocuments(query);
+    
+    // Prevent caching for user list to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
     res.json({
       success: true,
@@ -966,6 +994,99 @@ const getBackupStatus = async (req, res) => {
   }
 };
 
+// @desc    Bulk approve/reject events
+// @route   POST /api/admin/bulk-approve
+// @access  Private/Admin/Event Manager
+const bulkApproveEvents = async (req, res) => {
+  try {
+    const { eventIds, action } = req.body;
+
+    if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event IDs array is required'
+      });
+    }
+
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Action must be either "approve" or "reject"'
+      });
+    }
+
+    const results = [];
+    
+    for (const eventId of eventIds) {
+      try {
+        const event = await Event.findById(eventId);
+        
+        if (!event) {
+          results.push({
+            eventId,
+            success: false,
+            message: 'Event not found'
+          });
+          continue;
+        }
+
+        if (action === 'approve') {
+          event.status = 'approved';
+          event.approvedBy = req.user._id;
+          event.approvalDate = new Date();
+        } else {
+          event.status = 'rejected';
+          event.approvedBy = req.user._id;
+          event.approvalDate = new Date();
+        }
+
+        await event.save();
+
+        // Create notification for event organizer
+        const notification = new Notification({
+          title: action === 'approve' ? 'Event Approved' : 'Event Rejected',
+          message: action === 'approve' 
+            ? `Your event "${event.title}" has been approved and is now visible to all users.`
+            : `Your event "${event.title}" has been rejected.`,
+          type: action === 'approve' ? 'success' : 'error',
+          targetUsers: [event.organizerId],
+          createdBy: req.user._id
+        });
+
+        await notification.save();
+
+        results.push({
+          eventId,
+          success: true,
+          message: `Event ${action}d successfully`,
+          eventTitle: event.title
+        });
+      } catch (error) {
+        results.push({
+          eventId,
+          success: false,
+          message: error.message
+        });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+
+    res.json({
+      success: true,
+      message: `${successCount} out of ${eventIds.length} events ${action}d successfully`,
+      data: { results }
+    });
+  } catch (error) {
+    console.error('Bulk approve events error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing bulk approval',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAuditLog,
@@ -984,5 +1105,6 @@ module.exports = {
   getSystemSettings,
   updateSystemSettings,
   createBackup,
-  getBackupStatus
+  getBackupStatus,
+  bulkApproveEvents
 };

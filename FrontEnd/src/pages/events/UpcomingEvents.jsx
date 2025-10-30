@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Navigation from "../../components/Navigation";
 import { eventAPI } from "../../services/api";
 import { getCurrentUser, isAuthenticated } from "../../utils/auth";
-import { showSuccessToast, showErrorToast } from "../../utils/toastUtils";
+import { showSuccessToast, showErrorToast } from "../../utils/toastUtils.jsx";
 import "./UpcomingEvents.css";
 
 const UpcomingEvents = () => {
@@ -27,28 +27,38 @@ const UpcomingEvents = () => {
       const response = await eventAPI.getUpcoming();
       
       if (response.success) {
+        // Handle different possible data structures
+        const events = response.data?.events || response.events || response.data || [];
+        
+        if (!Array.isArray(events)) {
+          console.error('Events data is not an array:', events);
+          setError('Invalid events data format');
+          return;
+        }
+
         // Map backend data structure to frontend format
-        const mappedEvents = response.data.events.map(event => ({
-          id: event._id,
-          title: event.title,
-          date: event.date,
-          time: event.startTime,
-          endTime: event.endTime,
-          category: event.category,
-          type: event.isTeamEvent ? "team" : "individual",
-          description: event.description,
+        const mappedEvents = events.map(event => ({
+          id: event._id || event.id,
+          title: event.title || 'Untitled Event',
+          date: event.startDate || event.date,
+          time: event.startTime || new Date(event.startDate).toTimeString().slice(0, 5),
+          endTime: event.endTime || new Date(event.endDate).toTimeString().slice(0, 5),
+          category: event.category || 'general',
+          type: event.isTeamEvent || event.type === 'team' ? "team" : "individual",
+          description: event.description || 'No description available',
           image: event.images && event.images.length > 0 
             ? `http://localhost:5000${event.images[0].url}` 
-            : "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop",
-          location: event.venue,
-          maxParticipants: event.maxParticipants || event.capacity,
+            : event.image || "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop",
+          location: event.location || event.venue || 'TBA',
+          maxParticipants: event.maxParticipants || event.capacity || 50,
           registered: event.registrationCount || event.registrations?.length || 0,
-          organizer: event.organizerId ? `${event.organizerId.firstName} ${event.organizerId.lastName}` : "Unknown Organizer",
-          organizerContact: event.organizerId?.email || "",
-          prerequisites: event.requirements ? [event.requirements] : ["None"],
-          agenda: ["Event details available upon registration"],
+          organizer: event.organizer?.name || 
+                    (event.organizerId ? `${event.organizerId.firstName || ''} ${event.organizerId.lastName || ''}`.trim() : 'Unknown Organizer'),
+          organizerContact: event.organizer?.email || event.organizerId?.email || "",
+          prerequisites: event.prerequisites || (event.requirements ? [event.requirements] : ["None"]),
+          agenda: event.agenda || ["Event details available upon registration"],
           registrationDeadline: event.registrationDeadline,
-          tags: event.tags || [event.category],
+          tags: event.tags || [event.category || 'general'],
           volunteerSpots: 5, // Default value - backend doesn't have volunteer spots yet
           volunteerRegistered: event.volunteers?.length || 0,
           teamSize: event.isTeamEvent ? { min: 2, max: 5 } : null

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isAuthenticated, getCurrentUser, canAccessAdmin, canManageEvents, canManageFeedback, logout } from '../utils/auth';
+import { notificationAPI } from '../services/api';
 import './Navigation.css';
 
 const Navigation = () => {
@@ -12,6 +13,7 @@ const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
 
   useEffect(() => {
     const loggedIn = isAuthenticated();
@@ -25,6 +27,24 @@ const Navigation = () => {
       fetchNotificationCount();
     }
   }, [location]);
+
+  // Refresh notification count when leaving notifications page
+  useEffect(() => {
+    if (isLoggedIn && location.pathname !== '/notifications') {
+      fetchNotificationCount();
+    }
+  }, [location.pathname, isLoggedIn]);
+
+  // Periodically refresh notification count for authenticated users
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const interval = setInterval(() => {
+      fetchNotificationCount();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,28 +68,63 @@ const Navigation = () => {
   }, []);
 
   const fetchNotificationCount = async () => {
+    if (!isAuthenticated()) return;
+    
     try {
-      // This would be replaced with actual API call
-      // const response = await notificationAPI.getUnreadCount();
-      // setNotificationCount(response.data.count || 0);
-      setNotificationCount(3); // Mock data for now
+      setIsLoadingNotifications(true);
+      const response = await notificationAPI.getUnreadCount();
+      if (response.success) {
+        setNotificationCount(response.data.count || 0);
+      } else {
+        setNotificationCount(0);
+      }
     } catch (error) {
       console.error('Error fetching notification count:', error);
+      setNotificationCount(0); // Default to 0 on error
+    } finally {
+      setIsLoadingNotifications(false);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await logout();
+      // Clear local state first
       setIsLoggedIn(false);
       setUser(null);
+      setNotificationCount(0); // Reset notification count on logout
+      
+      // Clear localStorage manually to prevent auth.js redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userDepartment');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userPermissions');
+      
+      // Call backend logout API
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch('http://localhost:5000/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+      
+      // Navigate to landing page
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
-      // Fallback: clear local storage and redirect
+      // Fallback: clear local storage and redirect to landing page
       localStorage.clear();
       setIsLoggedIn(false);
       setUser(null);
+      setNotificationCount(0);
       navigate('/');
     }
   };
@@ -196,7 +251,7 @@ const Navigation = () => {
                     )}
                     {canManageEvents() && (
                       <Link 
-                        to="/events/create" 
+                        to="/events/manage" 
                         className="dropdown-link create-event-link"
                         onClick={closeMenu}
                         role="menuitem"
@@ -215,9 +270,13 @@ const Navigation = () => {
                 >
                   <i className="fas fa-bell"></i>
                   <span>Notifications</span>
-                  {notificationCount > 0 && (
-                    <span className="notification-badge">{notificationCount}</span>
-                  )}
+                  {isLoadingNotifications ? (
+                    <span className="notification-badge loading">
+                      <i className="fas fa-spinner fa-spin"></i>
+                    </span>
+                  ) : notificationCount > 0 ? (
+                    <span className="notification-badge">{notificationCount > 99 ? '99+' : notificationCount}</span>
+                  ) : null}
                 </Link>
 
                 <Link 
@@ -348,14 +407,6 @@ const Navigation = () => {
                 >
                   <i className="fas fa-star"></i>
                   <span>Features</span>
-                </Link>
-                <Link 
-                  to="/contact" 
-                  className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  <i className="fas fa-envelope"></i>
-                  <span>Contact</span>
                 </Link>
               </div>
 

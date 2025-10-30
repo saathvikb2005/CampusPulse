@@ -49,6 +49,22 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Department name cannot exceed 100 characters']
   },
+  // Optional profile fields used by frontend
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Bio cannot exceed 1000 characters'],
+    default: ''
+  },
+  interests: {
+    type: [String],
+    default: []
+  },
+  year: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   role: {
     type: String,
     enum: ['student', 'faculty', 'event_manager', 'admin'],

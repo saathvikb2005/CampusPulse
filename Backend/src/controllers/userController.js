@@ -348,6 +348,61 @@ const updateUserRole = async (req, res) => {
   }
 };
 
+// @desc    Change user password
+// @route   PUT /api/users/change-password
+// @access  Private
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    // Get user with password
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check current password
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    
+    // Invalidate all refresh tokens for security
+    user.refreshTokens = [];
+    
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully. Please login again.'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -356,5 +411,6 @@ module.exports = {
   getUserById,
   updateUser,
   deleteUser,
-  updateUserRole
+  updateUserRole,
+  changePassword
 };

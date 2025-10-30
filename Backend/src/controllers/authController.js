@@ -16,7 +16,8 @@ const register = async (req, res) => {
       role,
       department,
       studentId,
-      phone
+      phone,
+      year
     } = req.body;
 
     // Check if user already exists
@@ -47,7 +48,8 @@ const register = async (req, res) => {
       password,
       role: role || 'student',
       department,
-      phone
+      phone,
+      year
     };
 
     // Add role-specific fields  
@@ -402,6 +404,34 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+// @desc    Get current user profile
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user profile',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -409,5 +439,6 @@ module.exports = {
   refreshToken,
   forgotPassword,
   resetPassword,
-  verifyEmail
+  verifyEmail,
+  getMe
 };

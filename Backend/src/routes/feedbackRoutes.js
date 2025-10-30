@@ -14,7 +14,12 @@ router.post('/', validate.validateFeedbackCreate, feedbackController.createFeedb
 // @route   GET /api/feedback
 // @desc    Get all feedback (Admin/Faculty/Event Manager)
 // @access  Private/Admin/Faculty/Event Manager
-router.get('/', auth, authorize(['admin', 'faculty', 'event_manager']), feedbackController.getAllFeedback);
+router.get('/', auth, authorize('admin', 'faculty', 'event_manager'), feedbackController.getAllFeedback);
+
+// @route   GET /api/feedback/my-feedback
+// @desc    Get current user's feedback
+// @access  Private
+router.get('/my-feedback', auth, feedbackController.getUserFeedback);
 
 // @route   GET /api/feedback/:id
 // @desc    Get feedback by ID
@@ -24,7 +29,7 @@ router.get('/:id', auth, feedbackController.getFeedbackById);
 // @route   PUT /api/feedback/:id/status
 // @desc    Update feedback status (Admin/Faculty/Event Manager)
 // @access  Private/Admin/Faculty/Event Manager
-router.put('/:id/status', auth, authorize(['admin', 'faculty', 'event_manager']), validate.validateFeedbackStatusUpdate, feedbackController.updateFeedbackStatus);
+router.put('/:id/status', auth, authorize('admin', 'faculty', 'event_manager'), validate.validateFeedbackStatusUpdate, feedbackController.updateFeedbackStatus);
 
 // @route   DELETE /api/feedback/:id
 // @desc    Delete feedback

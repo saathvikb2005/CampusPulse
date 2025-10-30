@@ -31,10 +31,20 @@ const PresentEvents = () => {
         const response = await eventAPI.getPresent();
         
         if (response.success) {
-          setPresentEvents(response.data || []);
+          // Handle different possible data structures
+          const events = response.data?.events || response.events || response.data || [];
+          
+          if (!Array.isArray(events)) {
+            console.error('Events data is not an array:', events);
+            setError('Invalid events data format');
+            showErrorToast('Invalid events data format');
+            return;
+          }
+          
+          setPresentEvents(events);
         } else {
-          setError('Failed to load events');
-          showErrorToast('Failed to load live events');
+          setError(response.message || 'Failed to load events');
+          showErrorToast(response.message || 'Failed to load live events');
         }
       } catch (error) {
         console.error('Error fetching present events:', error);
@@ -48,7 +58,12 @@ const PresentEvents = () => {
     fetchPresentEvents();
   }, []);
 
-  const getTimeRemaining = (endDate) => {
+  const getTimeRemaining = (event) => {
+    // Use endDate if available, otherwise use date field, otherwise calculate from startDate
+    const endDate = event.endDate || event.date || (event.startDate ? new Date(new Date(event.startDate).getTime() + 2 * 60 * 60 * 1000) : null);
+    
+    if (!endDate) return null;
+    
     const now = currentTime.getTime();
     const end = new Date(endDate).getTime();
     const diff = end - now;
@@ -62,10 +77,18 @@ const PresentEvents = () => {
     return { days, hours, minutes };
   };
 
-  const isEventLive = (startDate, endDate) => {
+  const isEventLive = (event) => {
     const now = currentTime.getTime();
+    
+    // Try to determine start and end times from available fields
+    const startDate = event.startDate || event.date;
+    const endDate = event.endDate || (event.date ? new Date(new Date(event.date).getTime() + 2 * 60 * 60 * 1000) : null);
+    
+    if (!startDate) return false;
+    
     const start = new Date(startDate).getTime();
-    const end = new Date(endDate).getTime();
+    const end = endDate ? new Date(endDate).getTime() : start + (2 * 60 * 60 * 1000); // Default 2 hour duration
+    
     return now >= start && now <= end;
   };
 
@@ -107,8 +130,13 @@ const PresentEvents = () => {
 
   const getEventSchedule = (event) => {
     // Generate a simple schedule based on event timing
-    const startTime = new Date(event.startDate);
-    const endTime = new Date(event.endDate);
+    const startDate = event.startDate || event.date;
+    const endDate = event.endDate || (event.date ? new Date(new Date(event.date).getTime() + 2 * 60 * 60 * 1000) : null);
+    
+    if (!startDate) return [{ time: 'TBA', activity: 'Event Schedule TBA' }];
+    
+    const startTime = new Date(startDate);
+    const endTime = endDate ? new Date(endDate) : new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
     
     return [
       { time: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), activity: 'Event Starts' },
@@ -200,8 +228,8 @@ const PresentEvents = () => {
           {presentEvents.length > 0 ? (
             <div className="events-grid">
               {presentEvents.map(event => {
-                const timeRemaining = getTimeRemaining(event.endDate);
-                const isLive = isEventLive(event.startDate, event.endDate);
+                const timeRemaining = getTimeRemaining(event);
+                const isLive = isEventLive(event);
                 const registrationCount = getRegistrationCount(event);
                 const maxParticipants = getMaxParticipants(event);
                 const spotRegistrationAvailable = isSpotRegistrationAvailable(event);
@@ -232,17 +260,27 @@ const PresentEvents = () => {
                       
                       <div className="event-date">
                         <i className="fas fa-clock"></i>
-                        {new Date(event.startDate).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })} - {new Date(event.startDate).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })} to {new Date(event.endDate).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
+                        {(() => {
+                          const startDate = event.startDate || event.date;
+                          const endDate = event.endDate;
+                          
+                          if (!startDate) return 'Date TBA';
+                          
+                          const start = new Date(startDate);
+                          const end = endDate ? new Date(endDate) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+                          
+                          return `${start.toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })} - ${start.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })} to ${end.toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}`;
+                        })()}
                       </div>
                       
                       <div className="event-location">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { eventAPI } from "../../services/api";
 import { getCurrentUser, canEditEvent } from "../../utils/auth";
-import { showErrorToast } from "../../utils/toastUtils";
+import { showErrorToast, showSuccessToast } from "../../utils/toastUtils";
 import "./EventStream.css";
 
 const EventStream = () => {
@@ -166,7 +166,7 @@ const EventStream = () => {
           youtubeVideoId: extractVideoId(newUrl)
         }));
         // Show success message
-        alert('Stream URL updated successfully!');
+        showSuccessToast('Stream URL updated successfully!');
       } else {
         showErrorToast('Failed to update stream URL');
       }
@@ -194,7 +194,7 @@ const EventStream = () => {
         setIsStreamLive(!streamData.isLive);
         
         // Show success message
-        alert(`Stream ${!streamData.isLive ? 'started' : 'stopped'} successfully!`);
+        showSuccessToast(`Stream ${!streamData.isLive ? 'started' : 'stopped'} successfully!`);
       } else {
         showErrorToast(`Failed to ${streamData.isLive ? 'stop' : 'start'} stream`);
       }

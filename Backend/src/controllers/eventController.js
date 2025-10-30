@@ -67,6 +67,11 @@ const getAllEvents = async (req, res) => {
 
     const total = await Event.countDocuments(filter);
 
+    // Prevent caching for all events to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     res.json({
       success: true,
       data: {
@@ -521,7 +526,7 @@ const getEventsByCategory = async (req, res) => {
 
     const totalEvents = await Event.countDocuments(query);
     const events = await Event.find(query)
-      .populate('organizer', 'firstName lastName email')
+      .populate('organizerId', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -562,7 +567,7 @@ const getUserRegisteredEvents = async (req, res) => {
     const user = await User.findById(req.user._id).populate({
       path: 'eventsRegistered.event',
       populate: {
-        path: 'organizer',
+        path: 'organizerId',
         select: 'firstName lastName email'
       }
     });
@@ -578,6 +583,11 @@ const getUserRegisteredEvents = async (req, res) => {
     const events = user.eventsRegistered
       .sort((a, b) => new Date(b.registrationDate) - new Date(a.registrationDate))
       .slice(skip, skip + limit);
+
+    // Prevent caching for user registered events to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
 
     res.json({
       success: true,
@@ -611,14 +621,19 @@ const getUserCreatedEvents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const query = { organizer: req.user._id };
+    const query = { organizerId: req.user._id };
     const totalEvents = await Event.countDocuments(query);
     
     const events = await Event.find(query)
-      .populate('organizer', 'firstName lastName email')
+      .populate('organizerId', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    // Prevent caching for user created events to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
 
     res.json({
       success: true,
@@ -774,9 +789,12 @@ const getPastEvents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const category = req.query.category;
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    
     let filter = { 
       status: 'approved',
-      date: { $lt: new Date() }
+      date: { $lt: today } // Events before today
     };
     
     if (category && category !== 'all') {
@@ -790,6 +808,11 @@ const getPastEvents = async (req, res) => {
       .skip((page - 1) * limit);
     
     const total = await Event.countDocuments(filter);
+    
+    // Prevent caching for past events to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     
     res.json({
       success: true,
@@ -832,6 +855,11 @@ const getPresentEvents = async (req, res) => {
       .populate('organizerId', 'firstName lastName')
       .sort({ startTime: 1 });
     
+    // Prevent caching for present events to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     res.json({
       success: true,
       data: { events }
@@ -856,11 +884,11 @@ const getUpcomingEvents = async (req, res) => {
     const category = req.query.category;
     
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999); // End of today
     
     let filter = { 
       status: 'approved',
-      date: { $gte: today }
+      date: { $gt: today } // Events after today (tomorrow and later)
     };
     
     if (category && category !== 'all') {
@@ -874,6 +902,11 @@ const getUpcomingEvents = async (req, res) => {
       .skip((page - 1) * limit);
     
     const total = await Event.countDocuments(filter);
+    
+    // Prevent caching for upcoming events to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     
     res.json({
       success: true,
@@ -1096,6 +1129,187 @@ const confirmRegistration = async (req, res) => {
   }
 };
 
+// @desc    Search events
+// @route   GET /api/events/search
+// @access  Public
+const searchEvents = async (req, res) => {
+  try {
+    const { q, category, status = 'approved' } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required'
+      });
+    }
+
+    // Build search query
+    let filter = {
+      status: status,
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { venue: { $regex: q, $options: 'i' } },
+        { tags: { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    if (category) {
+      filter.category = category;
+    }
+
+    const events = await Event.find(filter)
+      .populate('organizerId', 'firstName lastName email')
+      .sort({ date: 1 })
+      .limit(limit)
+      .skip(skip);
+
+    const total = await Event.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: {
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalEvents: total,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        },
+        searchQuery: q
+      }
+    });
+  } catch (error) {
+    console.error('Search events error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error searching events',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get user's events (registered + created)
+// @route   GET /api/events/my-events
+// @access  Private
+const getMyEvents = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get user with populated events
+    const user = await User.findById(req.user._id)
+      .populate({
+        path: 'eventsRegistered.event',
+        populate: {
+          path: 'organizerId',
+          select: 'firstName lastName email'
+        }
+      })
+      .populate({
+        path: 'eventsCreated',
+        populate: {
+          path: 'organizerId',
+          select: 'firstName lastName email'
+        }
+      });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Combine registered and created events
+    const registeredEvents = user.eventsRegistered.map(reg => ({
+      ...reg.event.toObject(),
+      userRelation: 'registered',
+      registeredAt: reg.registeredAt,
+      status: reg.status
+    }));
+
+    const createdEvents = user.eventsCreated.map(event => ({
+      ...event.toObject(),
+      userRelation: 'created'
+    }));
+
+    const allEvents = [...registeredEvents, ...createdEvents]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(skip, skip + limit);
+
+    const total = registeredEvents.length + createdEvents.length;
+
+    res.json({
+      success: true,
+      data: {
+        events: allEvents,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalEvents: total,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get my events error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user events',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get pending events
+// @route   GET /api/events/pending
+// @access  Private/Admin/Event Manager
+const getPendingEvents = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = { status: 'pending' };
+
+    const events = await Event.find(filter)
+      .populate('organizerId', 'firstName lastName email')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip(skip);
+
+    const total = await Event.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: {
+        events,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalEvents: total,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get pending events error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching pending events',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -1117,5 +1331,8 @@ module.exports = {
   getEventGallery,
   addPhotosToGallery,
   removePhotoFromGallery,
-  confirmRegistration
+  confirmRegistration,
+  searchEvents,
+  getMyEvents,
+  getPendingEvents
 };

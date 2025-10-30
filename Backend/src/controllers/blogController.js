@@ -67,21 +67,25 @@ const createBlog = async (req, res) => {
     const {
       title,
       content,
+      excerpt,
+      summary, // Handle summary as alias for excerpt
       category,
       tags,
       eventId,
       featured,
       metaDescription,
-      status
+      status,
+      authorName
     } = req.body;
     
     const blogData = {
       title,
       content,
+      excerpt: excerpt || summary, // Use summary if excerpt not provided
       category,
       tags,
       author: req.user._id,
-      authorName: `${req.user.firstName} ${req.user.lastName}`,
+      authorName: authorName || `${req.user.firstName} ${req.user.lastName}`,
       metaDescription,
       status: status || 'draft'
     };
@@ -647,6 +651,52 @@ const reportBlog = async (req, res) => {
   }
 };
 
+// @desc    Get current user's blogs
+// @route   GET /api/blogs/my-blogs
+// @access  Private
+const getMyBlogs = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const status = req.query.status; // Can filter by status
+    
+    let query = { author: req.user._id };
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    const blogs = await Blog.find(query)
+      .populate('author', 'firstName lastName avatar')
+      .populate('relatedEvent', 'title')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await Blog.countDocuments(query);
+    
+    res.json({
+      success: true,
+      data: {
+        blogs,
+        pagination: {
+          page,
+          pages: Math.ceil(total / limit),
+          total,
+          limit
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get my blogs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user blogs',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllBlogs,
   createBlog,
@@ -661,5 +711,6 @@ module.exports = {
   getBlogsByCategory,
   getEventBlogs,
   togglePublishBlog,
-  reportBlog
+  reportBlog,
+  getMyBlogs
 };

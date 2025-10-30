@@ -39,13 +39,17 @@ const apiRequest = async (endpoint, options = {}) => {
 };
 
 // API methods
-const get = (endpoint) => apiRequest(endpoint, { method: 'GET' });
+const get = (endpoint, options = {}) => apiRequest(endpoint, { method: 'GET', ...options });
 const post = (endpoint, data) => apiRequest(endpoint, { 
   method: 'POST', 
   body: JSON.stringify(data) 
 });
 const put = (endpoint, data) => apiRequest(endpoint, { 
   method: 'PUT', 
+  body: JSON.stringify(data) 
+});
+const patch = (endpoint, data = {}) => apiRequest(endpoint, { 
+  method: 'PATCH', 
   body: JSON.stringify(data) 
 });
 const del = (endpoint) => apiRequest(endpoint, { method: 'DELETE' });
@@ -62,15 +66,15 @@ export const api = {
     logout: () => post('/api/auth/logout'),
     refreshToken: (refreshToken) => post('/api/auth/refresh', { refreshToken }),
     forgotPassword: (email) => post('/api/auth/forgot-password', { email }),
-    resetPassword: (token, newPassword) => post('/api/auth/reset-password', { token, newPassword }),
+    resetPassword: (token, newPassword) => post('/api/auth/reset-password', { token, password: newPassword }),
     verifyEmail: (token) => get(`/api/auth/verify-email/${token}`)
   },
 
   // User management endpoints
   users: {
-    getProfile: () => get('/api/users/profile'),
+    getProfile: () => get('/api/auth/me'),
     updateProfile: (profileData) => put('/api/users/profile', profileData),
-    uploadAvatar: (formData) => apiRequest('/api/users/upload-avatar', {
+    uploadAvatar: (formData) => apiRequest('/api/upload/avatar', {
       method: 'POST',
       body: formData,
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -79,15 +83,16 @@ export const api = {
     getUserById: (id) => get(`/api/users/${id}`),
     updateUser: (id, userData) => put(`/api/users/${id}`, userData),
     deleteUser: (id) => del(`/api/users/${id}`),
-    updateUserRole: (id, role) => put(`/api/users/${id}/role`, { role })
+    updateUserRole: (id, role) => put(`/api/users/${id}/role`, { role }),
+    changePassword: (passwordData) => put('/api/users/change-password', passwordData)
   },
 
   // Event management endpoints
   events: {
-    getAll: () => get('/api/events'),
-    getPast: () => get('/api/events/past'),
-    getPresent: () => get('/api/events/present'),
-    getUpcoming: () => get('/api/events/upcoming'),
+    getAll: () => get('/api/events', { cache: 'no-store' }),
+    getPast: () => get('/api/events/past', { cache: 'no-store' }),
+    getPresent: () => get('/api/events/present', { cache: 'no-store' }),
+    getUpcoming: () => get('/api/events/upcoming', { cache: 'no-store' }),
     getById: (id) => get(`/api/events/${id}`),
     create: (eventData) => post('/api/events', eventData),
     update: (id, eventData) => put(`/api/events/${id}`, eventData),
@@ -95,18 +100,21 @@ export const api = {
     register: (id) => post(`/api/events/${id}/register`),
     unregister: (id) => post(`/api/events/${id}/unregister`),
     getRegistrations: (id) => get(`/api/events/${id}/registrations`),
-    uploadImage: (id, formData) => apiRequest(`/api/events/${id}/upload-image`, {
+    uploadImage: (id, formData) => apiRequest(`/api/upload/event-image`, {
       method: 'POST',
       body: formData,
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }),
     getByCategory: (category) => get(`/api/events/category/${category}`),
-    getUserRegistered: () => get('/api/events/user/registered'),
-    getUserCreated: () => get('/api/events/user/created'),
+    getUserRegistered: () => get('/api/events/user/registered', { cache: 'no-store' }),
+    getUserCreated: () => get('/api/events/user/created', { cache: 'no-store' }),
+    getMyEvents: () => get('/api/events/my-events', { cache: 'no-store' }),
+    getPending: () => get('/api/events/pending', { cache: 'no-store' }),
+    search: (query) => get(`/api/events/search?q=${encodeURIComponent(query)}`),
     startLiveStream: (id) => post(`/api/events/${id}/start-stream`),
     endLiveStream: (id) => post(`/api/events/${id}/end-stream`),
     getGallery: (id) => get(`/api/events/${id}/gallery`),
-    addPhotosToGallery: (id, formData) => apiRequest(`/api/events/${id}/gallery`, {
+    addPhotosToGallery: (id, formData) => apiRequest(`/api/upload/event-gallery`, {
       method: 'POST',
       body: formData,
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -137,9 +145,10 @@ export const api = {
   admin: {
     getDashboard: () => get('/api/admin/dashboard'),
     getAuditLog: () => get('/api/admin/audit-log'),
-    getPendingEvents: () => get('/api/admin/pending-events'),
+    getPendingEvents: () => get('/api/admin/pending-approvals'),
     approveEvent: (id) => put(`/api/admin/approve-event/${id}`),
     rejectEvent: (id, reason) => put(`/api/admin/reject-event/${id}`, { reason }),
+    bulkApprove: (eventIds) => post('/api/admin/bulk-approve', { eventIds }),
     getAllUsers: () => get('/api/admin/users'),
     updateUserStatus: (id, status) => put(`/api/admin/users/${id}/status`, { status }),
     updateUserRole: (id, role) => put(`/api/admin/users/${id}/role`, { role }),
@@ -149,20 +158,20 @@ export const api = {
     getReports: () => get('/api/admin/reports'),
     getContentForModeration: () => get('/api/admin/content-moderation'),
     moderateContent: (type, id, action) => put(`/api/admin/moderate-content/${type}/${id}`, { action }),
-    getSystemSettings: () => get('/api/admin/system-settings'),
-    updateSystemSettings: (settings) => put('/api/admin/system-settings', settings),
+    getSystemSettings: () => get('/api/admin/settings'),
+    updateSystemSettings: (settings) => put('/api/admin/settings', settings),
     createBackup: () => post('/api/admin/backup'),
     getBackupStatus: () => get('/api/admin/backup/status')
   },
 
   // Notification endpoints
   notifications: {
-    getUserNotifications: () => get('/api/notifications'),
+    getUserNotifications: () => get('/api/notifications', { cache: 'no-store' }),
     create: (notificationData) => post('/api/notifications', notificationData),
     markAsRead: (id) => put(`/api/notifications/${id}/read`),
-    markAllAsRead: () => put('/api/notifications/read-all'),
+    markAllAsRead: () => patch('/api/notifications/mark-all-read'),
     delete: (id) => del(`/api/notifications/${id}`),
-    getUnreadCount: () => get('/api/notifications/unread-count')
+    getUnreadCount: () => get('/api/notifications/count', { cache: 'no-store' })
   },
 
   // Feedback endpoints
@@ -172,7 +181,7 @@ export const api = {
     getById: (id) => get(`/api/feedback/${id}`),
     updateStatus: (id, statusData) => put(`/api/feedback/${id}/status`, statusData),
     delete: (id) => del(`/api/feedback/${id}`),
-    getUserFeedback: () => get('/api/feedback/user/my-feedback')
+    getUserFeedback: () => get('/api/feedback/my-feedback')
   },
 
   // Analytics endpoints

@@ -36,6 +36,11 @@ const getUserNotifications = async (req, res) => {
       read: false
     });
 
+    // Prevent caching for notifications to ensure fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     res.json({
       success: true,
       data: {

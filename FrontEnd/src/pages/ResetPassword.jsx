@@ -31,6 +31,8 @@ const ResetPassword = () => {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = "Password must contain at least one uppercase letter, one lowercase letter, and one number";
     }
 
     if (!formData.confirmPassword) {
@@ -168,14 +170,14 @@ const ResetPassword = () => {
               fontWeight: '600',
               marginBottom: '0.5rem'
             }}>
-              New Password
+              New Password *
             </label>
             <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Enter your new password"
+              placeholder="At least 6 chars with uppercase, lowercase & number"
               style={{
                 width: '100%',
                 padding: '1rem',
@@ -205,7 +207,7 @@ const ResetPassword = () => {
               fontWeight: '600',
               marginBottom: '0.5rem'
             }}>
-              Confirm New Password
+              Confirm New Password *
             </label>
             <input
               type="password"

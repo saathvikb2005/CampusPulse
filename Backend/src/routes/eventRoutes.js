@@ -26,6 +26,21 @@ router.get('/present', eventController.getPresentEvents);
 // @access  Public
 router.get('/upcoming', eventController.getUpcomingEvents);
 
+// @route   GET /api/events/search
+// @desc    Search events
+// @access  Public
+router.get('/search', eventController.searchEvents);
+
+// @route   GET /api/events/my-events
+// @desc    Get user's events (registered + created)
+// @access  Private
+router.get('/my-events', auth, eventController.getMyEvents);
+
+// @route   GET /api/events/pending
+// @desc    Get pending events
+// @access  Private/Admin/Event Manager
+router.get('/pending', auth, authorize('admin', 'event_manager'), eventController.getPendingEvents);
+
 // @route   GET /api/events/:id
 // @desc    Get event by ID
 // @access  Public

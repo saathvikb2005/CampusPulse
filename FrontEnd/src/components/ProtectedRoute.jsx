@@ -1,7 +1,7 @@
 // src/components/ProtectedRoute.jsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { isAuthenticated, canAccessAdmin, canManageEvents } from '../utils/auth';
+import { isAuthenticated, canAccessAdmin, canManageEvents, canManageFeedback } from '../utils/auth';
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireEventManagement = false }) => {
   // Check if user is authenticated
@@ -54,7 +54,8 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireEventManagement
   }
 
   // Check if event management access is required
-  if (requireEventManagement && !canManageEvents()) {
+  // Allow access if user can manage events OR feedback OR is admin
+  if (requireEventManagement && !(canManageEvents() || canManageFeedback() || canAccessAdmin())) {
     return (
       <div style={{
         display: 'flex',

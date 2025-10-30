@@ -36,6 +36,11 @@ router.post('/reset-password', validate.validateResetPassword, authController.re
 // @access  Public
 router.post('/refresh', authController.refreshToken);
 
+// @route   GET /api/auth/me
+// @desc    Get current user profile
+// @access  Private
+router.get('/me', auth, authController.getMe);
+
 // @route   GET /api/auth/verify-email/:token
 // @desc    Verify email address
 // @access  Public

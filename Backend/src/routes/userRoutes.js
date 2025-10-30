@@ -16,6 +16,11 @@ router.get('/profile', auth, userController.getProfile);
 // @access  Private
 router.put('/profile', auth, validate.validateProfileUpdate, userController.updateProfile);
 
+// @route   PUT /api/users/change-password
+// @desc    Change user password
+// @access  Private
+router.put('/change-password', auth, userController.changePassword);
+
 // @route   POST /api/users/upload-avatar
 // @desc    Upload user avatar
 // @access  Private

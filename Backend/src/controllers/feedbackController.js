@@ -34,13 +34,17 @@ const createFeedback = async (req, res) => {
       // User is logged in
       userId = req.user._id;
     } else {
-      // Anonymous feedback - find existing anonymous user or use admin
-      let guestUser = await User.findOne({ email: 'admin@campuspulse.edu' });
+      // Anonymous feedback - find any admin user as default
+      let guestUser = await User.findOne({ role: 'admin' });
       if (!guestUser) {
-        return res.status(500).json({
-          success: false,
-          message: 'System error: No default user found for anonymous feedback'
-        });
+        // Fallback: find any user to handle anonymous feedback
+        guestUser = await User.findOne({});
+        if (!guestUser) {
+          return res.status(500).json({
+            success: false,
+            message: 'System error: No users found in the system'
+          });
+        }
       }
       userId = guestUser._id;
     }

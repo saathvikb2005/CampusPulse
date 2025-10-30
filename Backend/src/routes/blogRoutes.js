@@ -16,6 +16,11 @@ router.get('/', blogController.getAllBlogs);
 // @access  Private
 router.post('/', auth, validate.validateBlogCreate, blogController.createBlog);
 
+// @route   GET /api/blogs/my-blogs
+// @desc    Get current user's blogs
+// @access  Private
+router.get('/my-blogs', auth, blogController.getMyBlogs);
+
 // @route   GET /api/blogs/:id
 // @desc    Get blog details
 // @access  Public
