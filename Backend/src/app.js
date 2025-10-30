@@ -27,6 +27,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const metadataRoutes = require('./routes/metadataRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -126,7 +127,8 @@ app.get('/', (req, res) => {
       notifications: '/api/notifications',
       analytics: '/api/analytics',
       admin: '/api/admin',
-      upload: '/api/upload'
+      upload: '/api/upload',
+      metadata: '/api/metadata'
     }
   });
 });
@@ -141,6 +143,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/metadata', metadataRoutes);
 
 // 404 handler for all unmatched routes
 app.use((req, res) => {

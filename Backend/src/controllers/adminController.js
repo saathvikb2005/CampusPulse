@@ -406,13 +406,18 @@ const updateUserStatus = async (req, res) => {
     
     // Create notification for user
     const notification = new Notification({
+      recipient: user._id,
+      sender: req.user._id,
+      type: 'general',
       title: isActive ? 'Account Activated' : 'Account Deactivated',
       message: isActive 
         ? 'Your account has been activated by an administrator.'
         : `Your account has been deactivated. ${reason ? `Reason: ${reason}` : ''}`,
-      type: isActive ? 'success' : 'warning',
-      targetUsers: [user._id],
-      createdBy: req.user._id
+      data: {
+        statusChange: isActive ? 'activated' : 'deactivated',
+        reason: reason || null,
+        updatedBy: req.user._id
+      }
     });
     
     await notification.save();
@@ -454,11 +459,16 @@ const updateUserRole = async (req, res) => {
     
     // Create notification for user
     const notification = new Notification({
+      recipient: user._id,
+      sender: req.user._id,
+      type: 'general',
       title: 'Role Updated',
       message: `Your role has been updated from ${oldRole} to ${role} by an administrator.`,
-      type: 'info',
-      targetUsers: [user._id],
-      createdBy: req.user._id
+      data: {
+        oldRole: oldRole,
+        newRole: role,
+        updatedBy: req.user._id
+      }
     });
     
     await notification.save();

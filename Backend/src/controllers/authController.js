@@ -109,11 +109,14 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔍 LOGIN DEBUG - Email:', email, 'Password length:', password?.length);
 
     // Find user and include password
     const user = await User.findByEmail(email).select('+password');
+    console.log('🔍 LOGIN DEBUG - User found:', !!user, 'Active:', user?.isActive, 'Role:', user?.role);
     
     if (!user) {
+      console.log('🔍 LOGIN DEBUG - User not found');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -122,6 +125,7 @@ const login = async (req, res) => {
 
     // Check if account is active
     if (!user.isActive) {
+      console.log('🔍 LOGIN DEBUG - User not active');
       return res.status(401).json({
         success: false,
         message: 'Account has been deactivated. Please contact administrator.'
@@ -129,14 +133,18 @@ const login = async (req, res) => {
     }
 
     // Check password
+    console.log('🔍 LOGIN DEBUG - Password exists in DB:', !!user.password, 'Length:', user.password?.length);
     const isPasswordValid = await user.comparePassword(password);
+    console.log('🔍 LOGIN DEBUG - Password valid:', isPasswordValid);
     if (!isPasswordValid) {
+      console.log('🔍 LOGIN DEBUG - Password invalid');
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
 
+    console.log('🔍 LOGIN DEBUG - Login successful');
     // Update last login
     user.lastLogin = new Date();
     

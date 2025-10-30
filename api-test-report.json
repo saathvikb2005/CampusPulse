@@ -1,0 +1,365 @@
+{
+  "timestamp": "2025-10-30T17:00:02.477Z",
+  "executionTime": "0.10 seconds",
+  "summary": {
+    "totalTests": 42,
+    "passed": 1,
+    "failed": 41,
+    "successRate": "2.4%"
+  },
+  "expectedEndpoints": 59,
+  "actualEndpointsTested": 42,
+  "errors": [
+    "authAPI.login: connect ECONNREFUSED 127.0.0.1:5000",
+    "authAPI.register: connect ECONNREFUSED 127.0.0.1:5000",
+    "authAPI.forgotPassword: connect ECONNREFUSED 127.0.0.1:5000",
+    "authAPI.logout: connect ECONNREFUSED 127.0.0.1:5000",
+    "userAPI.getProfile: connect ECONNREFUSED 127.0.0.1:5000",
+    "userAPI.updateProfile: connect ECONNREFUSED 127.0.0.1:5000",
+    "userAPI.getUserById: No test user ID available",
+    "userAPI.getAllUsers: connect ECONNREFUSED 127.0.0.1:5000",
+    "userAPI.updateUser: No test user ID available",
+    "userAPI.changePassword: connect ECONNREFUSED 127.0.0.1:5000",
+    "userAPI.updateUserRole: No test user ID available",
+    "eventAPI.getAll: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.getUpcoming: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.getPresent: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.getPast: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.create: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.getUserRegistered: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.getUserCreated: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.getEventsByCategory: connect ECONNREFUSED 127.0.0.1:5000",
+    "eventAPI.searchEvents: connect ECONNREFUSED 127.0.0.1:5000",
+    "notificationAPI.create: connect ECONNREFUSED 127.0.0.1:5000",
+    "notificationAPI.getUserNotifications: connect ECONNREFUSED 127.0.0.1:5000",
+    "notificationAPI.getUnreadCount: connect ECONNREFUSED 127.0.0.1:5000",
+    "notificationAPI.markAllAsRead: connect ECONNREFUSED 127.0.0.1:5000",
+    "feedbackAPI.create: connect ECONNREFUSED 127.0.0.1:5000",
+    "feedbackAPI.getUserFeedback: connect ECONNREFUSED 127.0.0.1:5000",
+    "feedbackAPI.getAll: connect ECONNREFUSED 127.0.0.1:5000",
+    "blogAPI.getAll: connect ECONNREFUSED 127.0.0.1:5000",
+    "blogAPI.create: connect ECONNREFUSED 127.0.0.1:5000",
+    "blogAPI.getUserBlogs: connect ECONNREFUSED 127.0.0.1:5000",
+    "adminAPI.getDashboard: connect ECONNREFUSED 127.0.0.1:5000",
+    "adminAPI.getAuditLog: connect ECONNREFUSED 127.0.0.1:5000",
+    "adminAPI.getPendingEvents: connect ECONNREFUSED 127.0.0.1:5000",
+    "adminAPI.getAllUsers: connect ECONNREFUSED 127.0.0.1:5000",
+    "adminAPI.updateUserRole: Failed to create test user for role update",
+    "adminAPI.updateUserStatus: Failed to create test user for status update",
+    "analyticsAPI.getDashboard: connect ECONNREFUSED 127.0.0.1:5000",
+    "analyticsAPI.getFeedback: connect ECONNREFUSED 127.0.0.1:5000",
+    "metadataAPI.getDepartments: connect ECONNREFUSED 127.0.0.1:5000",
+    "metadataAPI.getYears: connect ECONNREFUSED 127.0.0.1:5000",
+    "healthCheck: connect ECONNREFUSED 127.0.0.1:5000"
+  ],
+  "detailedResults": [
+    {
+      "name": "authAPI.login",
+      "category": "Authentication",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000"
+    },
+    {
+      "name": "authAPI.register",
+      "category": "Authentication",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "authAPI.forgotPassword",
+      "category": "Authentication",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "authAPI.logout",
+      "category": "Authentication",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "userAPI.getProfile",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "userAPI.updateProfile",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "userAPI.uploadAvatar",
+      "category": "User Management",
+      "status": "PASS",
+      "message": "Success",
+      "responseTime": "N/A"
+    },
+    {
+      "name": "userAPI.getUserById",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "No test user ID available"
+    },
+    {
+      "name": "userAPI.getAllUsers",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "userAPI.updateUser",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "No test user ID available"
+    },
+    {
+      "name": "userAPI.changePassword",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "userAPI.updateUserRole",
+      "category": "User Management",
+      "status": "FAIL",
+      "message": "No test user ID available"
+    },
+    {
+      "name": "eventAPI.getAll",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.getUpcoming",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.getPresent",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.getPast",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.create",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.getUserRegistered",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.getUserCreated",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.getEventsByCategory",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "eventAPI.searchEvents",
+      "category": "Event Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "notificationAPI.create",
+      "category": "Notifications",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "notificationAPI.getUserNotifications",
+      "category": "Notifications",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "notificationAPI.getUnreadCount",
+      "category": "Notifications",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "notificationAPI.markAllAsRead",
+      "category": "Notifications",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "feedbackAPI.create",
+      "category": "Feedback",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "feedbackAPI.getUserFeedback",
+      "category": "Feedback",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "feedbackAPI.getAll",
+      "category": "Feedback",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "blogAPI.getAll",
+      "category": "Blog Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "blogAPI.create",
+      "category": "Blog Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "blogAPI.getUserBlogs",
+      "category": "Blog Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "adminAPI.getDashboard",
+      "category": "Admin Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "adminAPI.getAuditLog",
+      "category": "Admin Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "adminAPI.getPendingEvents",
+      "category": "Admin Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "adminAPI.getAllUsers",
+      "category": "Admin Management",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "adminAPI.updateUserRole",
+      "category": "Admin Management",
+      "status": "FAIL",
+      "message": "Failed to create test user for role update"
+    },
+    {
+      "name": "adminAPI.updateUserStatus",
+      "category": "Admin Management",
+      "status": "FAIL",
+      "message": "Failed to create test user for status update"
+    },
+    {
+      "name": "analyticsAPI.getDashboard",
+      "category": "Analytics",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "analyticsAPI.getFeedback",
+      "category": "Analytics",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "metadataAPI.getDepartments",
+      "category": "Metadata",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "metadataAPI.getYears",
+      "category": "Metadata",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    },
+    {
+      "name": "healthCheck",
+      "category": "System",
+      "status": "FAIL",
+      "message": "connect ECONNREFUSED 127.0.0.1:5000",
+      "statusCode": 0
+    }
+  ],
+  "categories": {
+    "Authentication": 4,
+    "User Management": 8,
+    "Event Management": 9,
+    "Notifications": 4,
+    "Feedback": 3,
+    "Blog Management": 3,
+    "Admin Management": 6,
+    "Analytics": 2,
+    "Metadata": 2,
+    "System": 1,
+    "Upload": 0
+  },
+  "recommendations": [
+    "Review failed API endpoints and fix backend implementations",
+    "Check authentication middleware for protected routes",
+    "Verify database connections and data models",
+    "Update frontend error handling for failed endpoints",
+    "Implement missing API routes identified in the analysis"
+  ]
+}

@@ -21,6 +21,16 @@ router.get('/', auth, authorize('admin', 'faculty', 'event_manager'), feedbackCo
 // @access  Private
 router.get('/my-feedback', auth, feedbackController.getUserFeedback);
 
+// @route   GET /api/feedback/user/my-feedback
+// @desc    Get user's feedback
+// @access  Private
+router.get('/user/my-feedback', auth, feedbackController.getUserFeedback);
+
+// @route   GET /api/feedback/user
+// @desc    Get user's feedback (alternative endpoint)
+// @access  Private
+router.get('/user', auth, feedbackController.getUserFeedback);
+
 // @route   GET /api/feedback/:id
 // @desc    Get feedback by ID
 // @access  Private
@@ -35,15 +45,5 @@ router.put('/:id/status', auth, authorize('admin', 'faculty', 'event_manager'), 
 // @desc    Delete feedback
 // @access  Private
 router.delete('/:id', auth, feedbackController.deleteFeedback);
-
-// @route   GET /api/feedback/user/my-feedback
-// @desc    Get user's feedback
-// @access  Private
-router.get('/user/my-feedback', auth, feedbackController.getUserFeedback);
-
-// @route   GET /api/feedback/user
-// @desc    Get user's feedback (alternative endpoint)
-// @access  Private
-router.get('/user', auth, feedbackController.getUserFeedback);
 
 module.exports = router;
