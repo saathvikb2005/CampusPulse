@@ -65,40 +65,67 @@ const getUserNotifications = async (req, res) => {
   }
 };
 
-// @desc    Create notification (Admin only)
+// @desc    Create notification
 // @route   POST /api/notifications
-// @access  Private/Admin
+// @access  Private/Admin/Faculty/EventManager
 const createNotification = async (req, res) => {
   try {
-    const { recipients, type, title, message, relatedEvent, data } = req.body;
+    const { title, message, type, recipients, targetUsers, targetRoles, relatedEvent, priority, actionUrl } = req.body;
 
     // Validate required fields
-    if (!recipients || !type || !title || !message) {
+    if (!title || !message || !type) {
       return res.status(400).json({
         success: false,
-        message: 'Recipients, type, title, and message are required'
+        message: 'Title, message, and type are required'
       });
+    }
+
+    let recipientIds = [];
+
+    // If specific recipients provided
+    if (recipients && Array.isArray(recipients)) {
+      recipientIds = recipients;
+    }
+    // If targetUsers provided
+    else if (targetUsers && Array.isArray(targetUsers)) {
+      recipientIds = targetUsers;
+    }
+    // If targetRoles provided, find users with those roles
+    else if (targetRoles && Array.isArray(targetRoles)) {
+      const users = await User.find({ role: { $in: targetRoles } });
+      recipientIds = users.map(user => user._id);
+    }
+    // Default to all users if no specific targeting
+    else {
+      const users = await User.find({ isActive: true });
+      recipientIds = users.map(user => user._id);
     }
 
     // Create notifications for all recipients
-    const notifications = [];
-    for (const recipientId of recipients) {
-      const notification = await Notification.create({
-        recipient: recipientId,
-        sender: req.user._id,
-        type,
-        title,
-        message,
-        relatedEvent,
-        data
-      });
-      notifications.push(notification);
-    }
+    const notifications = recipientIds.map(recipientId => ({
+      recipient: recipientId,
+      sender: req.user._id,
+      type,
+      title,
+      message,
+      relatedEvent,
+      priority: priority || 'medium',
+      actionUrl,
+      metadata: {
+        sentBy: req.user.role,
+        sentAt: new Date()
+      }
+    }));
+
+    const createdNotifications = await Notification.insertMany(notifications);
 
     res.status(201).json({
       success: true,
-      message: `${notifications.length} notifications created successfully`,
-      data: { notifications }
+      message: `Notification sent to ${recipientIds.length} recipients`,
+      data: {
+        notification: createdNotifications[0], // Return first notification as sample
+        recipientCount: recipientIds.length
+      }
     });
   } catch (error) {
     console.error('Create notification error:', error);

@@ -409,6 +409,105 @@ const unregisterFromEvent = async (req, res) => {
   }
 };
 
+// @desc    Volunteer for event
+// @route   POST /api/events/:id/volunteer
+// @access  Private
+const volunteerForEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Check if already volunteering
+    const alreadyVolunteering = event.volunteers.some(
+      volunteer => volunteer.userId.toString() === req.user._id.toString()
+    );
+    if (alreadyVolunteering) {
+      return res.status(400).json({
+        success: false,
+        message: 'Already volunteering for this event'
+      });
+    }
+
+    const now = new Date();
+    
+    // Add volunteer registration
+    event.volunteers.push({
+      userId: req.user._id,
+      registeredAt: now
+    });
+
+    await event.save();
+
+    res.json({
+      success: true,
+      message: 'Successfully registered as volunteer',
+      data: {
+        eventId: event._id,
+        title: event.title,
+        volunteeredAt: now
+      }
+    });
+  } catch (error) {
+    console.error('Volunteer for event error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error volunteering for event',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Unvolunteer from event
+// @route   POST /api/events/:id/volunteer/unregister
+// @access  Private
+const unvolunteerFromEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Check if volunteering
+    const volunteerIndex = event.volunteers.findIndex(
+      volunteer => volunteer.userId.toString() === req.user._id.toString()
+    );
+    
+    if (volunteerIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Not volunteering for this event'
+      });
+    }
+
+    // Remove volunteer registration
+    event.volunteers.splice(volunteerIndex, 1);
+
+    await event.save();
+
+    res.json({
+      success: true,
+      message: 'Successfully removed from volunteer list'
+    });
+  } catch (error) {
+    console.error('Unvolunteer from event error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error removing volunteer registration',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Get event registrations
 // @route   GET /api/events/:id/registrations
 // @access  Private/Event Manager/Admin
@@ -1318,6 +1417,8 @@ module.exports = {
   deleteEvent,
   registerForEvent,
   unregisterFromEvent,
+  volunteerForEvent,
+  unvolunteerFromEvent,
   getEventRegistrations,
   uploadEventImage,
   getEventsByCategory,

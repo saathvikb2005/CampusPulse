@@ -161,12 +161,24 @@
       // Service Worker Registration (for PWA features)
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-              console.log('SW registered: ', registration);
-            }).catch(function(registrationError) {
-              console.log('SW registration failed: ', registrationError);
+          // In development, unregister any existing service workers
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+                console.log('Unregistered service worker:', registration);
+              }
             });
+            console.log('Service Worker disabled in development');
+          } else {
+            // Only register service worker in production
+            navigator.serviceWorker.register('/sw.js')
+              .then(function(registration) {
+                console.log('SW registered: ', registration);
+              }).catch(function(registrationError) {
+                console.log('SW registration failed: ', registrationError);
+              });
+          }
         });
       }
     </script>

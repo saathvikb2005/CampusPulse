@@ -87,7 +87,8 @@ const createBlog = async (req, res) => {
       author: req.user._id,
       authorName: authorName || `${req.user.firstName} ${req.user.lastName}`,
       metaDescription,
-      status: status || 'draft'
+      status: status || 'published', // Auto-publish blogs for now
+      publishedAt: status === 'published' || !status ? new Date() : undefined
     };
     
     if (eventId) {

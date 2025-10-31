@@ -399,7 +399,7 @@ const validateBlogCreate = [
     .withMessage('Blog content must be between 1 and 10000 characters'),
   
   body('category')
-    .isIn(['academic', 'cultural', 'sports', 'technical', 'social', 'other'])
+    .isIn(['event', 'academic', 'cultural', 'sports', 'workshop', 'news', 'announcement', 'other'])
     .withMessage('Invalid blog category'),
   
   body('tags')

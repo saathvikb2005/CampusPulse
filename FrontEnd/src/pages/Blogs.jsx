@@ -25,7 +25,7 @@ const Blogs = () => {
   const [galleries, setGalleries] = useState([]);
   const [newBlog, setNewBlog] = useState({
     title: '',
-    category: 'technical',
+    category: 'academic',
     eventId: '',
     excerpt: '',
     content: '',
@@ -68,10 +68,14 @@ const Blogs = () => {
   const loadBlogs = async () => {
     try {
       setLoading(true);
+      console.log('Loading blogs...');
       const response = await blogAPI.getAll();
+      console.log('Blog API response:', response);
       
       if (response.success) {
         const blogs = response.data?.blogs || response.blogs || [];
+        console.log('Extracted blogs:', blogs);
+        console.log('Number of blogs:', blogs.length);
         setBlogs(blogs);
         
         // Extract user's liked blogs from backend data
@@ -85,6 +89,7 @@ const Blogs = () => {
           setLikedBlogs(userLikedBlogs);
         }
       } else {
+        console.error('Blog loading failed:', response);
         showErrorToast('Failed to load blogs');
         setBlogs([]);
       }
@@ -240,24 +245,44 @@ const Blogs = () => {
 
     try {
       const currentUser = getCurrentUser();
+      const authStatus = isAuthenticated();
+      const token = localStorage.getItem('token');
+      
+      console.log('Authentication status:', authStatus);
+      console.log('Current user:', currentUser);
+      console.log('Token exists:', !!token);
+      console.log('Token preview:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      if (!authStatus || !currentUser) {
+        showErrorToast('You must be logged in to create a blog post');
+        return;
+      }
+      
+      console.log('Creating blog with data:', newBlog);
       
       const blogData = {
         title: newBlog.title,
         category: newBlog.category,
-        eventId: newBlog.eventId || null,
         excerpt: newBlog.excerpt,
         content: newBlog.content,
         image: newBlog.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=250&fit=crop',
         tags: newBlog.tags
       };
 
+      // Only include eventId if it's not empty
+      if (newBlog.eventId && newBlog.eventId.trim() !== '') {
+        blogData.eventId = newBlog.eventId;
+      }
+
+      console.log('Sending blog data to API:', blogData);
       const response = await blogAPI.create(blogData);
+      console.log('Blog API response:', response);
       
-      if (response.success) {
+      if (response && response.success) {
         // Reset form
         setNewBlog({
           title: '',
-          category: 'technical',
+          category: 'academic',
           eventId: '',
           excerpt: '',
           content: '',
@@ -270,11 +295,35 @@ const Blogs = () => {
         // Reload blogs
         loadBlogs();
       } else {
-        showErrorToast(response.message || 'Failed to publish blog');
+        const errorMessage = response?.message || 'Failed to publish blog';
+        console.error('Blog creation failed:', errorMessage);
+        
+        // Show detailed validation errors if available
+        if (response?.errors && Array.isArray(response.errors)) {
+          const validationErrors = response.errors.map(err => err.msg || err.message).join(', ');
+          console.error('Validation errors:', response.errors);
+          showErrorToast(`Validation failed: ${validationErrors}`);
+        } else {
+          showErrorToast(errorMessage);
+        }
       }
     } catch (error) {
       console.error('Blog submission error:', error);
-      showErrorToast('Failed to publish blog. Please try again.');
+      console.error('Error details:', error.errors);
+      console.error('Error response:', error.response);
+      
+      // Check if error has validation details
+      if (error.errors && Array.isArray(error.errors)) {
+        const validationErrors = error.errors.map(err => err.msg || err.message).join(', ');
+        console.error('Caught validation errors:', error.errors);
+        showErrorToast(`Validation failed: ${validationErrors}`);
+      } else if (error.response?.errors && Array.isArray(error.response.errors)) {
+        const validationErrors = error.response.errors.map(err => err.msg || err.message).join(', ');
+        console.error('Response validation errors:', error.response.errors);
+        showErrorToast(`Validation failed: ${validationErrors}`);
+      } else {
+        showErrorToast('Failed to create blog post. Please try again.');
+      }
     }
   };
 
@@ -590,10 +639,14 @@ const Blogs = () => {
                 className="category-select"
               >
                 <option value="all">All Categories</option>
-                <option value="technical">Technical</option>
+                <option value="academic">Academic</option>
                 <option value="cultural">Cultural</option>
                 <option value="sports">Sports</option>
-                <option value="academic">Academic</option>
+                <option value="workshop">Workshop</option>
+                <option value="event">Event</option>
+                <option value="news">News</option>
+                <option value="announcement">Announcement</option>
+                <option value="other">Other</option>
               </select>
             </div>
           </div>
@@ -966,11 +1019,14 @@ const Blogs = () => {
                     value={newBlog.category}
                     onChange={(e) => setNewBlog({...newBlog, category: e.target.value})}
                   >
-                    <option value="technical">Technical</option>
-                    <option value="cultural">Cultural</option>
                     <option value="academic">Academic</option>
+                    <option value="cultural">Cultural</option>
                     <option value="sports">Sports</option>
+                    <option value="workshop">Workshop</option>
+                    <option value="event">Event</option>
+                    <option value="news">News</option>
                     <option value="announcement">Announcement</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 <div className="form-group">

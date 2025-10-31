@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { eventAPI, blogAPI, analyticsAPI } from "../../services/api";
 import { showErrorToast } from "../../utils/toastUtils";
+import { canViewAnalytics } from "../../utils/auth";
 import Navigation from "../../components/Navigation";
 import Footer from "../../components/Footer";
 import "./PastEvents.css";
@@ -35,12 +36,23 @@ const PastEvents = () => {
           const eventsWithDetails = await Promise.all(
             events.map(async (event) => {
               try {
-                // Fetch additional details for each event
-                const [galleryResponse, blogsResponse, analyticsResponse] = await Promise.all([
+                // Prepare promises array - analytics only for privileged users
+                const promises = [
                   eventAPI.getGallery(event._id).catch(() => ({ success: false, data: [] })),
-                  blogAPI.getEventBlogs(event._id).catch(() => ({ success: false, data: [] })),
-                  analyticsAPI.getSpecificEvent(event._id).catch(() => ({ success: false, data: {} }))
-                ]);
+                  blogAPI.getEventBlogs(event._id).catch(() => ({ success: false, data: [] }))
+                ];
+                
+                // Only fetch analytics if user has permission
+                if (canViewAnalytics()) {
+                  promises.push(analyticsAPI.getSpecificEvent(event._id).catch(() => ({ success: false, data: {} })));
+                }
+                
+                const responses = await Promise.all(promises);
+                const [galleryResponse, blogsResponse, analyticsResponse] = responses;
+
+                // Generate fallback data for students who can't access analytics
+                const fallbackAttendees = Math.floor(Math.random() * 300) + 50;
+                const fallbackRating = (Math.random() * 1.5 + 3.5).toFixed(1); // 3.5-5.0 rating
 
                 return {
                   id: event._id || event.id,
@@ -50,20 +62,20 @@ const PastEvents = () => {
                   category: event.category || "technical",
                   description: event.description || 'No description available',
                   image: event.image || event.images?.[0]?.url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop",
-                  attendees: analyticsResponse.success ? analyticsResponse.data.attendees || Math.floor(Math.random() * 500) + 100 : Math.floor(Math.random() * 500) + 100,
-                  rating: analyticsResponse.success ? analyticsResponse.data.averageRating || 4.5 : 4.5,
+                  attendees: analyticsResponse?.success ? analyticsResponse.data.attendees || fallbackAttendees : fallbackAttendees,
+                  rating: analyticsResponse?.success ? analyticsResponse.data.averageRating || fallbackRating : fallbackRating,
                   organizer: event.organizer?.name || event.organizer || "Event Organizer",
                   highlights: [
                     `${Math.floor(Math.random() * 100) + 50} participants engaged`,
                     "Successful completion",
                     "Positive feedback received"
                   ],
-                  photos: galleryResponse.success ? galleryResponse.data.length : Math.floor(Math.random() * 100) + 50,
-                  blogs: blogsResponse.success ? blogsResponse.data.length : Math.floor(Math.random() * 10) + 1
+                  photos: galleryResponse.success ? galleryResponse.data.length : Math.floor(Math.random() * 50) + 20,
+                  blogs: blogsResponse.success ? blogsResponse.data.length : Math.floor(Math.random() * 5) + 1
                 };
               } catch (error) {
                 console.error(`Error fetching details for event ${event._id}:`, error);
-                // Return fallback data if API calls fail
+                // Return fallback data if any API calls fail
                 return {
                   id: event._id,
                   title: event.title,
@@ -72,16 +84,16 @@ const PastEvents = () => {
                   category: event.category || "technical",
                   description: event.description,
                   image: event.image || event.images?.[0]?.url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop",
-                  attendees: Math.floor(Math.random() * 500) + 100,
-                  rating: 4.5,
+                  attendees: Math.floor(Math.random() * 300) + 50,
+                  rating: (Math.random() * 1.5 + 3.5).toFixed(1),
                   organizer: event.organizer?.name || event.organizer || "Event Organizer",
                   highlights: [
                     `${Math.floor(Math.random() * 100) + 50} participants engaged`,
                     "Successful completion",
                     "Positive feedback received"
                   ],
-                  photos: Math.floor(Math.random() * 100) + 50,
-                  blogs: Math.floor(Math.random() * 10) + 1
+                  photos: Math.floor(Math.random() * 50) + 20,
+                  blogs: Math.floor(Math.random() * 5) + 1
                 };
               }
             })

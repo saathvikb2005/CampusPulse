@@ -1,0 +1,109 @@
+/* Basic Theme Support CSS */
+
+/* Light Theme (Default) */
+body.theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --accent-color: #4361ee;
+}
+
+/* Dark Theme */
+body.theme-dark {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #ffffff;
+  --text-secondary: #adb5bd;
+  --border-color: #495057;
+  --accent-color: #6366f1;
+  
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Apply theme variables to common elements */
+body.theme-dark .profile-page,
+body.theme-dark .profile-card,
+body.theme-dark .profile-content,
+body.theme-dark .preferences-tab,
+body.theme-dark .activity-tab,
+body.theme-dark .registrations-tab {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body.theme-dark .profile-form input,
+body.theme-dark .profile-form select,
+body.theme-dark .profile-form textarea {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+body.theme-dark .tab {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+body.theme-dark .tab.active {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+body.theme-dark .activity-item,
+body.theme-dark .registration-item {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+body.theme-dark .preferences-section {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+/* Auto theme detection */
+@media (prefers-color-scheme: dark) {
+  body.theme-auto {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --text-primary: #ffffff;
+    --text-secondary: #adb5bd;
+    --border-color: #495057;
+    --accent-color: #6366f1;
+    
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  
+  body.theme-auto .profile-page,
+  body.theme-auto .profile-card,
+  body.theme-auto .profile-content,
+  body.theme-auto .preferences-tab,
+  body.theme-auto .activity-tab,
+  body.theme-auto .registrations-tab {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  
+  body.theme-auto .profile-form input,
+  body.theme-auto .profile-form select,
+  body.theme-auto .profile-form textarea {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  body.theme-auto {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+    --accent-color: #4361ee;
+  }
+}

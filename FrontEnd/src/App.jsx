@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import "./App.css";
+import "./styles/themes.css";
+import { isAuthenticated, getCurrentUser } from './utils/auth';
+import { initializeTheme } from './utils/preferences';
 import Home from "./pages/HomePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -84,6 +87,9 @@ function App() {
     // Initialize app state and check localStorage consistency
     const initializeApp = () => {
       try {
+        // Initialize theme first
+        initializeTheme();
+        
         // Clear any corrupted localStorage data
         const isLoggedIn = localStorage.getItem('isLoggedIn');
         const userEmail = localStorage.getItem('userEmail');

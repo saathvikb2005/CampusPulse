@@ -57,15 +57,22 @@ const EventDetails = () => {
             console.log('Could not load registration status');
           }
 
-          // Load registration count
+          // Load registration count - Only for privileged users
           try {
             const regResponse = await eventAPI.getRegistrations(eventId);
             if (regResponse.success) {
               const registrations = regResponse.data?.registrations || regResponse.registrations || [];
               setRegistrationCount(registrations.length);
             }
-          } catch (_) {
-            console.log('Could not load registration count');
+          } catch (regError) {
+            // If access denied (403), use fallback count from event data
+            if (regError.message?.includes('403') || regError.message?.includes('Access denied')) {
+              console.log('Using registration count from event data (no admin access)');
+              const fallbackCount = evt.registrationCount || evt.registrations?.length || evt.registered || 0;
+              setRegistrationCount(fallbackCount);
+            } else {
+              console.log('Could not load registration count:', regError.message);
+            }
           }
         }
 

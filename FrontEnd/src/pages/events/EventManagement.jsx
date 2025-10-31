@@ -17,7 +17,7 @@ const EventManagement = () => {
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
-    category: 'technical',
+    category: 'academic',
     type: 'individual',
     date: '',
     time: '',
@@ -38,6 +38,8 @@ const EventManagement = () => {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -60,8 +62,19 @@ const EventManagement = () => {
     try {
       setLoading(true);
       const response = await eventAPI.getUserCreated();
+      console.log('getUserCreated response:', response); // Debug log
+      
       if (response.success && response.data) {
-        const userEvents = response.data.map(event => ({
+        // Backend returns data.events, not data as array
+        const eventsData = response.data.events || [];
+        
+        if (eventsData.length === 0) {
+          console.log('No events found for user');
+          setEvents([]);
+          return;
+        }
+        
+        const userEvents = eventsData.map(event => ({
           id: event._id,
           title: event.title,
           date: event.startDate,
@@ -83,6 +96,7 @@ const EventManagement = () => {
         }));
         setEvents(userEvents);
       } else {
+        console.log('API response not successful or no data:', response);
         showErrorToast('Failed to load your events');
         setEvents([]);
       }
@@ -96,13 +110,23 @@ const EventManagement = () => {
   };
 
   const getEventStatus = (startDate, endDate) => {
-    const now = new Date();
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    try {
+      const now = new Date();
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // Check for invalid dates
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return 'unknown';
+      }
 
-    if (now < start) return 'upcoming';
-    if (now >= start && now <= end) return 'live';
-    return 'ended';
+      if (now < start) return 'upcoming';
+      if (now >= start && now <= end) return 'live';
+      return 'ended';
+    } catch (error) {
+      console.error('Error calculating event status:', error);
+      return 'unknown';
+    }
   };
 
   const loadEventForEdit = async (eventId) => {
@@ -113,26 +137,36 @@ const EventManagement = () => {
       if (response.success) {
         const event = response.data?.event || response.event;
         if (event) {
-          // Convert event data to form format
-          const eventDate = new Date(event.startDate);
-          const eventEndDate = new Date(event.endDate);
+          console.log('Event data for editing:', event); // Debug log
+          
+          // Safely convert dates with validation
+          const formatDateForInput = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+          };
+          
+          const formatTimeForInput = (dateString) => {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? '' : date.toTimeString().slice(0, 5);
+          };
           
           setEventForm({
             title: event.title || '',
             description: event.description || '',
-            category: event.category || 'technical',
+            category: event.category || 'academic',
             type: event.type || 'individual',
-            date: eventDate.toISOString().split('T')[0],
-            time: eventDate.toTimeString().slice(0, 5),
-            endTime: eventEndDate.toTimeString().slice(0, 5),
+            date: formatDateForInput(event.startDate),
+            time: formatTimeForInput(event.startDate),
+            endTime: formatTimeForInput(event.endDate),
             location: event.location || '',
             maxParticipants: event.maxParticipants || '',
             volunteerSpots: event.volunteerSpots || '',
             prerequisites: event.prerequisites || [''],
             agenda: event.agenda || [''],
             tags: event.tags || [''],
-            registrationDeadline: event.registrationDeadline ? 
-              new Date(event.registrationDeadline).toISOString().split('T')[0] : '',
+            registrationDeadline: formatDateForInput(event.registrationDeadline),
             teamSize: event.teamSize || { min: 2, max: 5 },
             image: event.image || '',
             youtubeStreamUrl: event.youtubeStreamUrl || '',
@@ -195,15 +229,77 @@ const EventManagement = () => {
     }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        showErrorToast('Please select a valid image file (JPEG, PNG, GIF, or WebP)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        showErrorToast('Image file size must be less than 5MB');
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setEventForm(prev => ({ ...prev, image: '' }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       setLoading(true);
       // Validate form
-      if (!eventForm.title || !eventForm.date || !eventForm.location) {
-        showErrorToast('Please fill in all required fields');
+      if (!eventForm.title || !eventForm.date || !eventForm.time || !eventForm.endTime || !eventForm.location) {
+        showErrorToast('Please fill in all required fields (title, date, start time, end time, and location)');
         return;
+      }
+
+      // Validate time logic
+      if (eventForm.time >= eventForm.endTime) {
+        showErrorToast('End time must be after start time');
+        return;
+      }
+
+      let imageUrl = eventForm.image;
+
+      // Handle image upload if a file is selected
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+
+        try {
+          const uploadResponse = await eventAPI.uploadImage(formData);
+          if (uploadResponse.success) {
+            imageUrl = uploadResponse.data.url; // Backend returns 'url' not 'imageUrl'
+          } else {
+            showErrorToast('Failed to upload image');
+            return;
+          }
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          showErrorToast('Failed to upload image');
+          return;
+        }
       }
 
       // Create event object for API
@@ -212,17 +308,18 @@ const EventManagement = () => {
         description: eventForm.description,
         category: eventForm.category,
         type: eventForm.type,
-        startDate: `${eventForm.date}T${eventForm.time}:00.000Z`,
-        endDate: `${eventForm.date}T${eventForm.endTime}:00.000Z`,
-        location: eventForm.location,
+        date: eventForm.date, // Just the date part
+        startTime: eventForm.time, // Time in HH:MM format
+        endTime: eventForm.endTime, // Time in HH:MM format
+        venue: eventForm.location, // venue field instead of location
         maxParticipants: parseInt(eventForm.maxParticipants) || null,
         volunteerSpots: parseInt(eventForm.volunteerSpots) || 0,
         prerequisites: eventForm.prerequisites.filter(p => p.trim()),
         agenda: eventForm.agenda.filter(a => a.trim()),
         tags: eventForm.tags.filter(t => t.trim()),
-        registrationDeadline: eventForm.registrationDeadline ? `${eventForm.registrationDeadline}T23:59:59.000Z` : null,
+        registrationDeadline: eventForm.registrationDeadline || null,
         teamSize: eventForm.type === 'team' ? eventForm.teamSize : null,
-        image: eventForm.image || null,
+        image: imageUrl || null,
         liveStreamUrl: eventForm.enableLiveStream ? eventForm.youtubeStreamUrl : null,
         streamTitle: eventForm.enableLiveStream ? eventForm.streamTitle : null,
         isLive: false // Initially not live
@@ -233,11 +330,11 @@ const EventManagement = () => {
       if (response.success) {
         showSuccessToast('Event created successfully!');
         
-        // Reset form
+        // Reset form and image
         setEventForm({
           title: '',
           description: '',
-          category: 'technical',
+          category: 'academic',
           type: 'individual',
           date: '',
           time: '',
@@ -255,6 +352,10 @@ const EventManagement = () => {
           streamTitle: '',
           enableLiveStream: false
         });
+
+        // Reset image upload
+        setSelectedImage(null);
+        setImagePreview(null);
 
         // Refresh events list
         loadUserEvents();
@@ -339,21 +440,35 @@ const EventManagement = () => {
 
   const handleEditEvent = (event) => {
     setEditingEvent(event);
+    
+    // Use the same date formatting functions as loadEventForEdit
+    const formatDateForInput = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+    };
+    
+    const formatTimeForInput = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? '' : date.toTimeString().slice(0, 5);
+    };
+    
     setEventForm({
       title: event.title || '',
       description: event.description || '',
       category: event.category || 'technical',
       type: event.type || 'individual',
-      date: event.startDate ? event.startDate.split('T')[0] : '',
-      time: event.startDate ? event.startDate.split('T')[1].substring(0, 5) : '',
-      endTime: event.endDate ? event.endDate.split('T')[1].substring(0, 5) : '',
+      date: formatDateForInput(event.startDate),
+      time: formatTimeForInput(event.startDate),
+      endTime: formatTimeForInput(event.endDate),
       location: event.location || '',
       maxParticipants: event.maxParticipants || '',
       volunteerSpots: event.volunteerSpots || '',
       prerequisites: event.prerequisites || [''],
       agenda: event.agenda || [''],
       tags: event.tags || [''],
-      registrationDeadline: event.registrationDeadline ? event.registrationDeadline.split('T')[0] : '',
+      registrationDeadline: formatDateForInput(event.registrationDeadline),
       teamSize: event.teamSize || { min: 2, max: 5 },
       image: event.image || '',
       youtubeStreamUrl: event.liveStreamUrl || event.youtubeStreamUrl || '',
@@ -371,6 +486,29 @@ const EventManagement = () => {
 
     try {
       setLoading(true);
+      
+      let imageUrl = eventForm.image;
+
+      // Handle image upload if a new file is selected
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+
+        try {
+          const uploadResponse = await eventAPI.uploadImage(formData);
+          if (uploadResponse.success) {
+            imageUrl = uploadResponse.data.url; // Backend returns 'url'
+          } else {
+            showErrorToast('Failed to upload image');
+            return;
+          }
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          showErrorToast('Failed to upload image');
+          return;
+        }
+      }
+
       const eventData = {
         title: eventForm.title,
         description: eventForm.description,
@@ -386,7 +524,7 @@ const EventManagement = () => {
         tags: eventForm.tags.filter(t => t.trim()),
         registrationDeadline: eventForm.registrationDeadline ? `${eventForm.registrationDeadline}T23:59:59.000Z` : null,
         teamSize: eventForm.type === 'team' ? eventForm.teamSize : null,
-        image: eventForm.image || null,
+        image: imageUrl || null,
         liveStreamUrl: eventForm.enableLiveStream ? eventForm.youtubeStreamUrl : null,
         streamTitle: eventForm.enableLiveStream ? eventForm.streamTitle : null
       };
@@ -396,33 +534,20 @@ const EventManagement = () => {
       if (response.success) {
         showSuccessToast(`Event "${eventForm.title}" updated successfully!`);
         
-        // Reset form and state
-        setEventForm({
-          title: '',
-          description: '',
-          category: 'technical',
-          type: 'individual',
-          date: '',
-          time: '',
-          endTime: '',
-          location: '',
-          maxParticipants: '',
-          volunteerSpots: '',
-          prerequisites: [''],
-          agenda: [''],
-          tags: [''],
-          registrationDeadline: '',
-          teamSize: { min: 2, max: 5 },
-          image: '',
-          youtubeStreamUrl: '',
-          streamTitle: '',
-          enableLiveStream: false
-        });
-        setEditingEvent(null);
-        setActiveTab('manage');
+        // Update the form with the new image URL if uploaded
+        if (selectedImage && imageUrl) {
+          setEventForm(prev => ({ ...prev, image: imageUrl }));
+        }
         
-        // Refresh events list
+        // Clear only the selected image, keep form data for further editing
+        setSelectedImage(null);
+        setImagePreview(null);
+        
+        // Refresh events list to show updated data
         loadUserEvents();
+        
+        // Don't switch tabs or clear form - keep user in edit mode
+        showSuccessToast('Event updated! You can continue editing or switch to manage tab.');
       } else {
         showErrorToast(response.message || 'Failed to update event');
       }
@@ -553,10 +678,9 @@ const EventManagement = () => {
                         required
                         disabled={loading}
                       >
-                        <option value="technical">Technical</option>
+                        <option value="academic">Academic</option>
                         <option value="cultural">Cultural</option>
                         <option value="sports">Sports</option>
-                        <option value="academic">Academic</option>
                         <option value="workshop">Workshop</option>
                         <option value="seminar">Seminar</option>
                       </select>
@@ -878,15 +1002,33 @@ const EventManagement = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Event Image URL</label>
-                    <input
-                      type="url"
-                      name="image"
-                      value={eventForm.image}
-                      onChange={handleInputChange}
-                      placeholder="https://example.com/image.jpg"
-                      disabled={loading}
-                    />
+                    <label>Event Image</label>
+                    <div className="image-upload-section">
+                      {imagePreview ? (
+                        <div className="image-preview">
+                          <img src={imagePreview} alt="Event preview" className="preview-img" />
+                          <button type="button" onClick={removeImage} className="remove-image-btn">
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="image-upload-area">
+                          <input
+                            type="file"
+                            id="eventImage"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            disabled={loading}
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="eventImage" className="upload-label">
+                            <i className="fas fa-cloud-upload-alt"></i>
+                            <span>Click to upload event image</span>
+                            <small>Supports: JPEG, PNG, GIF, WebP (Max 5MB)</small>
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1046,11 +1188,11 @@ const EventManagement = () => {
                         onChange={(e) => setEventForm({ ...eventForm, category: e.target.value })}
                         disabled={loading}
                       >
-                        <option value="technical">Technical</option>
-                        <option value="cultural">Cultural</option>
                         <option value="academic">Academic</option>
+                        <option value="cultural">Cultural</option>
                         <option value="sports">Sports</option>
-                        <option value="social">Social</option>
+                        <option value="workshop">Workshop</option>
+                        <option value="seminar">Seminar</option>
                       </select>
                     </div>
                   </div>
@@ -1081,15 +1223,38 @@ const EventManagement = () => {
                       </select>
                     </div>
                     <div className="form-group">
-                      <label>Image URL</label>
-                      <input
-                        type="url"
-                        name="image"
-                        value={eventForm.image}
-                        onChange={(e) => setEventForm({ ...eventForm, image: e.target.value })}
-                        placeholder="https://example.com/image.jpg"
-                        disabled={loading}
-                      />
+                      <label>Event Image</label>
+                      {imagePreview ? (
+                        <div className="image-preview-container">
+                          <img src={imagePreview} alt="Event preview" className="preview-img" />
+                          <button type="button" onClick={removeImage} className="remove-image-btn">
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      ) : eventForm.image ? (
+                        <div className="image-preview-container">
+                          <img src={eventForm.image} alt="Current event image" className="preview-img" />
+                          <button type="button" onClick={() => setEventForm({ ...eventForm, image: '' })} className="remove-image-btn">
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="image-upload-area">
+                          <input
+                            type="file"
+                            id="editEventImage"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            disabled={loading}
+                            style={{ display: 'none' }}
+                          />
+                          <label htmlFor="editEventImage" className="upload-label">
+                            <i className="fas fa-cloud-upload-alt"></i>
+                            <span>Click to upload event image</span>
+                            <small>Supports: JPEG, PNG, GIF, WebP (Max 5MB)</small>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1196,6 +1361,52 @@ const EventManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Participants Modal */}
+      {showParticipants && (
+        <div className="modal-overlay" onClick={() => setShowParticipants(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Event Participants</h3>
+              <button className="close-btn" onClick={() => setShowParticipants(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Participants list will be displayed here.</p>
+              <small>This feature is coming soon!</small>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowParticipants(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Volunteers Modal */}
+      {showVolunteers && (
+        <div className="modal-overlay" onClick={() => setShowVolunteers(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Event Volunteers</h3>
+              <button className="close-btn" onClick={() => setShowVolunteers(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Volunteers list will be displayed here.</p>
+              <small>This feature is coming soon!</small>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowVolunteers(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

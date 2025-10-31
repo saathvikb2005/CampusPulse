@@ -127,8 +127,25 @@ const UpcomingEvents = () => {
       setRegistrationLoading(prev => ({ ...prev, [eventId]: true }));
       
       if (type === "volunteer") {
-        // TODO: Implement volunteer registration when backend supports it
-        showErrorToast('Volunteer registration is not yet available. Please contact the event organizer.');
+        // Try volunteer registration API
+        try {
+          const volunteerResponse = await eventAPI.volunteerRegister(eventId);
+          
+          if (volunteerResponse.success) {
+            showSuccessToast('Successfully registered as volunteer!');
+            loadUpcomingEvents(); // Refresh to update volunteer count
+          } else {
+            showErrorToast('Failed to register as volunteer. Please try again.');
+          }
+        } catch (volunteerError) {
+          // If volunteer API not implemented, show helpful message
+          if (volunteerError.message?.includes('404') || volunteerError.message?.includes('not found')) {
+            showErrorToast('Volunteer registration is coming soon! Please contact the event organizer.');
+          } else {
+            console.error('Volunteer registration error:', volunteerError);
+            showErrorToast('Volunteer registration failed. Please try again.');
+          }
+        }
         return;
       }
 
@@ -158,7 +175,13 @@ const UpcomingEvents = () => {
 
   const isRegistered = (eventId, type = "participant") => {
     if (type === "volunteer") {
-      // TODO: Check volunteer registration when backend supports it
+      // Check if user is in volunteer list for this event
+      const event = upcomingEvents.find(e => e.id === eventId);
+      if (event && event.volunteers && Array.isArray(event.volunteers)) {
+        return event.volunteers.some(volunteer => 
+          volunteer.userId === user?.id || volunteer.id === user?.id || volunteer === user?.id
+        );
+      }
       return false;
     }
     return registeredEvents.has(eventId);

@@ -3,21 +3,11 @@
     "development"
   ],
   "hints": {
-    "compat-api/css": [
+    "compat-api/html": [
       "default",
       {
         "ignore": [
-          "backdrop-filter",
-          "user-select",
-          "position: sticky",
-          "accent-color",
-          "scroll-behavior",
-          "scroll-behavior: smooth",
-          "scrollbar-width",
-          "scrollbar-width: none",
-          "contain",
-          "contain: layout style paint",
-          "contain: layout style"
+          "meta[name=theme-color]"
         ]
       }
     ]

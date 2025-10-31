@@ -71,6 +71,16 @@ router.post('/:id/register', auth, eventController.registerForEvent);
 // @access  Private
 router.post('/:id/unregister', auth, eventController.unregisterFromEvent);
 
+// @route   POST /api/events/:id/volunteer
+// @desc    Register as volunteer for event
+// @access  Private
+router.post('/:id/volunteer', auth, eventController.volunteerForEvent);
+
+// @route   POST /api/events/:id/volunteer/unregister
+// @desc    Unregister as volunteer from event
+// @access  Private
+router.post('/:id/volunteer/unregister', auth, eventController.unvolunteerFromEvent);
+
 // @route   GET /api/events/:id/registrations
 // @desc    Get event registrations
 // @access  Private/Event Manager/Admin

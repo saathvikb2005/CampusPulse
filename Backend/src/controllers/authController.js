@@ -428,7 +428,9 @@ const getMe = async (req, res) => {
 
     res.json({
       success: true,
-      data: user
+      data: {
+        user: user
+      }
     });
   } catch (error) {
     console.error('Get me error:', error);

@@ -298,6 +298,7 @@ const getUserFeedback = async (req, res) => {
     const totalFeedback = await Feedback.countDocuments(query);
     const feedback = await Feedback.find(query)
       .populate('relatedEvent', 'title')
+      .populate('responseBy', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

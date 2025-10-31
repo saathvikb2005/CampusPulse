@@ -8,7 +8,7 @@ import "./Feedback.css";
 
 const Feedback = () => {
   const [feedbackType, setFeedbackType] = useState("event");
-  const [isAnonymous, setIsAnonymous] = useState(true);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState("");
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -28,45 +28,99 @@ const Feedback = () => {
   // Load events and user feedback on component mount
   useEffect(() => {
     loadRecentEvents();
-    if (isAuthenticated() && !isAnonymous) {
+    if (isAuthenticated()) {
       loadUserFeedback();
+      loadUserInfo();
     }
     
     // Load pre-filled data from localStorage if coming from event page
     const prefilledEventId = localStorage.getItem('feedbackEventId');
     const prefilledEventTitle = localStorage.getItem('feedbackEventTitle');
-    const userEmail = localStorage.getItem('userEmail');
     
     if (prefilledEventId) {
       setSelectedEvent(prefilledEventId);
       localStorage.removeItem('feedbackEventId');
       localStorage.removeItem('feedbackEventTitle');
     }
-    
-    if (userEmail && !isAnonymous) {
+  }, []);
+
+  // Separate useEffect to handle anonymous toggle changes
+  useEffect(() => {
+    if (!isAnonymous && isAuthenticated()) {
+      loadUserInfo();
+    } else if (isAnonymous) {
+      // Clear user info when switching to anonymous
       setFormData(prev => ({
         ...prev,
-        email: userEmail
+        name: "",
+        email: "",
+        department: ""
       }));
     }
   }, [isAnonymous]);
 
   const loadRecentEvents = async () => {
     try {
-      const response = await eventAPI.getAll();
-      if (response.success && response.events) {
-        // Get recent events from the last 3 months
-        const recentEventsData = response.events
-          .filter(event => {
-            const eventDate = new Date(event.startDate);
-            const threeMonthsAgo = new Date();
-            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-            return eventDate >= threeMonthsAgo;
-          })
-          .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-          .slice(0, 10);
+      setLoading(true);
+      console.log('Loading events for feedback...');
+      
+      // Try multiple API endpoints to get events
+      let response;
+      try {
+        response = await eventAPI.getAll();
+      } catch (error) {
+        console.log('getAll failed, trying getUpcoming...');
+        response = await eventAPI.getUpcoming();
+      }
+      
+      console.log('Events API response:', response);
+      
+      if (response && response.success) {
+        let events = [];
         
+        // Handle different response structures
+        if (response.events && Array.isArray(response.events)) {
+          events = response.events;
+        } else if (response.data && Array.isArray(response.data.events)) {
+          events = response.data.events;
+        } else if (response.data && Array.isArray(response.data)) {
+          events = response.data;
+        } else if (Array.isArray(response)) {
+          events = response;
+        }
+        
+        console.log('Processed events:', events);
+        
+        // Get recent events from the last 6 months (expanded timeframe)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        
+        const recentEventsData = events
+          .filter(event => {
+            if (!event) return false;
+            const eventDate = new Date(event.date || event.startDate || event.createdAt);
+            return eventDate >= sixMonthsAgo;
+          })
+          .sort((a, b) => {
+            const dateA = new Date(a.date || a.startDate || a.createdAt);
+            const dateB = new Date(b.date || b.startDate || b.createdAt);
+            return dateB - dateA;
+          })
+          .slice(0, 20); // Increased limit
+        
+        console.log('Filtered recent events:', recentEventsData);
         setRecentEvents(recentEventsData);
+        
+        if (recentEventsData.length === 0) {
+          console.log('No recent events found, trying to get all events without date filter...');
+          // If no recent events, just get all events
+          const allEventsData = events.slice(0, 10);
+          setRecentEvents(allEventsData);
+        }
+      } else {
+        console.error('Invalid events response structure:', response);
+        showErrorToast('Failed to load events. Please refresh the page.');
+        setRecentEvents([]);
       }
     } catch (error) {
       console.error('Error loading events:', error);
@@ -88,6 +142,36 @@ const Feedback = () => {
     }
   };
 
+  const loadUserInfo = async () => {
+    try {
+      // Get user info from localStorage first
+      const userEmail = localStorage.getItem('userEmail');
+      const userName = localStorage.getItem('userName') || localStorage.getItem('userFirstName');
+      const userLastName = localStorage.getItem('userLastName');
+      const userDepartment = localStorage.getItem('userDepartment');
+      
+      // Construct full name
+      let fullName = '';
+      if (userName && userLastName) {
+        fullName = `${userName} ${userLastName}`;
+      } else if (userName) {
+        fullName = userName;
+      }
+      
+      console.log('Loading user info:', { userEmail, fullName, userDepartment });
+      
+      setFormData(prev => ({
+        ...prev,
+        name: fullName || prev.name,
+        email: userEmail || prev.email,
+        department: userDepartment || prev.department
+      }));
+      
+    } catch (error) {
+      console.error('Error loading user info:', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -98,6 +182,8 @@ const Feedback = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    console.log('Form submission started', { feedbackType, selectedEvent, isAnonymous, formData });
     
     // Basic validation
     if (feedbackType === "event" && recentEvents.length === 0) {
@@ -128,9 +214,14 @@ const Feedback = () => {
     setIsSubmitting(true);
 
     try {
+      // Find selected event details
+      const selectedEventDetails = recentEvents.find(e => e._id === selectedEvent);
+      
       // Prepare feedback data to match backend model
       const feedbackData = {
-        subject: feedbackType === "event" ? `Event Feedback: ${recentEvents.find(e => e._id === selectedEvent)?.title || 'Event'}` : "Campus Life Feedback",
+        subject: feedbackType === "event" 
+          ? `Event Feedback: ${selectedEventDetails?.title || 'Event'}` 
+          : "Campus Life Feedback",
         message: formData.feedback,
         category: feedbackType === "event" ? "event_feedback" : "general_feedback",
         isAnonymous: isAnonymous
@@ -150,6 +241,7 @@ const Feedback = () => {
         pageUrl: window.location.href,
         userAgent: navigator.userAgent,
         deviceInfo: navigator.platform,
+        timestamp: new Date().toISOString(),
         additionalInfo: {
           department: formData.department || null,
           suggestions: formData.suggestions || null,
@@ -159,16 +251,20 @@ const Feedback = () => {
         }
       };
 
+      console.log('Submitting feedback data:', feedbackData);
+      
       const response = await feedbackAPI.create(feedbackData);
+      
+      console.log('Feedback submission response:', response);
 
-      if (response.success) {
+      if (response && response.success) {
         showSuccessToast("Feedback submitted successfully! Thank you for your input.");
         
         // Reset form
         setFormData({
-          name: "",
-          email: "",
-          department: "",
+          name: isAnonymous ? "" : formData.name, // Keep name if not anonymous
+          email: isAnonymous ? "" : formData.email, // Keep email if not anonymous
+          department: isAnonymous ? "" : formData.department, // Keep department if not anonymous
           feedback: "",
           suggestions: "",
           wouldRecommend: ""
@@ -176,12 +272,14 @@ const Feedback = () => {
         setRating(0);
         setSelectedEvent("");
         
-        // Reload user feedback if not anonymous
-        if (!isAnonymous && isAuthenticated()) {
+        // Reload user feedback if authenticated
+        if (isAuthenticated()) {
           loadUserFeedback();
         }
       } else {
-        showErrorToast(response.message || "Failed to submit feedback. Please try again.");
+        const errorMessage = response?.message || "Failed to submit feedback. Please try again.";
+        console.error('Feedback submission failed:', errorMessage);
+        showErrorToast(errorMessage);
       }
       
     } catch (error) {
@@ -202,6 +300,17 @@ const Feedback = () => {
           <div className="header-content">
             <h1>💬 Feedback Center</h1>
             <p>Your voice matters! Share your thoughts and help us improve campus experiences</p>
+            {isAuthenticated() && (
+              <div className="header-actions">
+                <button 
+                  className="btn btn-outline btn-small"
+                  onClick={() => document.getElementById('feedback-history')?.scrollIntoView({ behavior: 'smooth' })}
+                >
+                  <i className="fas fa-history"></i>
+                  View My Feedback History
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -328,7 +437,7 @@ const Feedback = () => {
                       </option>
                       {recentEvents.map(event => (
                         <option key={event._id} value={event._id}>
-                          {event.title} - {new Date(event.startDate).toLocaleDateString()}
+                          {event.title} - {new Date(event.date || event.startDate || event.createdAt).toLocaleDateString()}
                         </option>
                       ))}
                     </select>
@@ -342,6 +451,20 @@ const Feedback = () => {
                         No recent events found. Try selecting "Campus Life" feedback instead.
                       </p>
                     )}
+                    {loading && (
+                      <p style={{ 
+                        color: '#3b82f6', 
+                        fontSize: '0.875rem', 
+                        marginTop: '0.5rem',
+                        fontStyle: 'italic'
+                      }}>
+                        Loading events from server...
+                      </p>
+                    )}
+                    {/* Debug info (will be removed in production) */}
+                    <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                      Debug: Found {recentEvents.length} events
+                    </small>
                   </div>
                 )}
 
@@ -530,42 +653,124 @@ const Feedback = () => {
         </div>
       </section>
 
-      {/* Previous Feedback (if not anonymous) */}
-      {!isAnonymous && isAuthenticated() && (
-        <section className="previous-feedback-section">
+      {/* Previous Feedback (for authenticated users) */}
+      {isAuthenticated() && (
+        <section id="feedback-history" className="previous-feedback-section">
           <div className="container">
-            <h2>Your Previous Feedback</h2>
+            <h2>📋 Your Feedback History</h2>
+            <p className="section-subtitle">Track your feedback submissions and see admin responses</p>
             <div className="feedback-history">
               {previousFeedback.length > 0 ? (
                 previousFeedback.map((feedback) => (
                   <div key={feedback._id} className="feedback-item">
                     <div className="feedback-header">
-                      <h4>{feedback.relatedEvent?.title || feedback.subject || 'General Feedback'}</h4>
-                      <span className="feedback-date">
-                        {new Date(feedback.createdAt).toLocaleDateString()}
-                      </span>
-                      {feedback.rating && (
-                        <div className="feedback-rating">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <i 
-                              key={star}
-                              className={`fas fa-star ${star <= feedback.rating ? '' : 'far'}`}
-                            ></i>
-                          ))}
+                      <div className="feedback-title-section">
+                        <h4>{feedback.relatedEvent?.title || feedback.subject || 'General Feedback'}</h4>
+                        <div className="feedback-meta">
+                          <span className="feedback-date">
+                            <i className="fas fa-calendar"></i>
+                            Submitted: {new Date(feedback.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long', 
+                              day: 'numeric'
+                            })}
+                          </span>
+                          {feedback.rating && (
+                            <div className="feedback-rating">
+                              <span className="rating-label">Your Rating:</span>
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <i 
+                                  key={star}
+                                  className={`fas fa-star ${star <= feedback.rating ? 'star-filled' : 'star-empty'}`}
+                                ></i>
+                              ))}
+                              <span className="rating-text">({feedback.rating}/5)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="feedback-status-badge">
+                        <span className={`status-badge status-${feedback.status}`}>
+                          <i className={`fas ${
+                            feedback.status === 'pending' ? 'fa-clock' :
+                            feedback.status === 'in_review' ? 'fa-eye' :
+                            feedback.status === 'resolved' ? 'fa-check-circle' :
+                            feedback.status === 'closed' ? 'fa-times-circle' :
+                            feedback.status === 'rejected' ? 'fa-ban' : 'fa-question-circle'
+                          }`}></i>
+                          {feedback.status?.replace('_', ' ').toUpperCase() || 'SUBMITTED'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="feedback-content">
+                      <div className="user-feedback">
+                        <h5><i className="fas fa-comment"></i> Your Feedback:</h5>
+                        <p>{feedback.message}</p>
+                        {feedback.category && (
+                          <span className="feedback-category">
+                            <i className="fas fa-tag"></i>
+                            Category: {feedback.category.replace('_', ' ').toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Admin Response Section */}
+                      {feedback.response ? (
+                        <div className="admin-response">
+                          <div className="response-header">
+                            <h5><i className="fas fa-reply"></i> Admin Response:</h5>
+                            <div className="response-meta">
+                              {feedback.responseBy && (
+                                <span className="responder">
+                                  <i className="fas fa-user-shield"></i>
+                                  Responded by: {feedback.responseBy.firstName} {feedback.responseBy.lastName}
+                                </span>
+                              )}
+                              {feedback.responseDate && (
+                                <span className="response-date">
+                                  <i className="fas fa-clock"></i>
+                                  {new Date(feedback.responseDate).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long', 
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="response-content">
+                            <p>{feedback.response}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="no-response">
+                          <div className="no-response-content">
+                            <i className="fas fa-hourglass-half"></i>
+                            <p>
+                              {feedback.status === 'pending' 
+                                ? 'Your feedback is pending review. We\'ll respond soon!'
+                                : feedback.status === 'in_review' 
+                                ? 'Your feedback is currently being reviewed by our team.'
+                                : 'No admin response yet. We appreciate your feedback!'
+                              }
+                            </p>
+                          </div>
                         </div>
                       )}
-                    </div>
-                    <p className="feedback-text">{feedback.message}</p>
-                    <div className="feedback-status">
-                      <i className="fas fa-check-circle"></i>
-                      <span style={{ textTransform: 'capitalize' }}>
-                        {feedback.status?.replace('_', ' ') || 'Submitted'}
-                      </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p>No previous feedback found.</p>
+                <div className="no-feedback">
+                  <div className="no-feedback-content">
+                    <i className="fas fa-comments"></i>
+                    <h3>No Previous Feedback</h3>
+                    <p>You haven't submitted any feedback yet. Your feedback helps us improve!</p>
+                  </div>
+                </div>
               )}
             </div>
           </div>

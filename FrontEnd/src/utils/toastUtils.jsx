@@ -1,10 +1,11 @@
 // src/utils/toastUtils.js
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import Toast from '../components/Toast';
 
 let toastContainer = null;
 let toastId = 0;
+const activeToasts = new Map();
 
 const getToastContainer = () => {
   if (!toastContainer) {
@@ -29,21 +30,28 @@ export const showToast = (message, type = 'info', duration = 3000) => {
   
   const removeToast = () => {
     if (toastElement && toastElement.parentNode) {
-      ReactDOM.unmountComponentAtNode(toastElement);
+      const root = activeToasts.get(currentToastId);
+      if (root) {
+        root.unmount();
+        activeToasts.delete(currentToastId);
+      }
       toastElement.parentNode.removeChild(toastElement);
     }
   };
 
   container.appendChild(toastElement);
 
-  ReactDOM.render(
+  // Create root and render toast
+  const root = createRoot(toastElement);
+  activeToasts.set(currentToastId, root);
+  
+  root.render(
     <Toast 
       message={message} 
       type={type} 
       duration={duration}
       onClose={removeToast}
-    />,
-    toastElement
+    />
   );
 
   return currentToastId;

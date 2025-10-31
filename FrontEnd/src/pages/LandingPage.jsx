@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
 import { eventAPI, userAPI, notificationAPI, blogAPI, feedbackAPI } from "../services/api";
+import { isAuthenticated } from "../utils/auth";
 import "./LandingPage.css";
 
 const LandingPage = () => {
@@ -35,80 +36,300 @@ const LandingPage = () => {
         
         // Fetch upcoming events for the events section
         const eventsResponse = await eventAPI.getUpcoming();
-        const events = eventsResponse.data || eventsResponse || [];
-        setUpcomingEvents(events.slice(0, 3)); // Show only first 3 events
+        console.log('Events Response:', eventsResponse); // Debug log
+        
+        // Handle different response formats safely
+        let events = [];
+        if (eventsResponse?.data?.events) {
+          events = eventsResponse.data.events;
+        } else if (eventsResponse?.events) {
+          events = eventsResponse.events;
+        } else if (Array.isArray(eventsResponse?.data)) {
+          events = eventsResponse.data;
+        } else if (Array.isArray(eventsResponse)) {
+          events = eventsResponse;
+        }
+        
+        // Ensure events is an array before using slice
+        const validEvents = Array.isArray(events) ? events : [];
+        setUpcomingEvents(validEvents.slice(0, 3)); // Show only first 3 events
 
-        // Fetch recent notifications for hero cards
-        const notificationsResponse = await notificationAPI.getUserNotifications();
-        const notifications = notificationsResponse.data || notificationsResponse || [];
-        setRecentNotifications(notifications.slice(0, 3)); // Show only first 3 notifications
+        // Initialize notifications variable for later use
+        let validNotifications = [];
 
-        // Fetch stats (we can derive some stats from the data)
-        try {
-          const allEventsResponse = await eventAPI.getAll();
-          const allEvents = allEventsResponse.data || allEventsResponse || [];
-          
-          const usersResponse = await userAPI.getAllUsers();
-          const users = usersResponse.data || usersResponse || [];
-          
-          // Calculate real stats
-          const studentCount = users.filter(user => user.role === 'student').length;
-          const thisMonthEvents = allEvents.filter(event => {
-            const eventDate = new Date(event.date || event.createdAt);
-            const now = new Date();
-            return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
-          }).length;
+        // Fetch recent notifications for hero cards (only if authenticated)
+        if (isAuthenticated()) {
+          try {
+            const notificationsResponse = await notificationAPI.getUserNotifications();
+            console.log('Notifications Response:', notificationsResponse); // Debug log
+            
+            // Handle different notification response formats safely
+            let notifications = [];
+            if (notificationsResponse?.data?.notifications) {
+              notifications = notificationsResponse.data.notifications;
+            } else if (notificationsResponse?.notifications) {
+              notifications = notificationsResponse.notifications;
+            } else if (Array.isArray(notificationsResponse?.data)) {
+              notifications = notificationsResponse.data;
+            } else if (Array.isArray(notificationsResponse)) {
+              notifications = notificationsResponse;
+            }
+            
+            // Ensure notifications is an array before using slice
+            validNotifications = Array.isArray(notifications) ? notifications : [];
+            setRecentNotifications(validNotifications.slice(0, 3)); // Show only first 3 notifications
+          } catch (notifError) {
+            console.warn('Could not fetch notifications (likely not authenticated):', notifError);
+            // Use fallback notifications for unauthenticated users
+            const fallbackNotifications = [
+              {
+                id: 'public-notif-1',
+                title: 'Welcome to CampusPulse!',
+                message: 'Discover campus events and connect with your community.',
+                type: 'system_announcement',
+                createdAt: new Date().toISOString()
+              }
+            ];
+            validNotifications = fallbackNotifications;
+            setRecentNotifications(fallbackNotifications);
+          }
+        } else {
+          // Fallback notifications for unauthenticated users
+          const fallbackNotifications = [
+            {
+              id: 'public-notif-1',
+              title: 'Welcome to CampusPulse!',
+              message: 'Join our community to discover campus events and connect with students.',
+              type: 'system_announcement',
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: 'public-notif-2',
+              title: 'Explore Campus Events',
+              message: 'Discover exciting events happening around campus.',
+              type: 'general',
+              createdAt: new Date().toISOString()
+            }
+          ];
+          validNotifications = fallbackNotifications;
+          setRecentNotifications(fallbackNotifications);
+        }
 
-          // Fetch additional stats for features
-          const blogsResponse = await blogAPI.getAll();
-          const blogs = blogsResponse.data || blogsResponse || [];
-          
-          const feedbackResponse = await feedbackAPI.getAll();
-          const feedbacks = feedbackResponse.data || feedbackResponse || [];
+        // Fetch stats (we can derive some stats from the data) - only if authenticated
+        if (isAuthenticated()) {
+          try {
+            const allEventsResponse = await eventAPI.getAll();
+            let allEvents = [];
+            if (allEventsResponse?.data?.events) {
+              allEvents = allEventsResponse.data.events;
+            } else if (allEventsResponse?.events) {
+              allEvents = allEventsResponse.events;
+            } else if (Array.isArray(allEventsResponse?.data)) {
+              allEvents = allEventsResponse.data;
+            } else if (Array.isArray(allEventsResponse)) {
+              allEvents = allEventsResponse;
+            }
+            
+            // Try to get additional data that might require authentication
+            try {
+              const usersResponse = await userAPI.getAllUsers();
+              let users = [];
+              if (usersResponse?.data?.users) {
+                users = usersResponse.data.users;
+              } else if (usersResponse?.users) {
+                users = usersResponse.users;
+              } else if (Array.isArray(usersResponse?.data)) {
+                users = usersResponse.data;
+              } else if (Array.isArray(usersResponse)) {
+                users = usersResponse;
+              }
+              
+              // Calculate real stats with safe array operations
+              const validAllEvents = Array.isArray(allEvents) ? allEvents : [];
+              const validUsers = Array.isArray(users) ? users : [];
+              
+              const studentCount = validUsers.filter(user => user.role === 'student').length;
+              const thisMonthEvents = validAllEvents.filter(event => {
+                const eventDate = new Date(event.date || event.createdAt);
+                const now = new Date();
+                return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+              }).length;
 
-          // Calculate unique organizers/clubs
-          const uniqueOrganizers = [...new Set(allEvents.map(event => event.organizer || event.createdBy).filter(Boolean))];
+              // Fetch additional stats for features (may require auth)
+              try {
+                const blogsResponse = await blogAPI.getAll();
+                let blogs = [];
+                if (blogsResponse?.data?.blogs) {
+                  blogs = blogsResponse.data.blogs;
+                } else if (blogsResponse?.blogs) {
+                  blogs = blogsResponse.blogs;
+                } else if (Array.isArray(blogsResponse?.data)) {
+                  blogs = blogsResponse.data;
+                } else if (Array.isArray(blogsResponse)) {
+                  blogs = blogsResponse;
+                }
+                
+                const feedbackResponse = await feedbackAPI.getAll();
+                let feedbacks = [];
+                if (feedbackResponse?.data?.feedback) {
+                  feedbacks = feedbackResponse.data.feedback;
+                } else if (feedbackResponse?.feedback) {
+                  feedbacks = feedbackResponse.feedback;
+                } else if (Array.isArray(feedbackResponse?.data)) {
+                  feedbacks = feedbackResponse.data;
+                } else if (Array.isArray(feedbackResponse)) {
+                  feedbacks = feedbackResponse;
+                }
 
+                // Calculate unique organizers/clubs with safe array operations
+                const validBlogs = Array.isArray(blogs) ? blogs : [];
+                const validFeedbacks = Array.isArray(feedbacks) ? feedbacks : [];
+                const uniqueOrganizers = [...new Set(validAllEvents.map(event => event.organizer || event.createdBy).filter(Boolean))];
+
+                setStats({
+                  activeStudents: studentCount > 0 ? `${studentCount}+` : '1K+',
+                  monthlyEvents: thisMonthEvents > 0 ? `${thisMonthEvents}+` : '50+',
+                  clubs: uniqueOrganizers.length > 0 ? `${uniqueOrganizers.length}+` : '25+'
+                });
+
+                // Set feature stats for dynamic features section
+                setFeatureStats({
+                  totalAnnouncements: validNotifications.length,
+                  totalEvents: validAllEvents.length,
+                  totalFeedback: validFeedbacks.length,
+                  totalBlogs: validBlogs.length,
+                  activeUsers: validUsers.length,
+                  thisWeekEvents: validAllEvents.filter(event => {
+                    const eventDate = new Date(event.date || event.createdAt);
+                    const now = new Date();
+                    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    return eventDate >= weekAgo && eventDate <= now;
+                  }).length
+                });
+                
+              } catch (additionalStatsError) {
+                console.warn('Could not fetch additional stats:', additionalStatsError);
+                // Set basic stats if detailed stats fail
+                setStats({
+                  activeStudents: studentCount > 0 ? `${studentCount}+` : '1K+',
+                  monthlyEvents: thisMonthEvents > 0 ? `${thisMonthEvents}+` : '50+',
+                  clubs: '25+'
+                });
+                setFeatureStats({
+                  totalAnnouncements: 5,
+                  totalEvents: validAllEvents.length,
+                  totalFeedback: 100,
+                  totalBlogs: 50,
+                  activeUsers: validUsers.length,
+                  thisWeekEvents: 10
+                });
+              }
+              
+            } catch (userStatsError) {
+              console.warn('Could not fetch user stats:', userStatsError);
+              // Use default stats if user data is not available
+              setStats({
+                activeStudents: '1K+',
+                monthlyEvents: '50+',
+                clubs: '25+'
+              });
+              setFeatureStats({
+                totalAnnouncements: 5,
+                totalEvents: Array.isArray(allEvents) ? allEvents.length : 10,
+                totalFeedback: 100,
+                totalBlogs: 50,
+                activeUsers: 1000,
+                thisWeekEvents: 10
+              });
+            }
+
+          } catch (statsError) {
+            console.warn('Could not fetch any stats, using defaults:', statsError);
+            // Keep default stats if no data available
+            setStats({
+              activeStudents: '1K+',
+              monthlyEvents: '50+',
+              clubs: '25+'
+            });
+            setFeatureStats({
+              totalAnnouncements: 5,
+              totalEvents: 10,
+              totalFeedback: 100,
+              totalBlogs: 50,
+              activeUsers: 1000,
+              thisWeekEvents: 10
+            });
+          }
+        } else {
+          // Default stats for unauthenticated users
           setStats({
-            activeStudents: studentCount > 0 ? `${studentCount}+` : '10K+',
-            monthlyEvents: thisMonthEvents > 0 ? `${thisMonthEvents}+` : '500+',
-            clubs: uniqueOrganizers.length > 0 ? `${uniqueOrganizers.length}+` : '50+'
+            activeStudents: '1K+',
+            monthlyEvents: '50+',
+            clubs: '25+'
           });
-
-          // Set feature stats for dynamic features section
           setFeatureStats({
-            totalAnnouncements: notifications.length,
-            totalEvents: allEvents.length,
-            totalFeedback: feedbacks.length,
-            totalBlogs: blogs.length,
-            activeUsers: users.length,
-            thisWeekEvents: allEvents.filter(event => {
-              const eventDate = new Date(event.date || event.createdAt);
-              const now = new Date();
-              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              return eventDate >= weekAgo && eventDate <= now;
-            }).length
+            totalAnnouncements: 5,
+            totalEvents: validEvents.length > 0 ? validEvents.length : 10,
+            totalFeedback: 100,
+            totalBlogs: 50,
+            activeUsers: 1000,
+            thisWeekEvents: 10
           });
-
-        } catch (statsError) {
-          console.warn('Could not fetch stats, using defaults:', statsError);
-          // Keep default stats if user doesn't have permission
         }
 
       } catch (error) {
         console.error('Error fetching landing page data:', error);
-        // Set minimal fallback data if API fails
-        console.warn('Using fallback events due to API error');
+        
+        // Set comprehensive fallback data if API fails
+        console.warn('Using fallback data due to API error');
+        
+        // Fallback events
         setUpcomingEvents([
           {
-            id: 'demo-event',
+            id: 'demo-event-1',
             title: 'Campus Demo Event',
             description: 'Explore Campus Pulse features and connect with the community.',
-            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
+            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             location: 'Campus Hub',
             image: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60'
+          },
+          {
+            id: 'demo-event-2',
+            title: 'Tech Workshop',
+            description: 'Learn modern web development technologies.',
+            date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            location: 'Computer Lab',
+            image: 'https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=400&h=200&fit=crop&q=60'
           }
         ]);
+        
+        // Fallback notifications
+        setRecentNotifications([
+          {
+            id: 'demo-notif-1',
+            title: 'Welcome to CampusPulse!',
+            message: 'Your campus management system is ready to use.',
+            type: 'system_announcement',
+            createdAt: new Date().toISOString()
+          }
+        ]);
+        
+        // Keep default stats
+        setStats({
+          activeStudents: '10K+',
+          monthlyEvents: '500+',
+          clubs: '50+'
+        });
+        
+        // Keep default feature stats
+        setFeatureStats({
+          totalAnnouncements: 1,
+          totalEvents: 2,
+          totalFeedback: 50,
+          totalBlogs: 25,
+          activeUsers: 1000,
+          thisWeekEvents: 5
+        });
       } finally {
         setLoading(false);
       }
@@ -181,7 +402,7 @@ const LandingPage = () => {
                   <div key={notification.id || notification._id} className={`card card-${index + 1}`}>
                     <div className="card-header">
                       <div className="card-icon">
-                        {notification.type === 'announcement' ? '📢' :
+                        {notification.type === 'system_announcement' ? '📢' :
                          notification.type === 'event' ? '🎭' :
                          notification.type === 'urgent' ? '🚨' : '📝'}
                       </div>

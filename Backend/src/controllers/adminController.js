@@ -216,31 +216,39 @@ const getPendingEvents = async (req, res) => {
 // @access  Private/Admin/Event Manager
 const approveEvent = async (req, res) => {
   try {
+    console.log('Approving event with ID:', req.params.id);
     const event = await Event.findById(req.params.id);
     
     if (!event) {
+      console.log('Event not found:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
     
+    console.log('Found event:', event.title, 'Organizer ID:', event.organizerId);
+    
     event.status = 'approved';
     event.approvedBy = req.user._id;
     event.approvalDate = new Date();
     
     await event.save();
+    console.log('Event saved successfully');
     
     // Create notification for event organizer
     const notification = new Notification({
+      recipient: event.organizerId,
+      sender: req.user._id,
+      type: 'general',
       title: 'Event Approved',
       message: `Your event "${event.title}" has been approved and is now visible to all users.`,
-      type: 'success',
-      targetUsers: [event.organizerId],
-      createdBy: req.user._id
+      relatedEvent: event._id,
+      priority: 'medium'
     });
     
     await notification.save();
+    console.log('Notification saved successfully');
     
     // Emit real-time notification (if socket.io is set up)
     const io = req.app.get('io');
@@ -255,6 +263,7 @@ const approveEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Approve event error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error approving event',
@@ -268,16 +277,20 @@ const approveEvent = async (req, res) => {
 // @access  Private/Admin/Event Manager
 const rejectEvent = async (req, res) => {
   try {
+    console.log('Rejecting event with ID:', req.params.id);
     const { reason } = req.body;
     
     const event = await Event.findById(req.params.id);
     
     if (!event) {
+      console.log('Event not found:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
+    
+    console.log('Found event:', event.title, 'Organizer ID:', event.organizerId);
     
     event.status = 'rejected';
     event.rejectionReason = reason;
@@ -285,17 +298,21 @@ const rejectEvent = async (req, res) => {
     event.approvalDate = new Date();
     
     await event.save();
+    console.log('Event rejection saved successfully');
     
     // Create notification for event organizer
     const notification = new Notification({
+      recipient: event.organizerId,
+      sender: req.user._id,
+      type: 'general',
       title: 'Event Rejected',
       message: `Your event "${event.title}" has been rejected. Reason: ${reason}`,
-      type: 'error',
-      targetUsers: [event.organizerId],
-      createdBy: req.user._id
+      relatedEvent: event._id,
+      priority: 'medium'
     });
     
     await notification.save();
+    console.log('Notification saved successfully');
     
     // Emit real-time notification
     const io = req.app.get('io');
@@ -310,6 +327,7 @@ const rejectEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Reject event error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error rejecting event',
@@ -553,22 +571,24 @@ const sendNotification = async (req, res) => {
       recipients = allUsers.map(user => user._id);
     }
     
-    const notification = new Notification({
+    // Create notifications for all recipients
+    const notifications = recipients.map(recipient => new Notification({
+      recipient: recipient,
+      sender: req.user._id,
+      type: type || 'general',
       title,
       message,
-      type: type || 'info',
-      priority: priority || 'medium',
-      targetUsers: recipients,
-      createdBy: req.user._id
-    });
+      priority: priority || 'medium'
+    }));
     
-    await notification.save();
+    // Save all notifications
+    await Notification.insertMany(notifications);
     
     // Emit real-time notification to all recipients
     const io = req.app.get('io');
     if (io) {
-      recipients.forEach(userId => {
-        io.to(userId.toString()).emit('notification', notification);
+      notifications.forEach((notification, index) => {
+        io.to(recipients[index].toString()).emit('notification', notification);
       });
     }
     
@@ -839,13 +859,15 @@ const moderateContent = async (req, res) => {
       
       // Notify the author
       const notification = new Notification({
+        recipient: blog.author,
+        sender: req.user._id,
+        type: 'general',
         title: `Blog ${action === 'approve' ? 'Approved' : 'Rejected'}`,
         message: action === 'approve' 
           ? `Your blog "${blog.title}" has been approved and published.`
           : `Your blog "${blog.title}" has been rejected. ${reason ? `Reason: ${reason}` : ''}`,
-        type: action === 'approve' ? 'success' : 'error',
-        targetUsers: [blog.author],
-        createdBy: req.user._id
+        relatedEvent: null,
+        priority: 'medium'
       });
       
       await notification.save();
@@ -1054,13 +1076,15 @@ const bulkApproveEvents = async (req, res) => {
 
         // Create notification for event organizer
         const notification = new Notification({
+          recipient: event.organizerId,
+          sender: req.user._id,
+          type: 'general',
           title: action === 'approve' ? 'Event Approved' : 'Event Rejected',
           message: action === 'approve' 
             ? `Your event "${event.title}" has been approved and is now visible to all users.`
             : `Your event "${event.title}" has been rejected.`,
-          type: action === 'approve' ? 'success' : 'error',
-          targetUsers: [event.organizerId],
-          createdBy: req.user._id
+          relatedEvent: event._id,
+          priority: 'medium'
         });
 
         await notification.save();

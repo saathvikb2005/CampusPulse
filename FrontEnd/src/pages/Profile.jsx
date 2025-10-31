@@ -4,7 +4,9 @@ import Navigation from '../components/Navigation';
 import { showSuccessToast, showErrorToast } from '../utils/toastUtils';
 import { getCurrentUser, isAuthenticated, logout } from '../utils/auth';
 import { userAPI, eventAPI, blogAPI } from '../services/api';
+import { applyTheme } from '../utils/preferences';
 import './Profile.css';
+import '../styles/preferences.css';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -58,90 +60,139 @@ const Profile = () => {
   const loadUserData = async () => {
     try {
       setLoading(true);
+      console.log('Loading user profile data...');
       
       // Load profile data from backend API
       const profileResponse = await userAPI.getProfile();
+      console.log('Profile API response:', profileResponse);
+      console.log('Profile response data:', profileResponse.data);
+      console.log('Profile response data.user:', profileResponse.data?.user);
+      
       if (profileResponse.success && profileResponse.data?.user) {
         const userData = profileResponse.data.user;
+        console.log('User data from API:', userData);
+        
         setProfile({
-          name: `${userData.firstName} ${userData.lastName}`,
-          email: userData.email,
+          name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'User',
+          email: userData.email || '',
           regNumber: userData.studentId || '',
           department: userData.department || '',
           year: userData.year || '',
           phone: userData.phone || '',
           bio: userData.bio || '',
           interests: userData.interests || [],
-          avatar: userData.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=60'
+          avatar: userData.avatar || ''
         });
 
         // Load user preferences (from localStorage for now, can be moved to API later)
         const savedPreferences = JSON.parse(localStorage.getItem('userPreferences') || '{}');
         setPreferences(prev => ({ ...prev, ...savedPreferences }));
+      } else {
+        console.error('Profile API failed:', profileResponse);
+        console.error('Missing data.user - checking for direct user in data...');
+        
+        // Check if user data is directly in data instead of data.user
+        if (profileResponse.success && profileResponse.data && !profileResponse.data.user) {
+          console.log('Trying direct user data:', profileResponse.data);
+          const userData = profileResponse.data;
+          
+          setProfile({
+            name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'User',
+            email: userData.email || '',
+            regNumber: userData.studentId || '',
+            department: userData.department || '',
+            year: userData.year || '',
+            phone: userData.phone || '',
+            bio: userData.bio || '',
+            interests: userData.interests || [],
+            avatar: userData.avatar || ''
+          });
+
+          // Load user preferences
+          const savedPreferences = JSON.parse(localStorage.getItem('userPreferences') || '{}');
+          setPreferences(prev => ({ ...prev, ...savedPreferences }));
+        } else {
+          throw new Error('Failed to load profile data');
+        }
       }
 
       // Load user's registered events
-      const registeredEventsResponse = await eventAPI.getUserRegistered();
-      if (registeredEventsResponse.success) {
-        const events = registeredEventsResponse.data?.events || registeredEventsResponse.events || [];
-        const eventRegistrations = events.map(event => ({
-          id: event._id,
-          title: event.title,
-          date: event.startDate,
-          status: 'confirmed',
-          type: 'participant'
-        }));
-        setRegistrations(eventRegistrations);
+      console.log('Loading user registered events...');
+      try {
+        const registeredEventsResponse = await eventAPI.getUserRegistered();
+        console.log('Registered events response:', registeredEventsResponse);
+        
+        if (registeredEventsResponse.success) {
+          const events = registeredEventsResponse.data?.events || registeredEventsResponse.events || [];
+          console.log('Registered events:', events);
+          
+          const eventRegistrations = events.map(event => ({
+            id: event._id,
+            title: event.title,
+            date: event.startDate || event.date,
+            status: 'confirmed',
+            type: 'participant'
+          }));
+          setRegistrations(eventRegistrations);
+        } else {
+          console.error('Failed to load registered events:', registeredEventsResponse);
+          setRegistrations([]);
+        }
+      } catch (eventError) {
+        console.error('Error loading registered events:', eventError);
+        setRegistrations([]);
       }
 
       // Load user's created events and blogs for activity
-      const createdEventsResponse = await eventAPI.getUserCreated();
-      const userBlogsResponse = await blogAPI.getUserBlogs(getCurrentUser()?.id);
-      
       const activities = [];
       
-      // Add event registrations to activity
-      if (registeredEventsResponse.success) {
-        const registeredEvents = registeredEventsResponse.data?.events || registeredEventsResponse.events || [];
-        registeredEvents.forEach(event => {
-          activities.push({
-            type: 'registration',
-            event: event.title,
-            date: event.createdAt || event.startDate,
-            status: 'registered'
+      try {
+        console.log('Loading user created events...');
+        const createdEventsResponse = await eventAPI.getUserCreated();
+        console.log('Created events response:', createdEventsResponse);
+        
+        if (createdEventsResponse.success) {
+          const createdEvents = createdEventsResponse.data?.events || createdEventsResponse.events || [];
+          createdEvents.forEach(event => {
+            activities.push({
+              type: 'event_created',
+              event: event.title,
+              date: event.createdAt,
+              status: 'created'
+            });
           });
-        });
+        }
+      } catch (eventError) {
+        console.error('Error loading created events:', eventError);
       }
 
-      // Add created events to activity
-      if (createdEventsResponse.success) {
-        const createdEvents = createdEventsResponse.data?.events || createdEventsResponse.events || [];
-        createdEvents.forEach(event => {
-          activities.push({
-            type: 'event_created',
-            event: event.title,
-            date: event.createdAt,
-            status: 'created'
-          });
-        });
-      }
-
-      // Add user blogs to activity
-      if (userBlogsResponse.success) {
-        const blogs = userBlogsResponse.data?.blogs || userBlogsResponse.blogs || [];
-        blogs.forEach(blog => {
-          activities.push({
-            type: 'blog',
-            title: blog.title,
-            date: blog.createdAt,
-            status: blog.published ? 'published' : 'draft'
-          });
-        });
+      try {
+        console.log('Loading user blogs...');
+        const currentUser = getCurrentUser();
+        if (currentUser?.id) {
+          const userBlogsResponse = await blogAPI.getUserBlogs(currentUser.id);
+          console.log('User blogs response:', userBlogsResponse);
+          
+          if (userBlogsResponse.success) {
+            const blogs = userBlogsResponse.data?.blogs || userBlogsResponse.blogs || [];
+            blogs.forEach(blog => {
+              activities.push({
+                type: 'blog',
+                title: blog.title,
+                date: blog.createdAt,
+                status: blog.status === 'published' ? 'published' : 'draft'
+              });
+            });
+          }
+        }
+      } catch (blogError) {
+        console.error('Error loading user blogs:', blogError);
       }
 
       // Sort activities by date (newest first)
       activities.sort((a, b) => new Date(b.date) - new Date(a.date));
       setActivities(activities);
+      console.log('Final activities:', activities);
 
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -149,17 +200,19 @@ const Profile = () => {
       
       // Fallback to current user data from localStorage
       const currentUser = getCurrentUser();
+      console.log('Fallback to localStorage user:', currentUser);
+      
       if (currentUser) {
         setProfile({
           name: currentUser.name || 'User',
-          email: currentUser.email,
+          email: currentUser.email || '',
           regNumber: '',
           department: currentUser.department || '',
           year: '',
           phone: '',
           bio: '',
           interests: [],
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=60'
+          avatar: ''
         });
       }
     } finally {
@@ -214,6 +267,10 @@ const Profile = () => {
     setTimeout(() => {
       localStorage.setItem('userPreferences', JSON.stringify(preferences));
       localStorage.setItem('notificationPreferences', JSON.stringify(preferences.notifications));
+      
+      // Apply theme immediately when changed
+      applyTheme(preferences.theme);
+      
       setLoading(false);
       showSuccessToast('Preferences updated successfully!');
     }, 500);
@@ -230,22 +287,41 @@ const Profile = () => {
     if (file) {
       try {
         setLoading(true);
+        console.log('Uploading avatar file:', file);
+        
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          showErrorToast('File size must be less than 5MB');
+          return;
+        }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showErrorToast('Please select an image file');
+          return;
+        }
         
         // Create FormData for file upload
         const formData = new FormData();
         formData.append('avatar', file);
+        console.log('FormData created with file:', file.name);
 
         const response = await userAPI.uploadAvatar(formData);
+        console.log('Avatar upload response:', response);
         
         if (response.success) {
-          setProfile(prev => ({ ...prev, avatar: response.avatarUrl }));
+          const avatarUrl = response.data?.avatarUrl || response.avatarUrl;
+          console.log('Avatar URL:', avatarUrl);
+          setProfile(prev => ({ ...prev, avatar: avatarUrl }));
           showSuccessToast('Avatar updated successfully!');
         } else {
+          console.error('Avatar upload failed:', response);
           showErrorToast(response.message || 'Failed to upload avatar');
         }
       } catch (error) {
         console.error('Error uploading avatar:', error);
-        showErrorToast('Failed to upload avatar. Please try again.');
+        console.error('Error details:', error.message);
+        showErrorToast(`Failed to upload avatar: ${error.message}`);
         
         // Fallback to local preview
         const reader = new FileReader();
@@ -289,7 +365,11 @@ const Profile = () => {
       <div className="profile-card">
         <div className="profile-avatar-section">
           <div className="avatar-container">
-            <img src={profile.avatar} alt="Profile" className="profile-avatar" />
+            <img 
+              src={profile.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=60'} 
+              alt="Profile" 
+              className="profile-avatar" 
+            />
             {isEditing && (
               <label className="avatar-upload">
                 <input type="file" accept="image/*" onChange={handleAvatarChange} />
@@ -483,28 +563,40 @@ const Profile = () => {
           <div className="activity-tab">
             <h3>Recent Activity</h3>
             <div className="activity-list">
-              {activities.map((activity, index) => (
-                <div key={index} className="activity-item">
-                  <div className="activity-icon">
-                    {activity.type === 'registration' && <i className="fas fa-calendar-plus"></i>}
-                    {activity.type === 'feedback' && <i className="fas fa-comment"></i>}
-                    {activity.type === 'blog' && <i className="fas fa-pen"></i>}
-                    {activity.type === 'volunteer' && <i className="fas fa-hands-helping"></i>}
+              {loading ? (
+                <div className="loading-message">Loading activity...</div>
+              ) : activities.length > 0 ? (
+                activities.map((activity, index) => (
+                  <div key={index} className="activity-item">
+                    <div className="activity-icon">
+                      {activity.type === 'registration' && <i className="fas fa-calendar-plus"></i>}
+                      {activity.type === 'event_created' && <i className="fas fa-calendar-plus"></i>}
+                      {activity.type === 'feedback' && <i className="fas fa-comment"></i>}
+                      {activity.type === 'blog' && <i className="fas fa-pen"></i>}
+                      {activity.type === 'volunteer' && <i className="fas fa-hands-helping"></i>}
+                    </div>
+                    <div className="activity-content">
+                      <h4>
+                        {activity.type === 'registration' && `Registered for ${activity.event || 'Event'}`}
+                        {activity.type === 'event_created' && `Created event: ${activity.event || 'Event'}`}
+                        {activity.type === 'feedback' && `Submitted feedback for ${activity.event || 'Event'}`}
+                        {activity.type === 'blog' && `Published: ${activity.title || 'Blog Post'}`}
+                        {activity.type === 'volunteer' && `Volunteered for ${activity.event || 'Event'}`}
+                      </h4>
+                      <p>{activity.date ? new Date(activity.date).toLocaleDateString() : 'No date'}</p>
+                    </div>
+                    <div className={`activity-status ${activity.status || 'unknown'}`}>
+                      {activity.status || 'unknown'}
+                    </div>
                   </div>
-                  <div className="activity-content">
-                    <h4>
-                      {activity.type === 'registration' && `Registered for ${activity.event}`}
-                      {activity.type === 'feedback' && `Submitted feedback for ${activity.event}`}
-                      {activity.type === 'blog' && `Published: ${activity.title}`}
-                      {activity.type === 'volunteer' && `Volunteered for ${activity.event}`}
-                    </h4>
-                    <p>{new Date(activity.date).toLocaleDateString()}</p>
-                  </div>
-                  <div className={`activity-status ${activity.status}`}>
-                    {activity.status}
-                  </div>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <i className="fas fa-history"></i>
+                  <h4>No Recent Activity</h4>
+                  <p>Start engaging with events and blogs to see your activity here!</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -513,24 +605,40 @@ const Profile = () => {
           <div className="registrations-tab">
             <h3>Event Registrations</h3>
             <div className="registrations-list">
-              {registrations.map((registration) => (
-                <div key={registration.id} className="registration-item">
-                  <div className="registration-content">
-                    <h4>{registration.title}</h4>
-                    <p>Date: {new Date(registration.date).toLocaleDateString()}</p>
-                    <p>Type: {registration.type}</p>
+              {loading ? (
+                <div className="loading-message">Loading registrations...</div>
+              ) : registrations.length > 0 ? (
+                registrations.map((registration) => (
+                  <div key={registration.id} className="registration-item">
+                    <div className="registration-content">
+                      <h4>{registration.title || 'Event'}</h4>
+                      <p>Date: {registration.date ? new Date(registration.date).toLocaleDateString() : 'No date'}</p>
+                      <p>Type: {registration.type || 'participant'}</p>
+                    </div>
+                    <div className={`registration-status ${registration.status || 'confirmed'}`}>
+                      {registration.status || 'confirmed'}
+                    </div>
+                    <button 
+                      className="btn btn-outline btn-small"
+                      onClick={() => navigate(`/events/details/${registration.id}`)}
+                    >
+                      View Details
+                    </button>
                   </div>
-                  <div className={`registration-status ${registration.status}`}>
-                    {registration.status}
-                  </div>
+                ))
+              ) : (
+                <div className="empty-state">
+                  <i className="fas fa-calendar-alt"></i>
+                  <h4>No Event Registrations</h4>
+                  <p>You haven't registered for any events yet. Explore upcoming events!</p>
                   <button 
-                    className="btn btn-outline btn-small"
-                    onClick={() => navigate(`/events/details/${registration.id}`)}
+                    className="btn btn-primary"
+                    onClick={() => navigate('/events')}
                   >
-                    View Details
+                    Browse Events
                   </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -539,8 +647,16 @@ const Profile = () => {
           <div className="preferences-tab">
             <h3>Account Preferences</h3>
             
+            <div className="preferences-info">
+              <div className="info-banner">
+                <i className="fas fa-info-circle"></i>
+                <span>Your preferences are now active! Changes to notifications will filter what you see, and theme changes apply immediately.</span>
+              </div>
+            </div>
+            
             <div className="preferences-section">
               <h4>Notification Preferences</h4>
+              <p className="preference-description">Choose which types of notifications you want to receive:</p>
               <div className="preference-group">
                 {Object.entries(preferences.notifications).map(([key, value]) => (
                   <label key={key} className="preference-item">
@@ -560,6 +676,7 @@ const Profile = () => {
 
             <div className="preferences-section">
               <h4>Privacy Settings</h4>
+              <p className="preference-description">Control what information is visible to other users:</p>
               <div className="preference-group">
                 {Object.entries(preferences.privacy).map(([key, value]) => (
                   <label key={key} className="preference-item">
@@ -579,16 +696,22 @@ const Profile = () => {
 
             <div className="preferences-section">
               <h4>App Settings</h4>
+              <p className="preference-description">Customize your app experience:</p>
               <div className="preference-group">
                 <div className="preference-item">
                   <label>Theme:</label>
                   <select
                     value={preferences.theme}
-                    onChange={(e) => setPreferences(prev => ({ ...prev, theme: e.target.value }))}
+                    onChange={(e) => {
+                      const newTheme = e.target.value;
+                      setPreferences(prev => ({ ...prev, theme: newTheme }));
+                      // Apply theme immediately for preview
+                      applyTheme(newTheme);
+                    }}
                   >
                     <option value="light">Light</option>
                     <option value="dark">Dark</option>
-                    <option value="auto">Auto</option>
+                    <option value="auto">Auto (System)</option>
                   </select>
                 </div>
                 <div className="preference-item">

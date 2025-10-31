@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
 import { isAuthenticated, getCurrentUser, canCreateNotifications } from "../utils/auth";
+import { filterNotificationsByPreferences } from "../utils/preferences";
 import { notificationAPI, userAPI } from "../services/api";
 import "./Notifications.css";
 
@@ -50,7 +51,9 @@ const Notifications = () => {
       
       if (response.success) {
         const notificationsData = response.data?.notifications || response.notifications || [];
-        setNotifications(notificationsData);
+        // Filter notifications based on user preferences
+        const filteredNotifications = filterNotificationsByPreferences(notificationsData);
+        setNotifications(filteredNotifications);
         
         // Update unread count from the response if available
         if (response.data?.unreadCount !== undefined) {
@@ -67,7 +70,7 @@ const Notifications = () => {
           _id: '1',
           title: 'Welcome to CampusPulse!',
           message: 'Your account has been successfully created. Explore events and connect with your campus community.',
-          type: 'announcement',
+          type: 'system_announcement',
           priority: 'medium',
           isRead: false,
           createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
@@ -89,7 +92,7 @@ const Notifications = () => {
           _id: '3',
           title: 'Campus Festival Updates',
           message: 'Important updates regarding the upcoming campus festival. Check the latest schedule changes.',
-          type: 'announcement',
+          type: 'system_announcement',
           priority: 'medium',
           isRead: true,
           createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
@@ -97,7 +100,9 @@ const Notifications = () => {
           actionUrl: '/events'
         }
       ];
-      setNotifications(mockNotifications);
+      // Filter mock notifications based on user preferences too
+      const filteredMockNotifications = filterNotificationsByPreferences(mockNotifications);
+      setNotifications(filteredMockNotifications);
       showErrorToast('Using sample notifications. Please check your connection.');
     } finally {
       setLoading(false);
@@ -289,13 +294,19 @@ const Notifications = () => {
 
   const getNotificationIcon = (type) => {
     const icons = {
-      announcement: "fas fa-bullhorn",
+      system_announcement: "fas fa-bullhorn",
       event: "fas fa-calendar-alt",
+      event_created: "fas fa-calendar-plus",
+      event_updated: "fas fa-calendar-edit",
+      event_cancelled: "fas fa-calendar-times",
+      event_reminder: "fas fa-clock",
+      registration_confirmed: "fas fa-check-circle",
+      registration_cancelled: "fas fa-times-circle",
+      stream_started: "fas fa-play-circle",
+      stream_ended: "fas fa-stop-circle",
+      feedback_response: "fas fa-comment-dots",
+      general: "fas fa-info-circle",
       alert: "fas fa-exclamation-triangle",
-      poll: "fas fa-poll-h",
-      reminder: "fas fa-clock",
-      social: "fas fa-users",
-      academic: "fas fa-graduation-cap",
       system: "fas fa-cog"
     };
     return icons[type] || "fas fa-bell";
@@ -409,8 +420,8 @@ const Notifications = () => {
             Academic
           </button>
           <button 
-            className={`filter-btn ${filter === "announcement" ? "active" : ""}`}
-            onClick={() => setFilter("announcement")}
+            className={`filter-btn ${filter === "system_announcement" ? "active" : ""}`}
+            onClick={() => setFilter("system_announcement")}
           >
             <i className="fas fa-bullhorn"></i>
             Announcements

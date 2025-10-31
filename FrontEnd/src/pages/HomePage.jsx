@@ -35,7 +35,19 @@ const Home = () => {
       try {
         // Load recent notifications for the user
         const notificationResponse = await notificationAPI.getUserNotifications();
-        const notificationData = notificationResponse.data || notificationResponse || [];
+        console.log('Raw notification response:', notificationResponse);
+        
+        // Handle different response structures - ensure we get an array
+        let notificationData = [];
+        if (notificationResponse?.data) {
+          notificationData = Array.isArray(notificationResponse.data) ? notificationResponse.data : [];
+        } else if (Array.isArray(notificationResponse)) {
+          notificationData = notificationResponse;
+        } else if (notificationResponse?.notifications) {
+          notificationData = Array.isArray(notificationResponse.notifications) ? notificationResponse.notifications : [];
+        }
+        
+        console.log('Processed notification data:', notificationData);
         
         const recentNotifications = notificationData
           .slice(0, 3)

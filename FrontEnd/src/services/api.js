@@ -28,6 +28,13 @@ const apiRequest = async (endpoint, options = {}) => {
     const data = await response.json();
     
     if (!response.ok) {
+      // For validation errors (400), preserve the detailed error information
+      if (response.status === 400 && data.errors) {
+        const error = new Error(data.message || `HTTP error! status: ${response.status}`);
+        error.errors = data.errors;
+        error.response = data;
+        throw error;
+      }
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
     
@@ -74,11 +81,23 @@ export const api = {
   users: {
     getProfile: () => get('/api/auth/me'),
     updateProfile: (profileData) => put('/api/users/profile', profileData),
-    uploadAvatar: (formData) => apiRequest('/api/upload/avatar', {
-      method: 'POST',
-      body: formData,
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    }),
+    uploadAvatar: (formData) => {
+      const token = localStorage.getItem('token');
+      return fetch(`${API_BASE_URL}/api/users/upload-avatar`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // Don't set Content-Type - let browser set it automatically for FormData
+        }
+      }).then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        }
+        return data;
+      });
+    },
     getAllUsers: () => get('/api/users'),
     getUserById: (id) => get(`/api/users/${id}`),
     updateUser: (id, userData) => put(`/api/users/${id}`, userData),
@@ -99,12 +118,25 @@ export const api = {
     delete: (id) => del(`/api/events/${id}`),
     register: (id) => post(`/api/events/${id}/register`),
     unregister: (id) => post(`/api/events/${id}/unregister`),
+    volunteerRegister: (id) => post(`/api/events/${id}/volunteer`),
+    volunteerUnregister: (id) => post(`/api/events/${id}/volunteer/unregister`),
     getRegistrations: (id) => get(`/api/events/${id}/registrations`),
-    uploadImage: (id, formData) => apiRequest(`/api/upload/event-image`, {
-      method: 'POST',
-      body: formData,
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    }),
+    uploadImage: (formData) => {
+      const token = localStorage.getItem('token');
+      return fetch(`${API_BASE_URL}/api/upload/event-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // Don't set Content-Type for FormData - let browser set it with boundary
+        },
+        body: formData
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      });
+    },
     getByCategory: (category) => get(`/api/events/category/${category}`),
     getUserRegistered: () => get('/api/events/user/registered', { cache: 'no-store' }),
     getUserCreated: () => get('/api/events/user/created', { cache: 'no-store' }),
@@ -114,7 +146,7 @@ export const api = {
     startLiveStream: (id) => post(`/api/events/${id}/start-stream`),
     endLiveStream: (id) => post(`/api/events/${id}/end-stream`),
     getGallery: (id) => get(`/api/events/${id}/gallery`),
-    addPhotosToGallery: (id, formData) => apiRequest(`/api/upload/event-gallery`, {
+    addPhotosToGallery: (id, formData) => apiRequest(`/api/events/${id}/gallery`, {
       method: 'POST',
       body: formData,
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
