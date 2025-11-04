@@ -7,12 +7,31 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Uploads and temporary files
+uploads/*
+!uploads/.gitkeep
+temp/
+*.tmp
+
+# Database dumps and backups
+*.sql
+*.dump
+*.backup
+
+# IDE and Editor files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,3 +41,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Temporary deployment files
+enhance-database.js
+simple-populate.js
+check-database.js
