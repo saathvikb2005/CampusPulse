@@ -4,7 +4,7 @@
  * Authentication and authorization utility functions - Backend Integrated
  */
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'https://campuspulse-28.onrender.com';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => ({

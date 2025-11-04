@@ -107,7 +107,7 @@ const Navigation = () => {
       // Call backend logout API
       const token = localStorage.getItem('token');
       if (token) {
-        await fetch('http://localhost:5000/api/auth/logout', {
+        await fetch('https://campuspulse-28.onrender.com/api/auth/logout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
