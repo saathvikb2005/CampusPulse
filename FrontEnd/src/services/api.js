@@ -1,12 +1,14 @@
 // src/services/api.js - Backend API Integration Service
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-28.onrender.com';
+// Force production URL - temporary fix for deployment issue
+const API_BASE_URL = 'https://campuspulse-28.onrender.com';
 
 // Debug log for production troubleshooting
 console.log('🔍 API Configuration:', {
   envVar: import.meta.env.VITE_API_BASE_URL,
   finalURL: API_BASE_URL,
-  mode: import.meta.env.MODE
+  mode: import.meta.env.MODE,
+  forced: true
 });
 
 // Helper function to get auth headers
