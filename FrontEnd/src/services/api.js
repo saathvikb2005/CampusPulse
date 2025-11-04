@@ -1,6 +1,13 @@
 // src/services/api.js - Backend API Integration Service
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-28.onrender.com';
+
+// Debug log for production troubleshooting
+console.log('🔍 API Configuration:', {
+  envVar: import.meta.env.VITE_API_BASE_URL,
+  finalURL: API_BASE_URL,
+  mode: import.meta.env.MODE
+});
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -11,7 +18,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// Generic API request function
+// Generic API request function with Render cold start handling
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   const config = {
@@ -24,8 +31,31 @@ const apiRequest = async (endpoint, options = {}) => {
   };
 
   try {
-    const response = await fetch(url, config);
-    const data = await response.json();
+    // Add timeout for better error handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    const response = await fetch(url, {
+      ...config,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+
+    // Handle non-JSON responses (like "Network error" text)
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      // Handle non-JSON responses
+      const text = await response.text();
+      if (response.status === 408 || response.status >= 500) {
+        throw new Error(`Backend is starting up (${response.status}). Please wait a moment and try again.`);
+      }
+      throw new Error(`Unexpected response: ${text}`);
+    }
     
     if (!response.ok) {
       // For validation errors (400), preserve the detailed error information
@@ -41,6 +71,15 @@ const apiRequest = async (endpoint, options = {}) => {
     return data;
   } catch (error) {
     console.error(`API Error (${endpoint}):`, error);
+    
+    // Provide user-friendly error messages for common issues
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. The backend may be starting up, please try again.');
+    }
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('Unable to connect to server. Please check your internet connection.');
+    }
+    
     throw error;
   }
 };
