@@ -34,7 +34,10 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: [
+      "https://campuspulse-frontend-five.vercel.app",
+      process.env.CORS_ORIGIN || "http://localhost:5173"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
@@ -80,7 +83,10 @@ if (!isDev) {
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  origin: [
+    "https://campuspulse-frontend-five.vercel.app",
+    process.env.CORS_ORIGIN || "http://localhost:5173"
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
