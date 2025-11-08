@@ -28,9 +28,10 @@ const Navigation = () => {
     }
   }, [location]);
 
-  // Refresh notification count when leaving notifications page
+  // Refresh notification count when leaving notifications page or when returning to it
   useEffect(() => {
-    if (isLoggedIn && location.pathname !== '/notifications') {
+    if (isLoggedIn) {
+      // Always refresh when navigating to any page
       fetchNotificationCount();
     }
   }, [location.pathname, isLoggedIn]);
@@ -41,7 +42,7 @@ const Navigation = () => {
 
     const interval = setInterval(() => {
       fetchNotificationCount();
-    }, 300000); // Refresh every 30 seconds
+    }, 30000); // Refresh every 30 seconds
 
     return () => clearInterval(interval);
   }, [isLoggedIn]);
@@ -67,19 +68,55 @@ const Navigation = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Close mobile menu on any route change
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setActiveDropdown(null);
+  }, [location.pathname]);
+
+  // Escape key to close dropdowns and mobile menu
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMenuOpen(false);
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
+
   const fetchNotificationCount = async () => {
     if (!isAuthenticated()) return;
     
     try {
       setIsLoadingNotifications(true);
       const response = await notificationAPI.getUnreadCount();
+      console.log('📬 Notification count response:', response);
+      
       if (response.success) {
-        setNotificationCount(response.data.count || 0);
+        const count = response.data.unreadCount || 0;
+        console.log('📬 Setting notification count to:', count);
+        setNotificationCount(count);
       } else {
+        console.warn('📬 Failed to fetch notification count:', response.message);
         setNotificationCount(0);
       }
     } catch (error) {
-      console.error('Error fetching notification count:', error);
+      console.error('📬 Error fetching notification count:', error);
       setNotificationCount(0); // Default to 0 on error
     } finally {
       setIsLoadingNotifications(false);
@@ -88,12 +125,27 @@ const Navigation = () => {
 
   const handleLogout = async () => {
     try {
+      // Capture token BEFORE clearing
+      const token = localStorage.getItem('token');
+      
       // Clear local state first
       setIsLoggedIn(false);
       setUser(null);
       setNotificationCount(0); // Reset notification count on logout
       
-      // Clear localStorage manually to prevent auth.js redirect
+      // Call backend logout API first (if we still have a token)
+      if (token) {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+      
+      // Then clear everything
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('isLoggedIn');
@@ -103,18 +155,6 @@ const Navigation = () => {
       localStorage.removeItem('userDepartment');
       localStorage.removeItem('userId');
       localStorage.removeItem('userPermissions');
-      
-      // Call backend logout API
-      const token = localStorage.getItem('token');
-      if (token) {
-        await fetch('https://campuspulse-28.onrender.com/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
       
       // Navigate to landing page
       navigate('/');
@@ -209,16 +249,23 @@ const Navigation = () => {
                 {/* Events Dropdown */}
                 <div className="nav-dropdown">
                   <button 
+                    id="events-trigger"
                     className={`nav-link dropdown-trigger ${isEventRouteActive() ? 'active' : ''} ${isDropdownActive('events') ? 'dropdown-active' : ''}`}
                     onClick={(e) => toggleDropdown('events', e)}
-                    aria-haspopup="true"
+                    aria-haspopup="menu"
                     aria-expanded={isDropdownActive('events')}
+                    aria-controls="events-menu"
                   >
                     <i className="fas fa-calendar-alt"></i>
                     <span>Events</span>
                     <i className={`fas fa-chevron-down dropdown-arrow ${isDropdownActive('events') ? 'active' : ''}`}></i>
                   </button>
-                  <div className={`dropdown-menu ${isDropdownActive('events') ? 'active' : ''}`} role="menu">
+                  <div 
+                    id="events-menu"
+                    className={`dropdown-menu ${isDropdownActive('events') ? 'active' : ''}`} 
+                    role="menu"
+                    aria-labelledby="events-trigger"
+                  >
                     <Link 
                       to="/events/upcoming" 
                       className={`dropdown-link ${location.pathname === '/events/upcoming' ? 'active' : ''}`}
@@ -274,9 +321,9 @@ const Navigation = () => {
                     <span className="notification-badge loading">
                       <i className="fas fa-spinner fa-spin"></i>
                     </span>
-                  ) : notificationCount > 0 ? (
+                  ) : notificationCount > 0 && (
                     <span className="notification-badge">{notificationCount > 99 ? '99+' : notificationCount}</span>
-                  ) : null}
+                  )}
                 </Link>
 
                 <Link 
@@ -301,16 +348,23 @@ const Navigation = () => {
                 {(canManageEvents() || canAccessAdmin() || canManageFeedback()) && (
                   <div className="nav-dropdown">
                     <button 
+                      id="admin-trigger"
                       className={`nav-link dropdown-trigger admin-dropdown-trigger ${isAdminRouteActive() ? 'active' : ''} ${isDropdownActive('admin') ? 'dropdown-active' : ''}`}
                       onClick={(e) => toggleDropdown('admin', e)}
-                      aria-haspopup="true"
+                      aria-haspopup="menu"
                       aria-expanded={isDropdownActive('admin')}
+                      aria-controls="admin-menu"
                     >
                       <i className="fas fa-cog"></i>
                       <span>Management</span>
                       <i className={`fas fa-chevron-down dropdown-arrow ${isDropdownActive('admin') ? 'active' : ''}`}></i>
                     </button>
-                    <div className={`dropdown-menu admin-dropdown ${isDropdownActive('admin') ? 'active' : ''}`} role="menu">
+                    <div 
+                      id="admin-menu"
+                      className={`dropdown-menu admin-dropdown ${isDropdownActive('admin') ? 'active' : ''}`} 
+                      role="menu"
+                      aria-labelledby="admin-trigger"
+                    >
                       {canManageEvents() && (
                         <Link 
                           to="/events/manage" 
@@ -414,7 +468,7 @@ const Navigation = () => {
               <div className="auth-actions">
                 <Link 
                   to="/login" 
-                  className="auth-btn login-btn"
+                  className="auth-btn nav-login-btn"
                   onClick={closeMenu}
                 >
                   <i className="fas fa-sign-in-alt"></i>

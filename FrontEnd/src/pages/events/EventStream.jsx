@@ -33,22 +33,27 @@ const EventStream = () => {
         setUser(currentUser);
         
         // Fetch event details from API
+        console.log('🔍 Fetching event data for ID:', eventId);
         const response = await eventAPI.getById(eventId);
+        console.log('🔍 Event API response:', response);
         
         if (response.success) {
           const eventData = response.data;
+          console.log('🔍 Event data received:', eventData);
           setEvent(eventData);
           
-          // Set stream data from API response
+          // Set stream data from API response - check multiple possible field names
+          const streamUrl = eventData.liveStreamUrl || eventData.streamingUrl || eventData.liveStream?.streamUrl || eventData.youtubeStreamUrl;
+          
           setStreamData({
-            youtubeStreamUrl: eventData.liveStreamUrl || '',
-            youtubeVideoId: extractVideoId(eventData.liveStreamUrl),
-            isLive: eventData.isLive || false,
-            streamTitle: eventData.streamTitle || `🔴 LIVE: ${eventData.title}`,
+            youtubeStreamUrl: streamUrl || '',
+            youtubeVideoId: extractVideoId(streamUrl),
+            isLive: eventData.liveStream?.isLive || eventData.isLive || false,
+            streamTitle: eventData.liveStream?.streamTitle || eventData.streamTitle || `🔴 LIVE: ${eventData.title}`,
             streamDescription: eventData.streamDescription || eventData.description
           });
           
-          setIsStreamLive(eventData.isLive || false);
+          setIsStreamLive(eventData.liveStream?.isLive || eventData.isLive || false);
           
           // Check if user can manage this event
           if (currentUser) {
@@ -56,14 +61,26 @@ const EventStream = () => {
             setIsEventOwner(canEdit);
           }
           
-          // Set viewer count
-          setViewerCount(eventData.viewerCount || Math.floor(Math.random() * 500) + 100);
+          // Set viewer count from backend data
+          setViewerCount(eventData.analytics?.totalViews || eventData.viewerCount || 0);
         } else {
           showErrorToast('Failed to load event stream');
         }
       } catch (error) {
         console.error('Error fetching event data:', error);
-        showErrorToast('Error loading event stream');
+        console.error('Error details:', error.message);
+        
+        // Set a fallback state to prevent page crash
+        setEvent({
+          title: 'Event Stream Unavailable',
+          description: 'Unable to load event details. Please try again.',
+          _id: eventId,
+          startDate: new Date().toISOString(),
+          location: 'TBD',
+          organizer: { name: 'Unknown' }
+        });
+        
+        showErrorToast('Error loading event stream. Please refresh the page.');
       } finally {
         setLoading(false);
       }
@@ -71,75 +88,111 @@ const EventStream = () => {
 
     fetchEventData();
     
-    // Load chat messages from localStorage or initialize
-    const savedMessages = JSON.parse(localStorage.getItem(`chat_${eventId}`) || '[]');
-    if (savedMessages.length > 0) {
-      setChatMessages(savedMessages);
-    } else {
-      // Initialize with sample messages
-      const sampleMessages = [
-        { id: 1, user: "EventMod", message: "Welcome to the live stream! Feel free to ask questions.", timestamp: "10:30 AM", isOrganizer: true },
-        { id: 2, user: "TechFan", message: "Excited for this event! 🚀", timestamp: "10:31 AM", isOrganizer: false },
-      ];
-      setChatMessages(sampleMessages);
-    }
-
-    // Simulate live viewer count updates
-    const viewerInterval = setInterval(() => {
-      setViewerCount(prev => Math.max(1, prev + Math.floor(Math.random() * 10) - 5));
-    }, 30000);
-
-    // Simulate occasional new messages (if stream is live)
-    const chatInterval = setInterval(() => {
-      if (isStreamLive && Math.random() > 0.8) { // 20% chance
-        const randomMessages = [
-          "Great presentation! 👏",
-          "This is really helpful",
-          "Can you share the slides?",
-          "Amazing work!",
-          "Love the examples",
-          "Thanks for the demo!"
-        ];
-        
-        const randomUsers = ["TechLearner", "StudentDev", "CodeEnthusiast", "InnoFan"];
-        
-        const newMsg = {
-          id: Date.now(),
-          user: randomUsers[Math.floor(Math.random() * randomUsers.length)],
-          message: randomMessages[Math.floor(Math.random() * randomMessages.length)],
-          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          isOrganizer: false
-        };
-        setChatMessages(prev => {
-          const updated = [...prev.slice(-20), newMsg];
-          localStorage.setItem(`chat_${eventId}`, JSON.stringify(updated));
-          return updated;
-        });
+    // Load chat messages from backend or localStorage backup
+    const loadChatMessages = async () => {
+      try {
+        // Try to fetch chat messages from backend first
+        const chatResponse = await eventAPI.getChatMessages?.(eventId);
+        if (chatResponse?.success && chatResponse.data) {
+          setChatMessages(chatResponse.data);
+        } else {
+          // Fallback to localStorage for offline functionality
+          const savedMessages = JSON.parse(localStorage.getItem(`chat_${eventId}`) || '[]');
+          setChatMessages(savedMessages);
+        }
+      } catch (error) {
+        console.error('Error loading chat messages:', error);
+        // Fallback to localStorage
+        const savedMessages = JSON.parse(localStorage.getItem(`chat_${eventId}`) || '[]');
+        setChatMessages(savedMessages);
       }
-    }, 45000);
+    };
+
+    loadChatMessages();
+
+    // Real-time viewer count updates from backend
+    const updateViewerCount = async () => {
+      try {
+        const response = await eventAPI.getStreamStats?.(eventId);
+        if (response?.success) {
+          setViewerCount(response.data.viewerCount || 0);
+        }
+      } catch (error) {
+        // Silently fail for viewer count updates
+        console.log('Could not update viewer count:', error);
+      }
+    };
+
+    // Update viewer count every 30 seconds
+    const viewerInterval = setInterval(updateViewerCount, 30000);
+
+    // Real-time chat message polling
+    const pollChatMessages = async () => {
+      try {
+        const response = await eventAPI.getChatMessages?.(eventId);
+        if (response?.success) {
+          setChatMessages(response.data);
+        }
+      } catch (error) {
+        console.log('Could not poll chat messages:', error);
+      }
+    };
+
+    // Poll for new messages every 5 seconds when stream is live
+    let chatInterval;
+    if (isStreamLive) {
+      chatInterval = setInterval(pollChatMessages, 5000);
+    }
 
     return () => {
       clearInterval(viewerInterval);
-      clearInterval(chatInterval);
+      if (chatInterval) {
+        clearInterval(chatInterval);
+      }
     };
   }, [eventId, isStreamLive]);
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (newMessage.trim()) {
-      const userName = user?.name || 'Anonymous';
+      const userName = user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : user?.name || user?.email || 'Anonymous';
+      
       const message = {
         id: Date.now(),
         user: userName,
+        userId: user?._id,
         message: newMessage,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        isOrganizer: false,
+        timestamp: new Date().toISOString(),
+        isOrganizer: isEventOwner,
         isCurrentUser: true
       };
-      const updatedMessages = [...chatMessages, message];
-      setChatMessages(updatedMessages);
-      localStorage.setItem(`chat_${eventId}`, JSON.stringify(updatedMessages));
+
+      // Optimistically update UI
+      setChatMessages(prev => [...prev, message]);
       setNewMessage('');
+
+      try {
+        // Send message to backend
+        const response = await eventAPI.sendChatMessage?.(eventId, {
+          message: newMessage,
+          userId: user?._id,
+          userName: userName
+        });
+
+        if (!response?.success) {
+          console.error('Failed to send message to backend');
+          // Keep local backup
+          const updatedMessages = [...chatMessages, message];
+          localStorage.setItem(`chat_${eventId}`, JSON.stringify(updatedMessages.slice(-50)));
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        // Keep local backup for offline functionality
+        const updatedMessages = [...chatMessages, message];
+        localStorage.setItem(`chat_${eventId}`, JSON.stringify(updatedMessages.slice(-50)));
+      }
     }
   };
 
@@ -183,8 +236,19 @@ const EventStream = () => {
         return;
       }
 
+      // Check if event has a stream URL configured
+      if (!streamData.youtubeStreamUrl && !streamData.isLive) {
+        showErrorToast('No stream URL configured for this event. Please configure a stream URL first.');
+        return;
+      }
+
       // Toggle stream status via API
-      const response = await eventAPI[streamData.isLive ? 'endLiveStream' : 'startLiveStream'](eventId);
+      const requestData = {};
+      if (!streamData.isLive && streamData.youtubeStreamUrl) {
+        requestData.streamUrl = streamData.youtubeStreamUrl;
+      }
+
+      const response = await eventAPI[streamData.isLive ? 'endLiveStream' : 'startLiveStream'](eventId, requestData);
 
       if (response.success) {
         setStreamData(prev => ({
@@ -195,12 +259,20 @@ const EventStream = () => {
         
         // Show success message
         showSuccessToast(`Stream ${!streamData.isLive ? 'started' : 'stopped'} successfully!`);
+        
+        // Reload event data to get updated stream status
+        const eventResponse = await eventAPI.getById(eventId);
+        if (eventResponse.success) {
+          const eventData = eventResponse.data;
+          setEvent(eventData);
+        }
       } else {
-        showErrorToast(`Failed to ${streamData.isLive ? 'stop' : 'start'} stream`);
+        showErrorToast(response.message || `Failed to ${streamData.isLive ? 'stop' : 'start'} stream`);
       }
     } catch (error) {
       console.error('Error toggling stream:', error);
-      showErrorToast(`Failed to ${streamData.isLive ? 'stop' : 'start'} stream`);
+      const errorMessage = error.message || `Failed to ${streamData.isLive ? 'stop' : 'start'} stream`;
+      showErrorToast(errorMessage);
     }
   };
 
@@ -223,48 +295,161 @@ const EventStream = () => {
     return null;
   };
 
-  // Generate schedule based on event timing
+  // Generate schedule based on real event timing and agenda
   const generateSchedule = () => {
     if (!event) return [];
     
-    const startTime = new Date(event.startDate);
-    const endTime = new Date(event.endDate);
-    const duration = endTime - startTime;
-    const hours = Math.floor(duration / (1000 * 60 * 60));
+    // Check if we have valid date data
+    const eventDate = event.date || event.startDate;
+    if (!eventDate) {
+      // Return empty schedule if no date available
+      return [
+        { time: 'TBD', activity: 'Event Begins', completed: false },
+        { time: 'TBD', activity: 'Main Session', completed: false },
+        { time: 'TBD', activity: 'Event Ends', completed: false }
+      ];
+    }
     
-    const schedule = [];
-    for (let i = 0; i <= hours; i++) {
-      const time = new Date(startTime.getTime() + i * 60 * 60 * 1000);
-      schedule.push({
-        time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        activity: i === 0 ? 'Event Starts' : 
-                 i === hours ? 'Event Ends' : 
-                 `Session ${i}`
+    // Use agenda if available
+    if (event.agenda && event.agenda.length > 0) {
+      return event.agenda.map((item, index) => {
+        const startTime = new Date(eventDate);
+        // Check if date is valid
+        if (isNaN(startTime.getTime())) {
+          return {
+            time: 'TBD',
+            activity: item,
+            completed: false
+          };
+        }
+        
+        const scheduleTime = new Date(startTime.getTime() + index * 30 * 60 * 1000); // 30 min intervals
+        
+        return {
+          time: scheduleTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          activity: item,
+          completed: new Date() > scheduleTime
+        };
       });
     }
     
-    return schedule;
+    // Fallback to basic start/end times
+    const startTime = new Date(eventDate);
+    
+    // Check if date is valid
+    if (isNaN(startTime.getTime())) {
+      return [
+        { time: 'TBD', activity: 'Event Begins', completed: false },
+        { time: 'TBD', activity: 'Main Session', completed: false },
+        { time: 'TBD', activity: 'Event Ends', completed: false }
+      ];
+    }
+    let endTime;
+    
+    if (event.endTime && event.startTime) {
+      // Calculate end time based on event duration
+      const [startHour, startMin] = event.startTime.split(':').map(Number);
+      const [endHour, endMin] = event.endTime.split(':').map(Number);
+      
+      endTime = new Date(startTime);
+      endTime.setHours(endHour, endMin);
+    } else {
+      // Default 2 hour duration
+      endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+    }
+    
+    const now = new Date();
+    
+    return [
+      {
+        time: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        activity: 'Event Begins',
+        completed: now > startTime
+      },
+      {
+        time: new Date(startTime.getTime() + 60 * 60 * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        activity: event.category === 'workshop' ? 'Interactive Session' : 
+                 event.category === 'seminar' ? 'Main Presentation' :
+                 event.category === 'cultural' ? 'Performance Block' :
+                 'Main Session',
+        completed: now > new Date(startTime.getTime() + 60 * 60 * 1000)
+      },
+      {
+        time: endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        activity: 'Event Ends',
+        completed: now > endTime
+      }
+    ];
   };
 
-  // Generate stream features based on event category
+  // Generate stream features based on real event data
   const generateStreamFeatures = () => {
     if (!event) return [];
     
-    const baseFeatures = [
-      "Live commentary and updates",
-      "Interactive Q&A sessions",
-      "Real-time event coverage"
-    ];
+    const features = [];
     
-    if (event.category === 'technical') {
-      return [...baseFeatures, "Live coding demonstrations", "Technical deep dives"];
-    } else if (event.category === 'cultural') {
-      return [...baseFeatures, "Live performances", "Cultural showcases"];
-    } else if (event.category === 'sports') {
-      return [...baseFeatures, "Live match coverage", "Player interviews"];
+    // Add features based on event properties
+    if (event.liveStream?.isLive || streamData.isLive) {
+      features.push("🔴 Live video streaming");
     }
     
-    return baseFeatures;
+    if (chatMessages.length > 0) {
+      features.push("💬 Real-time chat interaction");
+    }
+    
+    // Add category-specific features
+    if (event.category === 'workshop') {
+      features.push("🛠️ Hands-on demonstrations");
+      features.push("📚 Interactive learning sessions");
+      features.push("❓ Live Q&A with instructors");
+    } else if (event.category === 'seminar') {
+      features.push("🎤 Expert presentations");
+      features.push("📊 Data insights and analysis");
+      features.push("🤝 Networking opportunities");
+    } else if (event.category === 'cultural') {
+      features.push("🎭 Live performances");
+      features.push("🎨 Cultural showcases");
+      features.push("🌍 Diverse cultural experiences");
+    } else if (event.category === 'sports') {
+      features.push("⚽ Live match coverage");
+      features.push("🏆 Real-time scores and updates");
+      features.push("🎙️ Expert commentary");
+    } else if (event.category === 'academic') {
+      features.push("📖 Educational content");
+      features.push("🧠 Knowledge sharing");
+      features.push("🎓 Learning outcomes");
+    }
+    
+    // Add features based on event tags
+    if (event.tags) {
+      if (event.tags.includes('interactive')) {
+        features.push("🎮 Interactive elements");
+      }
+      if (event.tags.includes('networking')) {
+        features.push("🤝 Networking sessions");
+      }
+      if (event.tags.includes('competition')) {
+        features.push("🏅 Competitive activities");
+      }
+    }
+    
+    // Add registration-related features
+    if (event.maxParticipants) {
+      features.push(`👥 Up to ${event.maxParticipants} participants`);
+    }
+    
+    if (event.isFreeEvent) {
+      features.push("🆓 Free participation");
+    }
+    
+    // Default features if none specific
+    if (features.length === 0) {
+      features.push("📺 Live event coverage");
+      features.push("💬 Community chat");
+      features.push("📱 Multi-device access");
+    }
+    
+    return features.slice(0, 6); // Limit to 6 features
   };
 
   if (loading) {
@@ -358,7 +543,7 @@ const EventStream = () => {
                   <div className="meta-details">
                     <span className="organizer">
                       <i className="fas fa-users"></i>
-                      {event.organizer?.name || event.organizer}
+                      {event.organizer?.name || event.organizer || 'Unknown Organizer'}
                     </span>
                     <span className="location">
                       <i className="fas fa-map-marker-alt"></i>
@@ -366,7 +551,7 @@ const EventStream = () => {
                     </span>
                     <span className="date">
                       <i className="fas fa-calendar"></i>
-                      {new Date(event.startDate).toLocaleDateString()}
+                      {event.startDate ? new Date(event.startDate).toLocaleDateString() : 'Date TBD'}
                     </span>
                   </div>
                   <p className="description">{event.description}</p>
@@ -447,10 +632,10 @@ const EventStream = () => {
                     <i className="fas fa-flag"></i>
                     Report
                   </button>
-                  <Link to={`/events/join/${eventId}`} className="btn btn-primary">
-                    <i className="fas fa-user-plus"></i>
-                    Join Event
-                  </Link>
+                  <div className="registration-info stream-registration-info">
+                    <i className="fas fa-info-circle"></i>
+                    <span>Register on-spot at venue</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -466,7 +651,7 @@ const EventStream = () => {
                       key={index} 
                       className={`schedule-item ${new Date().getHours() >= parseInt(item.time) ? 'completed' : ''}`}
                     >
-                      <span className="schedule-time">{item.time}</span>
+                      <span className={`schedule-time ${item.time === 'TBD' ? 'tbd' : ''}`}>{item.time}</span>
                       <span className="schedule-activity">{item.activity}</span>
                     </div>
                   ))}

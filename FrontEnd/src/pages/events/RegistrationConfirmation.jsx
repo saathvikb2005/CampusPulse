@@ -22,49 +22,53 @@ const RegistrationConfirmation = () => {
           const registrationData = location.state.registration;
           setRegistration(registrationData);
           
-          // Fetch event details
+          // Fetch event details to ensure we have complete information
           if (registrationData.eventId) {
             const eventResponse = await eventAPI.getById(registrationData.eventId);
             if (eventResponse.success) {
               setEvent(eventResponse.data);
+              
+              // Try to fetch the actual registration details from backend for more complete data
+              try {
+                const regResponse = await eventAPI.getUserRegistration(registrationData.eventId);
+                if (regResponse.success) {
+                  // Merge state data with fetched data, prioritizing fetched data
+                  setRegistration({
+                    ...registrationData,
+                    ...regResponse.data,
+                    // Keep some state data if it's more recent/complete
+                    eventTitle: regResponse.data.eventTitle || registrationData.eventTitle,
+                    confirmationNumber: regResponse.data.confirmationNumber || registrationData.confirmationNumber
+                  });
+                }
+              } catch (fetchError) {
+                console.warn('Could not fetch additional registration details:', fetchError);
+                // Continue with state data
+              }
             }
           }
         } else if (eventId) {
-          // If coming from direct link or refresh, fetch registration from API
-          const eventResponse = await eventAPI.getById(eventId);
+          // If coming from direct link or refresh, fetch both event and registration from API
+          const [eventResponse, registrationResponse] = await Promise.all([
+            eventAPI.getById(eventId),
+            eventAPI.getUserRegistration(eventId)
+          ]);
+          
           if (eventResponse.success) {
             setEvent(eventResponse.data);
-            
-            // Get user's registration for this event
-            const registrationsResponse = await eventAPI.getRegistrations(eventId);
-            if (registrationsResponse.success && registrationsResponse.data?.registrations) {
-              const currentUser = JSON.parse(localStorage.getItem('user'));
-              const userRegistration = registrationsResponse.data.registrations.find(
-                reg => reg.userId === currentUser?._id || reg.email === currentUser?.email
-              );
-              
-              if (userRegistration) {
-                setRegistration({
-                  ...userRegistration,
-                  eventTitle: eventResponse.data.title,
-                  eventDate: eventResponse.data.startDate,
-                  eventTime: new Date(eventResponse.data.startDate).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  }),
-                  eventLocation: eventResponse.data.location,
-                  participantName: userRegistration.name,
-                  registrationType: 'General Admission'
-                });
-              } else {
-                // If no registration found, redirect to events page
-                navigate('/events/present');
-                showErrorToast('Registration not found for this event');
-              }
-            }
           } else {
             navigate('/events/present');
             showErrorToast('Event not found');
+            return;
+          }
+          
+          if (registrationResponse.success) {
+            setRegistration(registrationResponse.data);
+          } else {
+            // If no registration found, redirect to events page
+            navigate('/events/present');
+            showErrorToast('Registration not found for this event');
+            return;
           }
         } else {
           // If no event ID or registration data, redirect to events page
@@ -82,52 +86,100 @@ const RegistrationConfirmation = () => {
     fetchRegistrationData();
   }, [location, navigate, eventId]);
 
-  const downloadTicket = () => {
+  const downloadTicket = async () => {
     if (!registration || !event) return;
     
-    showInfoToast('Generating your event ticket...', 2000);
-    
-    setTimeout(() => {
-      const ticketContent = `
+    try {
+      showInfoToast('Generating your professional PDF ticket...', 3000);
+      
+      // Create a ticket object compatible with the PDF generator
+      const ticketData = {
+        ticketCode: registration.confirmationNumber || registration._id || 'REG-' + Date.now(),
+        status: 'active',
+        ticketType: registration.registrationType || 'General Admission',
+        event: {
+          title: event.title || registration.eventTitle,
+          date: event.startDate || registration.eventDate,
+          venue: event.location || registration.eventLocation || 'TBA'
+        },
+        validFrom: new Date(),
+        validUntil: new Date(event.endDate || event.startDate || registration.eventDate),
+        qrCodeData: `CAMPUSPULSE-${registration._id || registration.registrationId}-${Date.now()}`
+      };
+      
+      // Import the PDF generator dynamically
+      const { downloadTicketPDF } = await import('../../utils/pdfTicketGenerator');
+      
+      const fileName = `${(event.title || registration.eventTitle).replace(/[^a-z0-9]/gi, '_').toLowerCase()}_ticket.pdf`;
+      await downloadTicketPDF(ticketData, fileName, {
+        name: registration.name,
+        email: registration.email,
+        department: registration.department,
+        year: registration.year,
+        eventTitle: event.title || registration.eventTitle,
+        eventDate: event.startDate || registration.eventDate,
+        eventLocation: event.location || registration.eventLocation,
+        confirmationNumber: registration.confirmationNumber,
+        _id: registration._id || registration.registrationId
+      });
+      
+      showSuccessToast('Professional PDF ticket downloaded successfully! 🎫');
+    } catch (error) {
+      console.error('Error generating PDF ticket:', error);
+      showErrorToast('Failed to generate PDF ticket. Downloading text version...');
+      
+      // Fallback to text version
+      setTimeout(() => {
+        const ticketContent = `
 CAMPUS PULSE EVENT TICKET
 ========================
-Event: ${event.title}
-Date: ${new Date(event.startDate).toLocaleDateString()}
-Time: ${new Date(event.startDate).toLocaleTimeString('en-US', {
+Event: ${event.title || registration.eventTitle}
+Date: ${new Date(event.startDate || registration.eventDate).toLocaleDateString()}
+Time: ${event.startDate ? new Date(event.startDate).toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit'
-      })}
-Venue: ${event.location}
+      }) : registration.eventTime || 'TBA'}
+Venue: ${event.location || registration.eventLocation || 'TBA'}
 Registration ID: ${registration._id || registration.registrationId}
+Confirmation Number: ${registration.confirmationNumber || 'N/A'}
 Participant: ${registration.name}
 Email: ${registration.email}
-Department: ${registration.department}
-Year: ${registration.year}
+Department: ${registration.department || 'N/A'}
+Year: ${registration.year || 'N/A'}
+Registration Type: ${registration.registrationType || 'General Admission'}
+Status: ${registration.status || 'Confirmed'}
 ========================
 Please present this ticket at the event venue.
 Note: Bring your student ID for verification.
-      `.trim();
-      
-      const blob = new Blob([ticketContent], { type: 'text/plain' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_ticket.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      showSuccessToast('Event ticket downloaded successfully!');
-    }, 2000);
+        `.trim();
+        
+        const blob = new Blob([ticketContent], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fileName = `${(event.title || registration.eventTitle).replace(/[^a-z0-9]/gi, '_').toLowerCase()}_ticket.txt`;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        showSuccessToast('Text ticket downloaded as fallback!');
+      }, 1000);
+    }
   };
 
   const addToCalendar = () => {
     if (!registration || !event) return;
 
     // Generate calendar event
-    const startDate = new Date(event.startDate);
-    const endDate = new Date(event.endDate);
+    const startDate = new Date(event.startDate || registration.eventDate);
+    const endDate = new Date(event.endDate || registration.eventEndDate || event.startDate || registration.eventDate);
+    
+    // If no end date, default to 2 hours after start
+    if (endDate.getTime() === startDate.getTime()) {
+      endDate.setHours(endDate.getHours() + 2);
+    }
     
     // Create ICS file content
     const icsContent = [
@@ -137,9 +189,9 @@ Note: Bring your student ID for verification.
       'BEGIN:VEVENT',
       `DTSTART:${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
       `DTEND:${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-      `SUMMARY:${event.title}`,
-      `DESCRIPTION:You are registered for ${event.title}. Registration ID: ${registration._id || registration.registrationId}`,
-      `LOCATION:${event.location}`,
+      `SUMMARY:${event.title || registration.eventTitle}`,
+      `DESCRIPTION:You are registered for ${event.title || registration.eventTitle}. Registration ID: ${registration._id || registration.registrationId}. Confirmation: ${registration.confirmationNumber || 'N/A'}`,
+      `LOCATION:${event.location || registration.eventLocation || 'TBA'}`,
       `UID:${registration._id || registration.registrationId}@campuspulse.edu`,
       'END:VEVENT',
       'END:VCALENDAR'
@@ -149,7 +201,8 @@ Note: Bring your student ID for verification.
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${event.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_calendar.ics`;
+    const fileName = `${(event.title || registration.eventTitle).replace(/[^a-z0-9]/gi, '_').toLowerCase()}_calendar.ics`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -240,7 +293,7 @@ Note: Bring your student ID for verification.
             </div>
           </div>
           <h1>Registration Successful!</h1>
-          <p>Thank you for registering for {event.title}</p>
+          <p>Thank you for registering for {event?.title || registration?.eventTitle}</p>
         </div>
       </div>
 
@@ -398,10 +451,15 @@ Note: Bring your student ID for verification.
                     Confirm Waitlist
                   </button>
                 )}
-                <Link to={`/events/${event._id}`} className="btn btn-outline">
+                <button 
+                  className="btn btn-outline"
+                  onClick={() => navigate(`/events/details/${event._id || registration.eventId}`, { 
+                    state: { registrationCompleted: true } 
+                  })}
+                >
                   <i className="fas fa-info-circle"></i>
                   View Event Details
-                </Link>
+                </button>
               </div>
 
               {/* Share Section */}
@@ -448,27 +506,30 @@ Note: Bring your student ID for verification.
                 <div className="event-summary">
                   <div className="summary-item">
                     <i className="fas fa-calendar"></i>
-                    <span>{new Date(event.startDate).toLocaleDateString()}</span>
+                    <span>{new Date(event?.startDate || registration?.eventDate).toLocaleDateString()}</span>
                   </div>
                   <div className="summary-item">
                     <i className="fas fa-clock"></i>
                     <span>
-                      {new Date(event.startDate).toLocaleTimeString('en-US', {
+                      {event?.startDate ? new Date(event.startDate).toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit'
-                      })} - {new Date(event.endDate).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      }) : registration?.eventTime || 'TBA'} 
+                      {(event?.endDate || registration?.eventEndDate) && 
+                        ` - ${new Date(event?.endDate || registration?.eventEndDate).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}`
+                      }
                     </span>
                   </div>
                   <div className="summary-item">
                     <i className="fas fa-map-marker-alt"></i>
-                    <span>{event.location || 'Location TBA'}</span>
+                    <span>{event?.location || registration?.eventLocation || 'Location TBA'}</span>
                   </div>
                   <div className="summary-item">
                     <i className="fas fa-users"></i>
-                    <span>{event.maxParticipants || 'Unlimited'} Attendees</span>
+                    <span>{event?.maxParticipants || registration?.maxParticipants || 'Unlimited'} Attendees</span>
                   </div>
                 </div>
               </div>
@@ -499,11 +560,11 @@ Note: Bring your student ID for verification.
                 <div className="contact-info">
                   <div className="contact-item">
                     <i className="fas fa-envelope"></i>
-                    <span>support@campuspulse.edu</span>
+                    <span>saathvikbachali@gmail.com</span>
                   </div>
                   <div className="contact-item">
                     <i className="fas fa-phone"></i>
-                    <span>+1 (555) 123-4567</span>
+                    <span>+91 7075299255</span>
                   </div>
                   <div className="contact-item">
                     <i className="fas fa-clock"></i>

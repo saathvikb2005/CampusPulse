@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Navigation from "../../components/Navigation";
 import { eventAPI } from "../../services/api";
-import { getCurrentUser, isAuthenticated } from "../../utils/auth";
-import { showSuccessToast, showErrorToast } from "../../utils/toastUtils.jsx";
 import "./UpcomingEvents.css";
 
 const UpcomingEvents = () => {
@@ -11,11 +9,9 @@ const UpcomingEvents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedType, setSelectedType] = useState("all"); // individual, team, all
-  const [registeredEvents, setRegisteredEvents] = useState(new Set());
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [registrationLoading, setRegistrationLoading] = useState({});
 
   // Fetch upcoming events from backend
   const fetchUpcomingEvents = async () => {
@@ -47,7 +43,7 @@ const UpcomingEvents = () => {
           type: event.isTeamEvent || event.type === 'team' ? "team" : "individual",
           description: event.description || 'No description available',
           image: event.images && event.images.length > 0 
-            ? `https://campuspulse-28.onrender.com${event.images[0].url}` 
+            ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${event.images[0].url}` 
             : event.image || "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop",
           location: event.location || event.venue || 'TBA',
           maxParticipants: event.maxParticipants || event.capacity || 50,
@@ -65,11 +61,6 @@ const UpcomingEvents = () => {
         }));
         
         setUpcomingEvents(mappedEvents);
-        
-        // Check which events user is registered for
-        if (isAuthenticated()) {
-          checkUserRegistrations(mappedEvents);
-        }
       } else {
         setError(response.message || "Failed to fetch events");
       }
@@ -78,23 +69,6 @@ const UpcomingEvents = () => {
       setError(err.message || "Failed to connect to server");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Check user registrations for events
-  const checkUserRegistrations = async (events) => {
-    try {
-      if (!isAuthenticated()) return;
-      
-      const response = await eventAPI.getUserRegistered();
-      if (response.success && response.data.events) {
-        const registeredEventIds = new Set(
-          response.data.events.map(reg => reg.event._id || reg.event)
-        );
-        setRegisteredEvents(registeredEventIds);
-      }
-    } catch (err) {
-      console.error("Error checking user registrations:", err);
     }
   };
 
@@ -111,81 +85,6 @@ const UpcomingEvents = () => {
     const matchesType = selectedType === "all" || event.type === selectedType;
     return matchesSearch && matchesCategory && matchesType;
   });
-
-  const handleRegister = async (eventId, type = "participant") => {
-    // Check if user is authenticated
-    if (!isAuthenticated()) {
-      showErrorToast('Please login first to register for events!');
-      navigate('/login');
-      return;
-    }
-
-    // Prevent multiple simultaneous registration attempts
-    if (registrationLoading[eventId]) return;
-
-    try {
-      setRegistrationLoading(prev => ({ ...prev, [eventId]: true }));
-      
-      if (type === "volunteer") {
-        // Try volunteer registration API
-        try {
-          const volunteerResponse = await eventAPI.volunteerRegister(eventId);
-          
-          if (volunteerResponse.success) {
-            showSuccessToast('Successfully registered as volunteer!');
-            loadUpcomingEvents(); // Refresh to update volunteer count
-          } else {
-            showErrorToast('Failed to register as volunteer. Please try again.');
-          }
-        } catch (volunteerError) {
-          // If volunteer API not implemented, show helpful message
-          if (volunteerError.message?.includes('404') || volunteerError.message?.includes('not found')) {
-            showErrorToast('Volunteer registration is coming soon! Please contact the event organizer.');
-          } else {
-            console.error('Volunteer registration error:', volunteerError);
-            showErrorToast('Volunteer registration failed. Please try again.');
-          }
-        }
-        return;
-      }
-
-      // Register for the event using backend API
-      const response = await eventAPI.register(eventId);
-      
-      if (response.success) {
-        // Update local state to reflect registration
-        setRegisteredEvents(prev => new Set([...prev, eventId]));
-        
-        // Show success message
-        const event = upcomingEvents.find(e => e.id === eventId);
-        showSuccessToast(`Successfully registered for "${event?.title}"! Check your notifications for updates.`);
-        
-        // Refresh events to get updated registration count
-        fetchUpcomingEvents();
-      } else {
-        showErrorToast(response.message || 'Registration failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      showErrorToast(error.message || 'Unable to register. Please check your connection and try again.');
-    } finally {
-      setRegistrationLoading(prev => ({ ...prev, [eventId]: false }));
-    }
-  };
-
-  const isRegistered = (eventId, type = "participant") => {
-    if (type === "volunteer") {
-      // Check if user is in volunteer list for this event
-      const event = upcomingEvents.find(e => e.id === eventId);
-      if (event && event.volunteers && Array.isArray(event.volunteers)) {
-        return event.volunteers.some(volunteer => 
-          volunteer.userId === user?.id || volunteer.id === user?.id || volunteer === user?.id
-        );
-      }
-      return false;
-    }
-    return registeredEvents.has(eventId);
-  };
 
   const getDaysUntilEvent = (eventDate) => {
     const today = new Date();
@@ -210,7 +109,7 @@ const UpcomingEvents = () => {
         <div className="container">
           <div className="header-content">
             <h1>🚀 Upcoming Events</h1>
-            <p>Browse details, register as participant, or volunteer for upcoming campus events</p>
+            <p>Browse and view details of upcoming campus events. Click "View Details" to register for events.</p>
           </div>
         </div>
       </div>
@@ -280,11 +179,18 @@ const UpcomingEvents = () => {
                 const volunteerSpotsLeft = event.volunteerSpots - event.volunteerRegistered;
                 
                 return (
-                  <div key={event.id} className="event-card upcoming-event">
+                  <div key={event.id} className="event-card upcoming-events">
                     <div className="event-image">
-                      <img src={event.image} alt={event.title} />
-                      <div className="event-countdown">
-                        {daysUntil > 0 ? `${daysUntil} days left` : daysUntil === 0 ? 'Today!' : 'Past'}
+                      <div className="event-date-badge">
+                        <span className="day">
+                          {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                        </span>
+                        <span className="date">
+                          {new Date(event.date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </span>
                       </div>
                       {spotsLeft <= 5 && spotsLeft > 0 && (
                         <div className="spots-warning">Only {spotsLeft} spots left!</div>
@@ -292,9 +198,11 @@ const UpcomingEvents = () => {
                     </div>
                     
                     <div className="event-content">
-                      <div className="event-header">
-                        <h3>{event.title}</h3>
-                        <div className="event-category">{event.category}</div>
+                      <div className="event-title-section">
+                        <h3 className="event-title">{event.title}</h3>
+                        <div className={`event-category-badge ${event.category.toLowerCase()}`}>
+                          {event.category}
+                        </div>
                       </div>
                       
                       <div className="event-tags">
@@ -303,29 +211,30 @@ const UpcomingEvents = () => {
                         ))}
                       </div>
                       
-                      <div className="event-details">
-                        <div className="event-date">
-                          <i className="fas fa-calendar"></i>
-                          {new Date(event.date).toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </div>
-                        
-                        <div className="event-time">
-                          <i className="fas fa-clock"></i>
-                          {event.time} - {event.endTime}
-                        </div>
-                        
-                        <div className="event-location">
-                          <i className="fas fa-map-marker-alt"></i>
-                          {event.location}
-                        </div>
+                      <div className="event-timing">
+                        <i className="fas fa-clock"></i>
+                        {event.time} - {event.endTime || '2 hours'}
+                      </div>
+                      
+                      <div className="event-location">
+                        <i className="fas fa-map-marker-alt"></i>
+                        {event.location}
                       </div>
                       
                       <p className="event-description">{event.description}</p>
+                      
+                      <div className="registration-info">
+                        <div className="registration-count">
+                          <i className="fas fa-users"></i>
+                          {event.registered || 0}/{event.maxParticipants || 50} Registered
+                        </div>
+                        {event.volunteerSpots && (
+                          <div className="volunteer-count">
+                            <i className="fas fa-hands-helping"></i>
+                            {event.volunteerRegistered || 0}/{event.volunteerSpots} Volunteers
+                          </div>
+                        )}
+                      </div>
                       
                       <div className="event-stats">
                         <div className="stat">
@@ -370,76 +279,30 @@ const UpcomingEvents = () => {
                       </div>
                       
                       {/* Prerequisites */}
-                      <div className="prerequisites">
-                        <h5>Prerequisites:</h5>
-                        <ul>
-                          {event.prerequisites.map((prereq, index) => (
-                            <li key={index}>{prereq}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      {/* Agenda */}
-                      <div className="agenda">
-                        <h5>Agenda:</h5>
-                        <ul>
-                          {event.agenda.map((item, index) => (
-                            <li key={index}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div className="registration-deadline">
-                        <small>
-                          <i className="fas fa-hourglass-half"></i>
-                          Registration deadline: {new Date(event.registrationDeadline).toLocaleDateString()}
-                        </small>
-                      </div>
+                      {event.prerequisites && event.prerequisites.length > 0 && (
+                        <div className="prerequisites-section">
+                          <div className="prerequisites-title">
+                            <i className="fas fa-exclamation-triangle"></i>
+                            Prerequisites:
+                          </div>
+                          <div className="prerequisites-text">
+                            {event.prerequisites.join(', ') || 'Event details available upon registration'}
+                          </div>
+                        </div>
+                      )}
                       
                       <div className="event-actions">
-                        {regOpen ? (
-                          <>
-                            <button 
-                              className={`btn ${isRegistered(event.id) ? 'btn-success' : 'btn-primary'}`}
-                              onClick={() => handleRegister(event.id)}
-                              disabled={isRegistered(event.id) || spotsLeft <= 0 || registrationLoading[event.id]}
-                            >
-                              <i className={`fas ${
-                                registrationLoading[event.id] ? 'fa-spinner fa-spin' :
-                                isRegistered(event.id) ? 'fa-check' : 
-                                event.type === 'team' ? 'fa-users' : 'fa-user-plus'
-                              }`}></i>
-                              {registrationLoading[event.id] ? 'Registering...' :
-                               isRegistered(event.id) 
-                                ? (event.type === 'team' ? 'Team Registered' : 'Registered')
-                                : spotsLeft > 0 
-                                  ? (event.type === 'team' ? 'Register Team' : 'Register') 
-                                  : 'Full'
-                              }
-                            </button>
-                            
-                            {volunteerSpotsLeft > 0 && (
-                              <button 
-                                className={`btn ${isRegistered(event.id, 'volunteer') ? 'btn-success' : 'btn-secondary'}`}
-                                onClick={() => handleRegister(event.id, 'volunteer')}
-                                disabled={isRegistered(event.id, 'volunteer')}
-                              >
-                                <i className={`fas ${isRegistered(event.id, 'volunteer') ? 'fa-check' : 'fa-hands-helping'}`}></i>
-                                {isRegistered(event.id, 'volunteer') ? 'Volunteering' : 'Volunteer'}
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <button className="btn btn-disabled" disabled>
-                            <i className="fas fa-times"></i>
-                            Registration Closed
-                          </button>
-                        )}
-                        
-                        <button className="btn btn-outline" onClick={() => navigate(`/events/details/${event.id}`)}>
+                        <button 
+                          className="btn-view-details"
+                          onClick={() => navigate(`/events/details/${event._id || event.id}`)}
+                        >
                           <i className="fas fa-info-circle"></i>
                           View Details
                         </button>
+                        <div className={`registration-badge ${regOpen ? 'open' : 'spot-registration'}`}>
+                          <i className={`fas ${regOpen ? 'fa-user-plus' : 'fa-info-circle'}`}></i>
+                          {regOpen ? 'Registration Open' : 'On-spot registration at venue'}
+                        </div>
                       </div>
                     </div>
                   </div>

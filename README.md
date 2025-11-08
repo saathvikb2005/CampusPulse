@@ -1,590 +1,488 @@
-﻿# 🎓 CampusPulse - Complete Campus Management System# CampusPulse 
+# 🎓 CampusPulse - Complete Campus Management System
 
+A comprehensive, modern **Digital Event Management Portal** built with React.js and Node.js, designed to streamline campus activities, events, communication, and administrative tasks for universities and colleges.
 
-
-A comprehensive, modern campus management system built with React.js and Node.js, designed to streamline campus activities, events, communication, and administrative tasks for universities and colleges.A comprehensive campus management system built with React.js and Node.js, designed to streamline campus activities, events, and communication.
-
-
-
-## ✨ Key Features##  Features
-
-
-
-### 🎯 **Event Management**- **Event Management**: Create, discover, and manage campus events
-
-- **Create & Manage Events**: Full event lifecycle management with approval workflow- **User Authentication**: Secure login system with role-based access control
-
-- **Event Registration**: Student registration with capacity management- **Real-time Notifications**: Stay updated with instant notifications
-
-- **Volunteer Management**: Dedicated volunteer coordination system- **Blog System**: Share and discover campus news and stories
-
-- **Image Upload**: Event gallery and featured image support- **Feedback System**: Submit and manage feedback efficiently
-
-- **Live Event Tracking**: Real-time event status updates- **Analytics Dashboard**: Comprehensive insights and reporting
-
-- **Event Categories**: Academic, technical, cultural, and sports events- **File Upload**: Support for avatars, event images, and galleries
-
-- **Responsive Design**: Mobile-friendly interface
-
-### 👥 **User Management & Authentication**
-
-- **Role-Based Access Control**: Student, Faculty, Admin, and Super Admin roles##  Tech Stack
-
-- **Secure Authentication**: JWT-based login with refresh tokens
-
-- **Profile Management**: Complete user profile with avatar uploads### Frontend
-
-- **Department Integration**: Department-wise user organization- **React.js 18** - Modern UI library
-
-- **Account Verification**: Email-based account activation- **React Router** - Client-side routing
-
-- **Vite** - Fast build tool and development server
-
-### 🔔 **Real-Time Notifications**- **CSS3** - Modern styling with custom properties
-
-- **Instant Notifications**: Real-time updates using Socket.IO
-
-- **Notification Categories**: Event updates, approvals, system alerts### Backend
-
-- **Read/Unread Tracking**: Smart notification management- **Node.js** - JavaScript runtime
-
-- **Push Notifications**: Browser notification support- **Express.js** - Web application framework
-
-- **MongoDB** - NoSQL database
-
-### 📝 **Blog System**- **Mongoose** - MongoDB object modeling
-
-- **Content Creation**: Rich text blog posts with media support- **JWT** - JSON Web Token authentication
-
-- **Category Management**: Organized content by topics- **Multer** - File upload handling
-
-- **User Contributions**: Student and faculty blog submissions- **bcrypt** - Password hashing
-
-- **Comment System**: Interactive discussions on posts
-
-##  Prerequisites
-
-### 💬 **Feedback System**
-
-- **Anonymous Feedback**: Optional anonymous submissionsBefore running this application, make sure you have:
-
-- **Event Feedback**: Specific event rating and reviews
-
-- **Campus Feedback**: General campus life improvements- **Node.js** (v16 or higher)
-
-- **Admin Response System**: Complete feedback resolution workflow- **MongoDB** (v4.4 or higher)
-
-- **Feedback History**: Users can track their feedback and admin responses- **npm** or **yarn** package manager
-
-
-
-### 📊 **Analytics Dashboard**##  Installation & Setup
-
-- **Event Analytics**: Registration, attendance, and engagement metrics
-
-- **User Analytics**: Department-wise statistics and activity tracking### 1. Clone the Repository
-
-- **Feedback Analytics**: Response rates and satisfaction metrics`ash
-
-- **System Health**: Performance monitoring and usage statisticsgit clone https://github.com/saathvikb2005/CampusPulse.git
-
-cd CampusPulse
-
-### 🎨 **Modern UI/UX**`
-
-- **Responsive Design**: Mobile-first design that works on all devices
-
-- **Modern Interface**: Clean, intuitive design with smooth animations### 2. Backend Setup
-
-- **Dark Mode Ready**: Comfortable viewing in any lighting`ash
-
-- **Accessibility**: ARIA compliant with keyboard navigation supportcd Backend
-
-- **Interactive Elements**: Hover effects, smooth transitions, and micro-interactionsnpm install
-
-`
-
-## 🛠️ Technology Stack
-
-Create a .env file in the Backend directory:
-
-### Frontend (React.js)`env
-
-- **React 18** with Hooks and Context API# Database
-
-- **React Router v6** for navigationMONGODB_URI=mongodb://localhost:27017/campuspulse
-
-- **Vite** for fast development and building
-
-- **Modern CSS** with CSS Grid and Flexbox# JWT Secrets
-
-- **Font Awesome** for iconsJWT_SECRET=your_super_secret_jwt_key_here
-
-- **Socket.IO Client** for real-time featuresJWT_REFRESH_SECRET=your_refresh_secret_key_here
-
-JWT_EXPIRE=7d
-
-### Backend (Node.js)JWT_REFRESH_EXPIRE=30d
-
-- **Express.js** web framework
-
-- **MongoDB** with Mongoose ODM# Security
-
-- **JWT Authentication** with refresh tokensBCRYPT_SALT_ROUNDS=12
-
-- **Multer** for file uploads
-
-- **Socket.IO** for real-time communication# Server
-
-- **bcrypt** for password securityPORT=5000
-
-- **Express Validator** for input validationNODE_ENV=production
-
-
-
-### Database & Storage# Email (for password reset - optional)
-
-- **MongoDB** - Primary databaseEMAIL_HOST=smtp.gmail.com
-
-- **Local File Storage** - Image and file uploadsEMAIL_PORT=587
-
-- **Indexed Collections** - Optimized queriesEMAIL_USER=your_email@gmail.com
-
-- **Data Validation** - Schema-level constraintsEMAIL_PASS=your_app_password
-
-`
-
-## 🚀 Quick Start
-
-### 3. Frontend Setup
-
-### Prerequisites`ash
-
-- **Node.js** (v16.0.0 or higher)cd ../FrontEnd
-
-- **MongoDB** (v4.4 or higher)npm install
-
-- **Git** for version control`
-
-
-
-### Installation### 4. Database Setup
-
-Start MongoDB service on your system, then run:
-
-1. **Clone the Repository**`ash
-
-   ```bashcd Backend
-
-   git clone https://github.com/saathvikb2005/CampusPulse.gitnpm start
-
-   cd CampusPulse`
-
-   ```
-
-The application will automatically create the database and collections.
-
-2. **Backend Setup**
-
-   ```bash##  Running the Application
-
-   cd Backend
-
-   npm install### Option 1: Run Both Services Separately
-
-   ```
-
-**Start Backend:**
-
-   Create `.env` file in Backend directory:`ash
-
-   ```envcd Backend
-
-   # Database Configurationnpm start
-
-   MONGODB_URI=mongodb://127.0.0.1:27017/campuspulse`
-
-   Backend will run on http://localhost:5000
-
-   # JWT Configuration
-
-   JWT_SECRET=your_super_secret_jwt_key_at_least_32_characters_long**Start Frontend:**
-
-   JWT_REFRESH_SECRET=your_refresh_secret_key_different_from_main_secret`ash
-
-   JWT_EXPIRE=7dcd FrontEnd
-
-   JWT_REFRESH_EXPIRE=30dnpm run dev
-
-   `
-
-   # SecurityFrontend will run on http://localhost:5173
-
-   BCRYPT_SALT_ROUNDS=12
-
-   ### Option 2: Quick Start (Windows)
-
-   # Server Configuration`ash
-
-   PORT=5000# From project root
-
-   NODE_ENV=development./start_frontend.bat
-
-   `
-
-   # Email Configuration (Optional - for notifications)
-
-   EMAIL_HOST=smtp.gmail.com### Option 3: Quick Start (Unix/Linux/Mac)
-
-   EMAIL_PORT=587`ash
-
-   EMAIL_USER=your_email@gmail.com# From project root
-
-   EMAIL_PASS=your_app_passwordchmod +x start.sh
-
-   ./start.sh
-
-   # File Upload Configuration`
-
-   MAX_FILE_SIZE=5242880
-
-   UPLOAD_PATH=./uploads##  Default Login Credentials
-
-   ```
-
-After setup, you can log in with these default accounts:
-
-3. **Frontend Setup**
-
-   ```bash### Admin Account
-
-   cd ../FrontEnd- **Email**: admin@campuspulse.com
-
-   npm install- **Password**: password123
-
-   ```- **Role**: Administrator (full access)
-
-
-
-4. **Database Initialization**### Faculty Account
-
-   ```bash- **Email**: john.smith@campuspulse.com
-
-   cd ../Backend- **Password**: password123
-
-   # Create admin user (optional)- **Role**: Faculty
-
-   node create-admin-user.js
-
-   ### Student Account
-
-   # Populate with sample data (optional)- **Email**: alice.cooper@student.campuspulse.com
-
-   node populate-database.js- **Password**: password123
-
-   ```- **Role**: Student
-
-
-
-### Running the Application> ** Security Note**: Change these default passwords immediately in production!
-
-
-
-**Start Backend Server:**##  Project Structure
-
-```bash
-
-cd Backend`
-
-npm startCampusPulse/
-
-``` Backend/                 # Node.js API server
-
-🚀 Backend runs on: http://localhost:5000    src/
-
-       controllers/     # Request handlers
-
-**Start Frontend Development Server:**       models/         # Database models
-
-```bash       routes/         # API routes
-
-cd FrontEnd       middleware/     # Custom middleware
-
-npm run dev       services/       # Business logic
-
-```       utils/          # Utility functions
-
-🌐 Frontend runs on: http://localhost:5173       app.js          # Express app setup
-
-    uploads/            # File uploads storage
-
-## 👤 Default Accounts    package.json
-
-
-
-After running the database setup, you can use these accounts: FrontEnd/               # React application
-
-    src/
-
-### 🔒 Super Admin       components/     # Reusable components
-
-- **Email**: `superadmin@campuspulse.com`       pages/          # Page components
-
-- **Password**: `superadmin123`       services/       # API integration
-
-- **Access**: Full system administration       utils/          # Helper functions
-
-       main.jsx        # Application entry
-
-### 👨‍💼 Admin    public/             # Static assets
-
-- **Email**: `admin@campuspulse.com`    package.json
-
-- **Password**: `admin123`
-
-- **Access**: Event management, user management README.md
-
-`
-
-### 👨‍🏫 Faculty
-
-- **Email**: `john.doe@faculty.campuspulse.com`##  Configuration
-
-- **Password**: `faculty123`
-
-- **Access**: Event creation, blog posting### Environment Variables
-
-
-
-### 🎓 Student**Backend (.env):**
-
-- **Email**: `saathvikbachali@gmail.com`- MONGODB_URI - MongoDB connection string
-
-- **Password**: `student123456`- JWT_SECRET - Secret for JWT token signing
-
-- **Access**: Event registration, feedback submission- PORT - Server port (default: 5000)
-
-- NODE_ENV - Environment (development/production)
-
-> ⚠️ **Security Warning**: Change these credentials immediately in production!
-
-**Frontend:**
-
-## 📁 Project Structure- API URL is configured in src/services/api.js
-
-- Default: http://localhost:5000
-
-```
-
-CampusPulse/##  Security Features
-
-├── Backend/                    # Node.js API Server
-
-│   ├── src/- **JWT Authentication** - Secure token-based authentication
-
-│   │   ├── app.js             # Express application setup- **Password Hashing** - bcrypt with salt rounds
-
-│   │   ├── config/- **Role-based Access Control** - Different permissions for Admin, Faculty, and Students
-
-│   │   │   └── database.js    # MongoDB connection- **Input Validation** - Comprehensive data validation
-
-│   │   ├── controllers/       # Request handlers- **CORS Protection** - Cross-origin request handling
-
-│   │   │   ├── authController.js- **File Upload Security** - Safe file handling with type validation
-
-│   │   │   ├── eventController.js
-
-│   │   │   ├── userController.js##  API Endpoints
-
-│   │   │   ├── blogController.js
-
-│   │   │   ├── feedbackController.js### Authentication
-
-│   │   │   ├── notificationController.js- POST /api/auth/register - User registration
-
-│   │   │   ├── analyticsController.js- POST /api/auth/login - User login
-
-│   │   │   └── adminController.js- GET /api/auth/me - Get current user
-
-│   │   ├── middleware/         # Custom middleware- POST /api/auth/logout - User logout
-
-│   │   │   ├── auth.js        # Authentication middleware
-
-│   │   │   ├── validation.js  # Input validation### Events
-
-│   │   │   └── errorHandler.js- GET /api/events - Get all events
-
-│   │   ├── models/            # Database schemas- POST /api/events - Create new event
-
-│   │   │   ├── User.js- GET /api/events/upcoming - Get upcoming events
-
-│   │   │   ├── Event.js- GET /api/events/:id - Get specific event
-
-│   │   │   ├── Blog.js
-
-│   │   │   ├── Feedback.js### Users
-
-│   │   │   └── Notification.js- GET /api/users/profile - Get user profile
-
-│   │   ├── routes/            # API endpoints- PUT /api/users/profile - Update profile
-
-│   │   │   ├── authRoutes.js- PUT /api/users/change-password - Change password
-
-│   │   │   ├── eventRoutes.js
-
-│   │   │   ├── userRoutes.js### Notifications
-
-│   │   │   ├── blogRoutes.js- GET /api/notifications - Get user notifications
-
-│   │   │   ├── feedbackRoutes.js- GET /api/notifications/count - Get unread count
-
-│   │   │   ├── notificationRoutes.js- PATCH /api/notifications/mark-all-read - Mark all as read
-
-│   │   │   ├── analyticsRoutes.js
-
-│   │   │   └── adminRoutes.js##  UI Features
-
-│   │   ├── services/          # Business logic
-
-│   │   │   ├── notificationService.js- **Modern Design** - Clean and intuitive interface
-
-│   │   │   └── socketService.js- **Responsive Layout** - Works on desktop, tablet, and mobile
-
-│   │   └── utils/             # Helper functions- **Dark Mode Support** - Comfortable viewing experience
-
-│   │       ├── tokenHelpers.js- **Smooth Animations** - Enhanced user interactions
-
-│   │       ├── emailService.js- **Accessibility** - ARIA labels and keyboard navigation
-
-│   │       ├── fileUpload.js- **Real-time Updates** - Live notification system
-
-│   │       └── responseHelpers.js
-
-│   ├── uploads/               # File storage##  Deployment
-
-│   │   ├── avatars/          # User profile pictures
-
-│   │   └── events/           # Event images### Production Setup
-
-│   ├── create-admin-user.js   # Admin user creation script
-
-│   ├── populate-database.js   # Sample data script1. **Environment Configuration**
-
-│   └── package.json   `env
-
-│   NODE_ENV=production
-
-├── FrontEnd/                   # React Application   MONGODB_URI=your_production_mongodb_uri
-
-│   ├── public/   JWT_SECRET=strong_production_secret
-
-│   │   ├── manifest.json      # PWA manifest   `
-
-│   │   └── sw.js             # Service worker
-
-│   ├── src/2. **Build Frontend**
-
-│   │   ├── components/        # Reusable components   `ash
-
-│   │   │   ├── Navigation.jsx   cd FrontEnd
-
-│   │   │   ├── Footer.jsx   npm run build
-
-│   │   │   ├── Layout.jsx   `
-
-│   │   │   ├── ProtectedRoute.jsx
-
-│   │   │   └── Toast.jsx3. **Start Production Server**
-
-│   │   ├── pages/            # Page components   `ash
-
-│   │   │   ├── LandingPage.jsx   cd Backend
-
-│   │   │   ├── HomePage.jsx   npm start
-
-│   │   │   ├── Login.jsx   `
-
-│   │   │   ├── Register.jsx
-
-│   │   │   ├── Profile.jsx### Deployment Platforms
-
-│   │   │   ├── About.jsx- **Backend**: Heroku, DigitalOcean, AWS
-
-│   │   │   ├── Features.jsx- **Frontend**: Vercel, Netlify, GitHub Pages
-
-│   │   │   ├── Privacy.jsx- **Database**: MongoDB Atlas, AWS DocumentDB
-
-│   │   │   ├── Terms.jsx
-
-│   │   │   ├── Blogs.jsx##  Contributing
-
-│   │   │   ├── Feedback.jsx
-
-│   │   │   ├── Notifications.jsx1. Fork the repository
-
-│   │   │   ├── Admin.jsx2. Create a feature branch (git checkout -b feature/amazing-feature)
-
-│   │   │   ├── FeedbackManagement.jsx3. Commit your changes (git commit -m 'Add some amazing feature')
-
-│   │   │   └── events/4. Push to the branch (git push origin feature/amazing-feature)
-
-│   │   │       ├── EventGallery.jsx5. Open a Pull Request
-
-│   │   │       ├── EventManagement.jsx
-
-│   │   │       ├── PastEvents.jsx##  License
-
-│   │   │       └── UpcomingEvents.jsx
-
-│   │   ├── services/         # API integrationThis project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-│   │   │   └── api.js        # Centralized API service
-
-│   │   ├── utils/            # Helper functions##  Author
-
-│   │   │   ├── auth.js       # Authentication utilities
-
-│   │   │   └── toastUtils.js # Notification utilities**Saathvik B**
-
-│   │   ├── App.jsx           # Main app component- GitHub: [@saathvikb2005](https://github.com/saathvikb2005)
-
-│   │   └── main.jsx          # Application entry point- Project: [CampusPulse](https://github.com/saathvikb2005/CampusPulse)
-
-│   ├── package.json
-
-│   └── vite.config.js        # Vite configuration##  Support
-
-│
-
-└── README.md                  # This fileIf you encounter any issues or have questions:
-
-```
-
-1. Check the [Issues](https://github.com/saathvikb2005/CampusPulse/issues) page
-
-## 🔧 Configuration2. Create a new issue with detailed information
-
-3. Contact the maintainer
-
-### Environment Variables
+[![⭐ Star this project](https://img.shields.io/github/stars/saathvikb2005/CampusPulse?style=social)](https://github.com/saathvikb2005/CampusPulse)
 
 ---
 
-**Backend Configuration (.env):**
+## 🌐 Live Application
 
-- `MONGODB_URI` - MongoDB connection string**Made with  for the campus community**
+### **Production URLs**
+- **Frontend**: https://campuspulse-frontend-five.vercel.app
+- **Backend API**: https://campuspulse-28.onrender.com
+- **Database**: MongoDB Atlas (Cloud)
+- **Status**: 🟢 **Fully Operational**
 
-- `JWT_SECRET` - JWT signing secret (min 32 characters)
-- `JWT_REFRESH_SECRET` - Refresh token secret
-- `PORT` - Server port (default: 5000)
-- `NODE_ENV` - Environment (development/production)
-- `BCRYPT_SALT_ROUNDS` - Password hashing rounds
-- `MAX_FILE_SIZE` - Maximum upload size in bytes
-- `UPLOAD_PATH` - File upload directory
+### **Demo Accounts**
+Experience the full functionality with these test accounts:
 
-**Frontend Configuration:**
-- API base URL is configured in `src/services/api.js`
-- Default: `http://localhost:5000`
+#### 🔒 **Admin Account**
+- **Email**: `saathvikbachali@gmail.com`
+- **Password**: `admin123`
+- **Access**: Global analytics, user management, event approval
+
+#### 👨‍🏫 **Faculty/Organizer Account**
+- **Email**: `john.doe@faculty.campuspulse.com`
+- **Password**: `faculty123`
+- **Access**: Event creation, QR scanning, attendance tracking
+
+#### 🎓 **Student/Participant Account**
+- **Email**: `saathvikbachali@gmail.com`
+- **Password**: `student123456`
+- **Access**: Event registration, ticket generation, feedback submission
+
+---
+
+## ✨ Core Features Overview
+
+### 🎯 **Event Management System**
+- **Complete Event Lifecycle**: Create, approve, manage, and analyze events
+- **QR-Based E-Tickets**: Digital tickets with QR codes for seamless check-in
+- **Attendance Tracking**: Real-time QR-based attendance validation
+- **Event Registration**: Advanced registration with capacity management
+- **Volunteer Coordination**: Dedicated volunteer management system
+- **Image Gallery**: Event photo uploads and gallery management
+- **Live Updates**: Real-time event status and notification system
+
+### 👥 **Role-Based Access Control**
+- **🔴 Super Admin**: Complete system administration and global analytics
+- **🟠 Admin**: Event approval, user management, and system oversight
+- **🔵 Faculty/Organizer**: Event creation, management, and attendance tracking
+- **🟢 Student/Participant**: Event discovery, registration, and feedback
+
+### 🎟️ **QR-Based Ticketing System**
+- **Digital Ticket Generation**: Unique QR-coded tickets for each registration
+- **PDF Download**: Professional ticket downloads with event details
+- **Mobile-Friendly**: Optimized for smartphone display and scanning
+- **Security**: Encrypted ticket data with unique validation codes
+- **Duplicate Prevention**: Smart system prevents ticket duplication
+
+### 📱 **Attendance Management**
+- **QR Scanner**: Real-time QR code scanning for instant check-in
+- **Attendance Dashboard**: Live attendance tracking for organizers
+- **Manual Override**: Backup manual attendance marking capability
+- **Attendance Analytics**: Real-time attendance statistics and trends
+- **Check-in History**: Complete audit trail of all check-ins
+
+### 🔔 **Real-Time Notification System**
+- **Instant Notifications**: Real-time updates using Socket.IO
+- **Automated Reminders**: Smart email reminders 24h before events
+- **Notification Categories**: Event updates, approvals, system alerts
+- **Read/Unread Tracking**: Smart notification management
+- **Push Notifications**: Browser notification support
+
+### 📊 **Advanced Analytics Dashboard**
+- **Attendance Analytics**: Registration vs. attendance tracking
+- **Department Insights**: Department-wise participation statistics
+- **Global Analytics**: System-wide event and user analytics
+- **Feedback Analytics**: Enhanced rating trends and satisfaction metrics
+- **Real-time Dashboards**: Live data visualization with charts
+- **Export Capabilities**: CSV export for detailed reporting
+
+### 📝 **Content Management System**
+- **Blog Platform**: Rich content creation with media support
+- **Category Management**: Organized content by topics and tags
+- **User Contributions**: Student and faculty content submissions
+- **Content Moderation**: Admin approval workflow for published content
+- **Interactive Features**: Comment system and user engagement
+
+### 💬 **Enhanced Feedback System**
+- **Multi-Category Rating**: Organization, content, venue, and timing ratings
+- **Anonymous Feedback**: Optional anonymous submission capability
+- **Event-Specific Feedback**: Targeted feedback collection for each event
+- **Automated Requests**: Smart feedback requests after event completion
+- **Feedback Analytics**: Comprehensive satisfaction analysis and trends
+- **Admin Response System**: Complete feedback resolution workflow
+
+### 🤖 **AI Recommendation System**
+- **Personalized Event Recommendations**: ML-powered event suggestions
+- **Trending Events Detection**: Identify popular and trending events
+- **Similar Events Suggestion**: Find related events based on user preferences
+- **User Interest Profiling**: Build comprehensive user preference profiles
+- **ML-based Event Scoring**: Advanced algorithms for recommendation accuracy
+- **Recommendation Confidence Scoring**: Transparent recommendation quality
+- **AI Insights Dashboard**: Analytics on recommendation performance
+
+### 🎨 **Modern UI/UX Design**
+- **Responsive Design**: Mobile-first approach for all devices
+- **Professional Interface**: Clean, intuitive design with smooth animations
+- **Accessibility**: ARIA compliant with keyboard navigation support
+- **Dark Mode Ready**: Comfortable viewing in any lighting condition
+- **Touch-Friendly**: Optimized for mobile and tablet interactions
+- **Interactive Elements**: Hover effects, smooth transitions, and micro-interactions
+
+---
+
+## 📊 Complete Feature List (160 Features)
+
+### **🔐 Authentication & User Management (7 features)**
+1. User Registration
+2. User Login/Logout
+3. Password Reset
+4. Email Verification
+5. User Profile Management
+6. Role-Based Access Control
+7. User Dashboard
+
+### **📅 Event Management System (13 features)**
+8. Create Events
+9. Edit Events
+10. Delete Events
+11. Event Categories Management
+12. Event Status Management
+13. Event Approval Workflow
+14. Event Search & Filtering
+15. Event Details View
+16. Event Image Upload
+17. Event Registration Management
+18. Event Volunteer Management
+19. Event Capacity Management
+20. Event Schedule Management
+
+### **📋 Event Registration & Ticketing (10 features)**
+21. Event Registration (Free Events)
+22. Event Registration (Paid Events)
+23. Payment Gateway Integration
+24. Registration Form Validation
+25. Registration Confirmation
+26. QR Code Ticket Generation
+27. QR Code Ticket Validation
+28. QR Code Scanning
+29. Ticket Download/Email
+30. Registration Status Tracking
+
+### **📺 Live Streaming Features (8 features)**
+31. Live Stream Setup
+32. YouTube Integration
+33. Live Stream Controls
+34. Stream Viewer Count
+35. Live Stream Chat
+36. Stream Status Indicators
+37. Stream URL Validation
+38. Stream Recording Management
+
+### **🔔 Notification System (8 features)**
+39. Real-time Notifications
+40. Email Notifications
+41. Push Notifications
+42. Notification Categories
+43. Notification Preferences
+44. Mark as Read/Unread
+45. Notification History
+46. Bulk Notification Actions
+
+### **💬 Feedback System (8 features)**
+47. Event Feedback Submission
+48. Anonymous Feedback Option
+49. Rating System
+50. Feedback Management Dashboard
+51. Feedback Response System
+52. Feedback Status Tracking
+53. Feedback Analytics
+54. Feedback Export
+
+### **📝 Blog & Content Management (8 features)**
+55. Blog Post Creation
+56. Blog Post Editing
+57. Blog Image Upload
+58. Blog Categories
+59. Blog Comments System
+60. Blog Search
+61. Blog Publishing Workflow
+62. Blog Analytics
+
+### **🤖 AI Recommendation System (8 features)**
+63. Personalized Event Recommendations
+64. Trending Events Detection
+65. Similar Events Suggestion
+66. User Interest Profiling
+67. ML-based Event Scoring
+68. Recommendation Confidence Scoring
+69. AI Insights Dashboard
+70. Recommendation API
+
+### **📊 Analytics & Reporting (8 features)**
+71. Event Attendance Analytics
+72. User Registration Analytics
+73. Event Performance Metrics
+74. Dashboard Analytics
+75. Export Analytics Data
+76. Real-time Statistics
+77. Event ROI Analysis
+78. User Engagement Metrics
+
+### **Additional Feature Categories (82 more features)**
+79-160. Including User Interactions, Search & Discovery, Mobile Features, Administrative Tools, Security Features, Payment Systems, Communication Tools, UI/UX Components, and Data Management capabilities.
+
+---
+
+## 🛠️ Technology Stack
+
+### **Frontend (React.js)**
+- **React 18** with Hooks and Context API
+- **React Router v6** for navigation
+- **Vite** for fast development and building
+- **Modern CSS** with CSS Grid and Flexbox
+- **Font Awesome** for icons
+- **Socket.IO Client** for real-time features
+- **Chart.js** for analytics visualization
+- **QR Code Libraries** for ticket generation
+
+### **Backend (Node.js)**
+- **Express.js** web framework
+- **MongoDB** with Mongoose ODM
+- **JWT Authentication** with refresh tokens
+- **Multer** for file uploads
+- **Socket.IO** for real-time communication
+- **bcrypt** for password security
+- **Express Validator** for input validation
+- **Natural** for AI/ML text processing
+
+### **Database & Storage**
+- **MongoDB** - Primary database
+- **Local File Storage** - Image and file uploads
+- **Indexed Collections** - Optimized queries
+- **Data Validation** - Schema-level constraints
+
+---
+
+## 🚀 Installation & Setup
+
+### **Prerequisites**
+- **Node.js** (v16.0.0 or higher)
+- **MongoDB** (v4.4 or higher)
+- **npm** or **yarn** package manager
+
+### **1. Clone the Repository**
+```bash
+git clone https://github.com/saathvikb2005/CampusPulse.git
+cd CampusPulse
+```
+
+### **2. Backend Setup**
+```bash
+cd Backend
+npm install
+```
+
+Create `.env` file in Backend directory:
+```env
+# Database Configuration
+MONGODB_URI=mongodb://127.0.0.1:27017/campuspulse
+
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_at_least_32_characters_long
+JWT_REFRESH_SECRET=your_refresh_secret_key_different_from_main_secret
+JWT_EXPIRE=7d
+JWT_REFRESH_EXPIRE=30d
+
+# Security
+BCRYPT_SALT_ROUNDS=12
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Email Configuration (Optional)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+
+# File Upload Configuration
+MAX_FILE_SIZE=5242880
+UPLOAD_PATH=./uploads
+```
+
+### **3. Frontend Setup**
+```bash
+cd ../FrontEnd
+npm install
+```
+
+### **4. Database Initialization**
+```bash
+cd ../Backend
+# Create admin user (optional)
+node create-admin-user.js
+
+# Populate with sample data (optional)
+node populate-database.js
+```
+
+### **5. Running the Application**
+
+**Start Backend Server:**
+```bash
+cd Backend
+npm start
+```
+🚀 Backend runs on: http://localhost:5000
+
+**Start Frontend Development Server:**
+```bash
+cd FrontEnd
+npm run dev
+```
+🌐 Frontend runs on: http://localhost:5173
+
+---
+
+## 📋 Project Structure
+
+```
+CampusPulse/
+├── Backend/                    # Node.js API Server
+│   ├── src/
+│   │   ├── app.js             # Express application setup
+│   │   ├── config/
+│   │   │   └── database.js    # MongoDB connection
+│   │   ├── controllers/       # Request handlers
+│   │   │   ├── authController.js
+│   │   │   ├── eventController.js
+│   │   │   ├── userController.js
+│   │   │   ├── blogController.js
+│   │   │   ├── feedbackController.js
+│   │   │   ├── notificationController.js
+│   │   │   ├── analyticsController.js
+│   │   │   └── adminController.js
+│   │   ├── middleware/         # Custom middleware
+│   │   │   ├── auth.js        # Authentication middleware
+│   │   │   ├── validation.js  # Input validation
+│   │   │   └── errorHandler.js
+│   │   ├── models/            # Database schemas
+│   │   │   ├── User.js
+│   │   │   ├── Event.js
+│   │   │   ├── Blog.js
+│   │   │   ├── Feedback.js
+│   │   │   └── Notification.js
+│   │   ├── routes/            # API endpoints
+│   │   │   ├── authRoutes.js
+│   │   │   ├── eventRoutes.js
+│   │   │   ├── userRoutes.js
+│   │   │   ├── blogRoutes.js
+│   │   │   ├── feedbackRoutes.js
+│   │   │   ├── notificationRoutes.js
+│   │   │   ├── analyticsRoutes.js
+│   │   │   └── adminRoutes.js
+│   │   ├── services/          # Business logic
+│   │   │   ├── notificationService.js
+│   │   │   ├── recommendationService.js
+│   │   │   └── socketService.js
+│   │   └── utils/             # Helper functions
+│   │       ├── tokenHelpers.js
+│   │       ├── emailService.js
+│   │       ├── fileUpload.js
+│   │       └── responseHelpers.js
+│   ├── uploads/               # File storage
+│   │   ├── avatars/          # User profile pictures
+│   │   └── events/           # Event images
+│   └── package.json
+│
+├── FrontEnd/                   # React Application
+│   ├── public/
+│   │   ├── manifest.json      # PWA manifest
+│   │   └── sw.js             # Service worker
+│   ├── src/
+│   │   ├── components/        # Reusable components
+│   │   │   ├── Navigation.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   ├── Layout.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── QRScanner.jsx
+│   │   │   ├── QRTicket.jsx
+│   │   │   ├── EventRecommendations.jsx
+│   │   │   └── Toast.jsx
+│   │   ├── pages/            # Page components
+│   │   │   ├── HomePage.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── Admin.jsx
+│   │   │   ├── Blogs.jsx
+│   │   │   ├── Feedback.jsx
+│   │   │   ├── Notifications.jsx
+│   │   │   └── events/
+│   │   │       ├── EventGallery.jsx
+│   │   │       ├── EventManagement.jsx
+│   │   │       ├── PastEvents.jsx
+│   │   │       ├── PresentEvents.jsx
+│   │   │       └── UpcomingEvents.jsx
+│   │   ├── services/         # API integration
+│   │   │   └── api.js        # Centralized API service
+│   │   ├── utils/            # Helper functions
+│   │   │   ├── auth.js       # Authentication utilities
+│   │   │   └── toastUtils.js # Notification utilities
+│   │   ├── App.jsx           # Main app component
+│   │   └── main.jsx          # Application entry point
+│   └── package.json
+│
+└── CAMPUSPULSE_DOCUMENTATION.md  # This file
+```
+
+---
+
+## 📚 API Documentation
+
+### **Authentication Endpoints**
+```
+POST /api/auth/register     # User registration
+POST /api/auth/login        # User login
+POST /api/auth/refresh      # Refresh access token
+GET  /api/auth/me          # Get current user
+POST /api/auth/logout      # User logout
+POST /api/auth/forgot      # Password reset request
+POST /api/auth/reset       # Password reset confirmation
+```
+
+### **Event Management**
+```
+GET    /api/events              # Get all events
+POST   /api/events              # Create new event
+GET    /api/events/:id          # Get specific event
+PUT    /api/events/:id          # Update event
+DELETE /api/events/:id          # Delete event
+GET    /api/events/upcoming     # Get upcoming events
+GET    /api/events/past         # Get past events
+GET    /api/events/present      # Get current events
+POST   /api/events/:id/register # Register for event
+```
+
+### **QR Ticketing System**
+```
+POST /api/qr/generate/:eventId    # Generate QR ticket
+POST /api/qr/validate             # Validate QR code
+GET  /api/qr/tickets/my-tickets   # Get user's tickets
+GET  /api/qr/analytics/:eventId   # Get QR analytics
+```
+
+### **AI Recommendations**
+```
+GET /api/ai/recommendations/:userId  # Get personalized recommendations
+GET /api/ai/trending                # Get trending events
+GET /api/ai/similar/:eventId        # Get similar events
+GET /api/ai/insights/:eventId       # Get AI insights
+GET /api/ai/health                  # AI service health check
+```
+
+### **Notifications**
+```
+GET    /api/notifications           # Get user notifications
+GET    /api/notifications/count     # Get unread count
+PUT    /api/notifications/:id/read  # Mark as read
+PUT    /api/notifications/mark-all-read # Mark all as read
+```
+
+### **Analytics**
+```
+GET /api/analytics/dashboard        # Get dashboard analytics
+GET /api/analytics/events           # Get event analytics
+GET /api/analytics/users            # Get user analytics
+GET /api/analytics/feedback         # Get feedback analytics
+```
+
+---
 
 ## 🔐 Security Features
 
@@ -596,120 +494,20 @@ CampusPulse/##  Security Features
 - **CORS Protection** with configurable origins
 - **Rate Limiting** to prevent abuse
 - **XSS Protection** with input sanitization
-- **SQL Injection Prevention** with parameterized queries
+- **QR Code Encryption** for ticket security
+- **Session Management** with secure cookies
 
-## 📚 API Documentation
-
-### Authentication Endpoints
-```
-POST /api/auth/register     # User registration
-POST /api/auth/login        # User login
-POST /api/auth/refresh      # Refresh access token
-GET  /api/auth/me          # Get current user
-POST /api/auth/logout      # User logout
-POST /api/auth/forgot      # Password reset request
-POST /api/auth/reset       # Password reset confirmation
-```
-
-### Event Management
-```
-GET    /api/events              # Get all events
-POST   /api/events              # Create new event
-GET    /api/events/:id          # Get specific event
-PUT    /api/events/:id          # Update event
-DELETE /api/events/:id          # Delete event
-GET    /api/events/upcoming     # Get upcoming events
-GET    /api/events/past         # Get past events
-GET    /api/events/present      # Get current events
-POST   /api/events/:id/register # Register for event
-GET    /api/events/user/created # Get user's created events
-```
-
-### User Management
-```
-GET  /api/users/profile           # Get user profile
-PUT  /api/users/profile          # Update profile
-PUT  /api/users/change-password  # Change password
-POST /api/users/upload-avatar    # Upload profile picture
-GET  /api/users                  # Get all users (admin)
-```
-
-### Notifications
-```
-GET    /api/notifications           # Get user notifications
-GET    /api/notifications/count     # Get unread count
-PUT    /api/notifications/:id/read  # Mark as read
-PUT    /api/notifications/mark-all-read # Mark all as read
-POST   /api/notifications          # Create notification (admin)
-```
-
-### Blog System
-```
-GET    /api/blogs        # Get all blogs
-POST   /api/blogs        # Create new blog
-GET    /api/blogs/:id    # Get specific blog
-PUT    /api/blogs/:id    # Update blog
-DELETE /api/blogs/:id    # Delete blog
-```
-
-### Feedback System
-```
-GET    /api/feedback           # Get all feedback (admin)
-POST   /api/feedback           # Submit feedback
-GET    /api/feedback/my-feedback # Get user's feedback
-PUT    /api/feedback/:id/status  # Update feedback status (admin)
-```
-
-### File Upload
-```
-POST /api/upload/avatar       # Upload user avatar
-POST /api/upload/event-image  # Upload event image
-POST /api/upload/blog-image   # Upload blog image
-```
-
-## 🎨 UI Components & Features
-
-### Navigation & Layout
-- **Responsive Navigation** with mobile hamburger menu
-- **Breadcrumb Navigation** for deep pages
-- **Sticky Header** with user profile dropdown
-- **Footer** with quick links and social media
-
-### Event Management Interface
-- **Event Cards** with image previews and quick actions
-- **Event Calendar** with month/week/day views
-- **Registration Modal** with form validation
-- **Image Upload** with drag-and-drop support
-- **Filter & Search** functionality
-
-### User Dashboard
-- **Profile Management** with avatar upload
-- **Activity Timeline** showing user actions
-- **Notification Center** with real-time updates
-- **Quick Actions** for common tasks
-
-### Admin Panel
-- **Analytics Dashboard** with charts and metrics
-- **User Management** with role assignment
-- **Event Approval** workflow
-- **Feedback Management** system
-- **System Health** monitoring
-
-### Responsive Design
-- **Mobile-First** approach
-- **Tablet Optimization** for medium screens
-- **Desktop Enhancement** for large displays
-- **Touch-Friendly** interactions
+---
 
 ## 🚀 Deployment
 
-### Production Checklist
+### **Production Setup**
 
-1. **Environment Setup**
+1. **Environment Configuration**
    ```env
    NODE_ENV=production
-   MONGODB_URI=mongodb+srv://your-cluster.mongodb.net/campuspulse
-   JWT_SECRET=your_super_secure_production_secret
+   MONGODB_URI=your_production_mongodb_uri
+   JWT_SECRET=strong_production_secret
    ```
 
 2. **Frontend Build**
@@ -718,66 +516,44 @@ POST /api/upload/blog-image   # Upload blog image
    npm run build
    ```
 
-3. **Backend Optimization**
+3. **Backend Start**
    ```bash
    cd Backend
-   npm install --production
    npm start
    ```
 
-### Deployment Platforms
-
-**Recommended Hosting:**
-- **Frontend**: Vercel, Netlify, or GitHub Pages
+### **Recommended Hosting**
+- **Frontend**: Vercel, Netlify, GitHub Pages
 - **Backend**: Heroku, Railway, DigitalOcean App Platform
 - **Database**: MongoDB Atlas (recommended)
 - **File Storage**: AWS S3, Cloudinary, or local storage
 
-**Server Requirements:**
-- **CPU**: 1 vCPU minimum (2+ recommended)
-- **RAM**: 512MB minimum (1GB+ recommended)
-- **Storage**: 10GB minimum for file uploads
-- **Network**: HTTPS support required
+---
 
 ## 🤝 Contributing
 
 We welcome contributions! Here's how to get started:
 
 1. **Fork the Repository**
-   ```bash
-   git fork https://github.com/saathvikb2005/CampusPulse.git
-   ```
+2. **Create Feature Branch** (`git checkout -b feature/amazing-feature`)
+3. **Make Changes** following existing code style
+4. **Commit Changes** (`git commit -m "feat: add amazing feature"`)
+5. **Push and Create PR** (`git push origin feature/amazing-feature`)
 
-2. **Create Feature Branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
+### **Development Guidelines**
+- Use ESLint for code linting
+- Follow React Hooks patterns
+- Write descriptive commit messages
+- Add JSDoc comments for functions
+- Test on multiple devices
 
-3. **Make Changes**
-   - Follow existing code style
-   - Add tests for new features
-   - Update documentation
-
-4. **Commit Changes**
-   ```bash
-   git commit -m "feat: add amazing feature"
-   ```
-
-5. **Push and Create PR**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-
-### Development Guidelines
-- Use **ESLint** for code linting
-- Follow **React Hooks** patterns
-- Write **descriptive commit messages**
-- Add **JSDoc comments** for functions
-- Test on **multiple devices**
+---
 
 ## 📄 License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
 
 ## 👨‍💻 Author
 
@@ -786,14 +562,18 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 📧 Email: saathvikbachali@gmail.com
 - 🚀 Project: [CampusPulse](https://github.com/saathvikb2005/CampusPulse)
 
+---
+
 ## 🆘 Support
 
 Need help? We've got you covered:
 
-1. **📖 Documentation**: Check this README and inline code comments
+1. **📖 Documentation**: Check this guide and inline code comments
 2. **🐛 Issues**: [GitHub Issues](https://github.com/saathvikb2005/CampusPulse/issues)
 3. **💡 Feature Requests**: Open an issue with the "enhancement" label
 4. **❓ Questions**: Use GitHub Discussions for community support
+
+---
 
 ## 🙏 Acknowledgments
 
@@ -812,5 +592,7 @@ Need help? We've got you covered:
 *CampusPulse - Connecting, Engaging, and Empowering Campus Life*
 
 [![⭐ Star this project](https://img.shields.io/github/stars/saathvikb2005/CampusPulse?style=social)](https://github.com/saathvikb2005/CampusPulse)
+
+**🏆 Ready for Academic Evaluation & Industry Standards**
 
 </div>

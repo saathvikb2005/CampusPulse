@@ -44,6 +44,36 @@
   gap: 20px;
 }
 
+.register-title {
+  position: relative;
+}
+
+.back-to-event-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.back-to-event-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.back-to-event-btn i {
+  font-size: 0.8rem;
+}
+
 .register-title h1 {
   font-size: 2.5rem;
   font-weight: 700;
@@ -420,11 +450,37 @@
 }
 
 /* Sessions Grid */
+.sessions-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 16px;
+}
+
+.select-all-btn {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.select-all-btn:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
 .sessions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .session-btn {
@@ -436,16 +492,54 @@
   transition: all 0.3s ease;
   font-size: 0.9rem;
   background: white;
+  position: relative;
 }
 
 .session-btn:hover {
   border-color: #cbd5e0;
+  background: #f7fafc;
+  transform: translateY(-1px);
 }
 
 .session-btn.selected {
   border-color: #667eea;
   background: #667eea;
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+}
+
+.session-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.session-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0;
+}
+
+.session-error i {
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
+.sessions-selected-count {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #667eea;
+  font-weight: 500;
+  margin-top: 8px;
 }
 
 /* Payment Methods */
@@ -751,5 +845,148 @@
   .stat-item {
     padding: 6px 12px;
     font-size: 0.8rem;
+  }
+}
+
+/* Free Event Specific Styles */
+.price-item.free-event {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.free-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Update progress steps for free events */
+.progress-steps .step {
+  transition: all 0.3s ease;
+}
+
+/* Free event registration button styling */
+.btn.btn-success .fas.fa-check {
+  margin-right: 8px;
+}
+
+/* Ticket options for free events */
+.ticket-option .ticket-price {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.ticket-option .ticket-price:after {
+  content: " (FREE)";
+  font-size: 0.8em;
+  color: #6b7280;
+}
+
+/* Form step modifications for free events */
+.form-progress .progress-steps .step:last-child {
+  display: var(--show-payment-step, block);
+}
+
+/* Animation for free event badge */
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.free-badge {
+  animation: pulse-green 2s infinite;
+}
+
+/* Cached Data Notice Styles */
+.cached-data-notice {
+  background: linear-gradient(135deg, #fef3c0 0%, #f9f1c6 100%);
+  border-bottom: 2px solid #f59e0b;
+  padding: 12px 0;
+  position: relative;
+}
+
+.cached-notice-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.cached-notice-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #92400e;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.cached-notice-text i {
+  color: #f59e0b;
+  font-size: 16px;
+}
+
+.refresh-button {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  /* min-width: fit-content; */
+}
+
+.refresh-button:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
+}
+
+.refresh-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+}
+
+.refresh-button i {
+  font-size: 12px;
+}
+
+/* Responsive design for cached notice */
+@media (max-width: 768px) {
+  .cached-notice-content {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .cached-notice-text {
+    justify-content: center;
+  }
+  
+  .refresh-button {
+    align-self: center;
   }
 }

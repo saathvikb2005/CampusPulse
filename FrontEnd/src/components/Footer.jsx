@@ -77,19 +77,19 @@ const Footer = () => {
                   <div className="contact-icon">
                     <i className="fas fa-envelope"></i>
                   </div>
-                  <span>support@campuspulse.com</span>
+                  <span>saathvikbachali@gmail.com</span>
                 </div>
                 <div className="contact-item">
                   <div className="contact-icon">
                     <i className="fas fa-phone"></i>
                   </div>
-                  <span>+1 (555) 123-4567</span>
+                  <span>+91 7075299255</span>
                 </div>
                 <div className="contact-item">
                   <div className="contact-icon">
                     <i className="fas fa-map-marker-alt"></i>
                   </div>
-                  <span>Campus Hub, University Center</span>
+                  <span>Vignan's Foundation for Science, Technology and Research, Vadlamudi, Guntur, Andhra Pradesh, India</span>
                 </div>
               </div>
             </div>

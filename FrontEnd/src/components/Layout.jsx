@@ -1,13 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navigation from './Navigation';
 import Footer from './Footer';
 import './Layout.css';
 
 const Layout = ({ children, showNavigation = true, showFooter = true }) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="app-layout">
       {showNavigation && (
-        <div className="navigation-wrapper">
+        <div className={`navigation-wrapper ${isScrolled ? 'scrolled' : ''}`}>
           <Navigation />
         </div>
       )}

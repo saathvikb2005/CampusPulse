@@ -1,118 +1,189 @@
-/* Preferences Enhancement CSS */
+/* Enhanced Comprehensive Theme System for CampusPulse */
 
-.preferences-info {
-  margin-bottom: 2rem;
+:root {
+  /* Light Theme Colors (Default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
+  --border-color: #dee2e6;
+  --accent-color: #4361ee;
+  --accent-hover: #3a56d4;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --info-color: #17a2b8;
+  
+  /* Semantic colors for components */
+  --info-light: #e3f2fd;
+  --info-lighter: #f3e5f5;
+  --info-border: #2196f3;
+  --info-text: #1976d2;
+  
+  /* Shadows */
+  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+  
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
 }
 
-.info-banner {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-  border: 1px solid #2196f3;
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
-  color: #1976d2;
+/* Dark Theme */
+body.theme-dark {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --border-color: #404040;
+  --accent-color: #6366f1;
+  --accent-hover: #5b5ee0;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #06b6d4;
+  
+  /* Semantic colors for dark mode */
+  --info-light: #1e3a8a;
+  --info-lighter: #3730a3;
+  --info-border: #3b82f6;
+  --info-text: #93c5fd;
+  
+  /* Enhanced shadows for dark theme */
+  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.6);
 }
 
-.info-banner i {
-  color: #2196f3;
-  font-size: 1.1rem;
+/* Auto Theme - System Preference */
+@media (prefers-color-scheme: dark) {
+  body.theme-auto {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --text-muted: #808080;
+    --border-color: #404040;
+    --accent-color: #6366f1;
+    --accent-hover: #5b5ee0;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #06b6d4;
+    
+    --info-light: #1e3a8a;
+    --info-lighter: #3730a3;
+    --info-border: #3b82f6;
+    --info-text: #93c5fd;
+    
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.6);
+  }
 }
 
-.preference-description {
-  font-size: 0.85rem;
-  color: #666;
-  margin-bottom: 1rem;
-  margin-top: 0.5rem;
-}
-
-.preferences-section {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.preferences-section h4 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  color: #495057;
-}
-
-.preference-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.preference-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.preference-item:hover {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.preference-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #4361ee;
-}
-
-.preference-item select {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background-color: white;
-  font-size: 0.9rem;
-  min-width: 120px;
-}
-
-.preference-item label {
-  margin: 0;
-  font-weight: 500;
-  color: #495057;
-  min-width: 80px;
-}
-
-/* Dark theme for preferences */
-body.theme-dark .preferences-section {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-body.theme-dark .preferences-section h4 {
-  color: var(--text-primary);
-}
-
-body.theme-dark .preference-description {
-  color: var(--text-secondary);
-}
-
-body.theme-dark .preference-item label {
-  color: var(--text-primary);
-}
-
-body.theme-dark .preference-item select {
+/* Enhanced Theme Application with Better Specificity */
+body.theme-dark,
+body.theme-auto {
+  /* Base element styling */
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  
+  /* Enhanced component styling with data attributes */
+  [class*="card"],
+  [class*="section"],
+  [class*="panel"],
+  [class*="container"] {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+  
+  /* Form elements with enhanced focus states */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--border-color) !important;
+    transition: all var(--transition-normal) !important;
+  }
+  
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 25%, transparent) !important;
+    outline: none !important;
+  }
+  
+  /* Enhanced button states */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)) !important;
+    border: none !important;
+    color: white !important;
+    transition: all var(--transition-normal) !important;
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md) !important;
+  }
 }
 
-body.theme-dark .info-banner {
-  background: linear-gradient(135deg, #1a237e 0%, #4a148c 100%);
-  border-color: #3f51b5;
-  color: #e8eaf6;
+/* Smooth Theme Transitions */
+.theme-transition * {
+  transition: background-color var(--transition-normal) ease,
+              color var(--transition-normal) ease,
+              border-color var(--transition-normal) ease,
+              box-shadow var(--transition-normal) ease !important;
 }
 
-body.theme-dark .info-banner i {
-  color: #7986cb;
+/* Enhanced Scrollbar Styling */
+body.theme-dark::-webkit-scrollbar,
+body.theme-auto::-webkit-scrollbar {
+  width: 12px;
+}
+
+body.theme-dark::-webkit-scrollbar-track,
+body.theme-auto::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+body.theme-dark::-webkit-scrollbar-thumb,
+body.theme-auto::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  border-radius: 6px;
+  border: 2px solid var(--bg-secondary);
+}
+
+body.theme-dark::-webkit-scrollbar-thumb:hover,
+body.theme-auto::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--accent-hover), var(--accent-color));
+}
+
+/* Firefox Scrollbar */
+body.theme-dark,
+body.theme-auto {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-color) var(--bg-secondary);
+}
+
+/* Print Optimization */
+@media print {
+  body.theme-dark,
+  body.theme-auto {
+    --bg-primary: #ffffff !important;
+    --bg-secondary: #f8f8f8 !important;
+    --text-primary: #000000 !important;
+    --text-secondary: #333333 !important;
+  }
 }

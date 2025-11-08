@@ -33,13 +33,21 @@ const EventManagement = () => {
     image: '',
     youtubeStreamUrl: '',
     streamTitle: '',
-    enableLiveStream: false
+    enableLiveStream: false,
+    isFreeEvent: true,
+    registrationFee: 0
   });
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageUploadMethod, setImageUploadMethod] = useState('upload');
+  const [imageUrl, setImageUrl] = useState('');
+  const [participants, setParticipants] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [loadingVolunteers, setLoadingVolunteers] = useState(false);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -74,26 +82,39 @@ const EventManagement = () => {
           return;
         }
         
-        const userEvents = eventsData.map(event => ({
-          id: event._id,
-          title: event.title,
-          date: event.startDate,
-          status: getEventStatus(event.startDate, event.endDate),
-          registrations: event.registrations?.length || 0,
-          volunteers: event.volunteers?.length || 0,
-          type: event.type || 'individual',
-          category: event.category || 'technical',
-          description: event.description,
-          location: event.location,
-          maxParticipants: event.maxParticipants,
-          organizer: event.organizer?.name || getCurrentUser()?.name,
-          startDate: event.startDate,
-          endDate: event.endDate,
-          image: event.image,
-          youtubeStreamUrl: event.youtubeStreamUrl,
-          streamTitle: event.streamTitle,
-          enableLiveStream: event.enableLiveStream
-        }));
+        const userEvents = eventsData.map(event => {
+          // Create a combined datetime for status calculation
+          const eventDateTime = event.date && event.startTime ? 
+            new Date(`${event.date}T${event.startTime}`) : null;
+          const endDateTime = event.date && event.endTime ? 
+            new Date(`${event.date}T${event.endTime}`) : null;
+            
+          return {
+            id: event._id,
+            title: event.title,
+            date: eventDateTime, // Combined datetime for display/status
+            status: getEventStatus(eventDateTime, endDateTime),
+            registrations: event.registrations?.length || 0,
+            volunteers: event.volunteers?.length || 0,
+            type: event.isTeamEvent ? 'team' : 'individual',
+            category: event.category || 'technical',
+            description: event.description,
+            location: event.venue, // Map venue to location for display
+            maxParticipants: event.maxParticipants,
+            organizer: event.organizer?.name || getCurrentUser()?.name,
+            // Keep original backend fields for editing
+            originalDate: event.date, // Keep the original date string
+            venue: event.venue,
+            isTeamEvent: event.isTeamEvent,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            images: event.images,
+            prerequisites: event.prerequisites,
+            agenda: event.agenda,
+            tags: event.tags,
+            registrationDeadline: event.registrationDeadline
+          };
+        });
         setEvents(userEvents);
       } else {
         console.log('API response not successful or no data:', response);
@@ -156,11 +177,11 @@ const EventManagement = () => {
             title: event.title || '',
             description: event.description || '',
             category: event.category || 'academic',
-            type: event.type || 'individual',
-            date: formatDateForInput(event.startDate),
-            time: formatTimeForInput(event.startDate),
-            endTime: formatTimeForInput(event.endDate),
-            location: event.location || '',
+            type: event.isTeamEvent ? 'team' : 'individual', // Convert boolean back to type
+            date: event.date ? new Date(event.date).toISOString().split('T')[0] : '',
+            time: event.startTime || '',
+            endTime: event.endTime || '',
+            location: event.venue || '',
             maxParticipants: event.maxParticipants || '',
             volunteerSpots: event.volunteerSpots || '',
             prerequisites: event.prerequisites || [''],
@@ -168,10 +189,12 @@ const EventManagement = () => {
             tags: event.tags || [''],
             registrationDeadline: formatDateForInput(event.registrationDeadline),
             teamSize: event.teamSize || { min: 2, max: 5 },
-            image: event.image || '',
+            image: event.images && event.images[0] ? event.images[0].url : '',
             youtubeStreamUrl: event.youtubeStreamUrl || '',
             streamTitle: event.streamTitle || '',
-            enableLiveStream: event.enableLiveStream || false
+            enableLiveStream: event.enableLiveStream || false,
+            isFreeEvent: event.isFreeEvent !== undefined ? event.isFreeEvent : true,
+            registrationFee: event.registrationFee || 0
           });
           
           setEditingEvent(event);
@@ -260,7 +283,29 @@ const EventManagement = () => {
   const removeImage = () => {
     setSelectedImage(null);
     setImagePreview(null);
+    setImageUrl('');
     setEventForm(prev => ({ ...prev, image: '' }));
+  };
+
+  const handleImageUrl = () => {
+    if (!imageUrl.trim()) {
+      showErrorToast('Please enter a valid image URL');
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(imageUrl);
+    } catch {
+      showErrorToast('Please enter a valid URL');
+      return;
+    }
+
+    // Set the URL as preview and form data
+    setImagePreview(imageUrl);
+    setSelectedImage(null); // Clear any selected file
+    setEventForm(prev => ({ ...prev, image: imageUrl }));
+    showSuccessToast('Image URL added successfully');
   };
 
   const handleSubmit = async (e) => {
@@ -269,8 +314,8 @@ const EventManagement = () => {
     try {
       setLoading(true);
       // Validate form
-      if (!eventForm.title || !eventForm.date || !eventForm.time || !eventForm.endTime || !eventForm.location) {
-        showErrorToast('Please fill in all required fields (title, date, start time, end time, and location)');
+      if (!eventForm.title || !eventForm.description || !eventForm.date || !eventForm.time || !eventForm.endTime || !eventForm.location) {
+        showErrorToast('Please fill in all required fields (title, description, date, start time, end time, and location)');
         return;
       }
 
@@ -307,23 +352,39 @@ const EventManagement = () => {
         title: eventForm.title,
         description: eventForm.description,
         category: eventForm.category,
-        type: eventForm.type,
-        date: eventForm.date, // Just the date part
+        date: new Date(eventForm.date + 'T00:00:00'), // Ensure proper date format without timezone issues
         startTime: eventForm.time, // Time in HH:MM format
         endTime: eventForm.endTime, // Time in HH:MM format
         venue: eventForm.location, // venue field instead of location
         maxParticipants: parseInt(eventForm.maxParticipants) || null,
-        volunteerSpots: parseInt(eventForm.volunteerSpots) || 0,
-        prerequisites: eventForm.prerequisites.filter(p => p.trim()),
-        agenda: eventForm.agenda.filter(a => a.trim()),
-        tags: eventForm.tags.filter(t => t.trim()),
-        registrationDeadline: eventForm.registrationDeadline || null,
-        teamSize: eventForm.type === 'team' ? eventForm.teamSize : null,
-        image: imageUrl || null,
-        liveStreamUrl: eventForm.enableLiveStream ? eventForm.youtubeStreamUrl : null,
-        streamTitle: eventForm.enableLiveStream ? eventForm.streamTitle : null,
-        isLive: false // Initially not live
+        registrationDeadline: eventForm.registrationDeadline ? new Date(`${eventForm.registrationDeadline}T23:59:59.000Z`) : null,
+        isTeamEvent: eventForm.type === 'team', // Backend expects 'isTeamEvent' boolean
+        images: imageUrl ? [{ url: imageUrl, caption: eventForm.title }] : [],
+        isFreeEvent: eventForm.isFreeEvent,
+        registrationFee: eventForm.isFreeEvent ? 0 : (parseFloat(eventForm.registrationFee) || 0)
       };
+
+      // Add streaming fields if live stream is enabled
+      if (eventForm.enableLiveStream && eventForm.youtubeStreamUrl) {
+        eventData.streamingUrl = eventForm.youtubeStreamUrl;
+        eventData.liveStreamUrl = eventForm.youtubeStreamUrl; // For PresentEvents compatibility
+        eventData.liveStream = {
+          isLive: true,
+          streamUrl: eventForm.youtubeStreamUrl,
+          streamTitle: eventForm.streamTitle || eventForm.title
+        };
+      }
+
+      // Only include optional fields if they have values
+      if (eventForm.prerequisites && eventForm.prerequisites.length > 0) {
+        eventData.prerequisites = eventForm.prerequisites.filter(p => p.trim());
+      }
+      if (eventForm.agenda && eventForm.agenda.length > 0) {
+        eventData.agenda = eventForm.agenda.filter(a => a.trim());
+      }
+      if (eventForm.tags && eventForm.tags.length > 0) {
+        eventData.tags = eventForm.tags.filter(t => t.trim());
+      }
 
       const response = await eventAPI.create(eventData);
       
@@ -350,7 +411,9 @@ const EventManagement = () => {
           image: '',
           youtubeStreamUrl: '',
           streamTitle: '',
-          enableLiveStream: false
+          enableLiveStream: false,
+          isFreeEvent: true,
+          registrationFee: 0
         });
 
         // Reset image upload
@@ -366,7 +429,16 @@ const EventManagement = () => {
 
     } catch (error) {
       console.error('Error creating event:', error);
-      showErrorToast('Failed to create event. Please try again.');
+      
+      // Handle validation errors specifically
+      if (error.response && error.response.errors) {
+        const validationErrors = Object.values(error.response.errors).flat().join(', ');
+        showErrorToast(`Validation failed: ${validationErrors}`);
+      } else if (error.message) {
+        showErrorToast(error.message);
+      } else {
+        showErrorToast('Failed to create event. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -414,16 +486,45 @@ const EventManagement = () => {
 
   const exportVolunteers = async (eventId) => {
     try {
-      // In a real implementation, you would fetch volunteers from API
-      // For now, using mock data
-      const volunteerData = [
-        ['Name', 'Email', 'Phone', 'Department', 'Registration Date', 'Skills'],
-        ['Alice Johnson', 'alice@example.com', '9876543212', 'Electronics', '2025-10-01', 'Event Management'],
-        ['Bob Wilson', 'bob@example.com', '9876543213', 'Mechanical', '2025-10-02', 'Technical Support'],
-      ];
+      // If we already have volunteers data, use it; otherwise fetch it
+      let volunteersToExport = volunteers;
+      
+      if (!volunteersToExport || volunteersToExport.length === 0 || selectedEvent !== eventId) {
+        const response = await eventAPI.getVolunteerRegistrations(eventId);
+        if (response.success && response.data) {
+          volunteersToExport = response.data;
+        } else {
+          showErrorToast('Failed to fetch volunteer data for export');
+          return;
+        }
+      }
 
-      const csvContent = volunteerData.map(row => row.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
+      if (volunteersToExport.length === 0) {
+        showErrorToast('No volunteer data to export');
+        return;
+      }
+
+      // Create CSV headers
+      const headers = ['Name', 'Email', 'Phone', 'University', 'Skills/Experience', 'Registration Date', 'Status'];
+      
+      // Convert volunteer data to CSV rows
+      const csvRows = volunteersToExport.map(volunteer => [
+        volunteer.fullName || `${volunteer.firstName || ''} ${volunteer.lastName || ''}`.trim(),
+        volunteer.email || '',
+        volunteer.phone || '',
+        volunteer.university || '',
+        volunteer.skills || volunteer.experience || '',
+        volunteer.registeredAt ? new Date(volunteer.registeredAt).toLocaleDateString() : 
+        volunteer.createdAt ? new Date(volunteer.createdAt).toLocaleDateString() : '',
+        volunteer.status || 'Registered'
+      ]);
+
+      // Combine headers and data
+      const csvContent = [headers, ...csvRows].map(row => 
+        row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')
+      ).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -439,6 +540,7 @@ const EventManagement = () => {
   };
 
   const handleEditEvent = (event) => {
+    console.log('Editing event:', event); // Debug log
     setEditingEvent(event);
     
     // Use the same date formatting functions as loadEventForEdit
@@ -448,21 +550,15 @@ const EventManagement = () => {
       return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
     };
     
-    const formatTimeForInput = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return isNaN(date.getTime()) ? '' : date.toTimeString().slice(0, 5);
-    };
-    
-    setEventForm({
+    const formData = {
       title: event.title || '',
       description: event.description || '',
       category: event.category || 'technical',
-      type: event.type || 'individual',
-      date: formatDateForInput(event.startDate),
-      time: formatTimeForInput(event.startDate),
-      endTime: formatTimeForInput(event.endDate),
-      location: event.location || '',
+      type: event.isTeamEvent ? 'team' : 'individual', // Convert boolean back to type
+      date: event.originalDate ? new Date(event.originalDate).toISOString().split('T')[0] : '',
+      time: event.startTime || '',
+      endTime: event.endTime || '',
+      location: event.venue || '',
       maxParticipants: event.maxParticipants || '',
       volunteerSpots: event.volunteerSpots || '',
       prerequisites: event.prerequisites || [''],
@@ -470,17 +566,29 @@ const EventManagement = () => {
       tags: event.tags || [''],
       registrationDeadline: formatDateForInput(event.registrationDeadline),
       teamSize: event.teamSize || { min: 2, max: 5 },
-      image: event.image || '',
+      image: event.images && event.images[0] ? event.images[0].url : '',
       youtubeStreamUrl: event.liveStreamUrl || event.youtubeStreamUrl || '',
       streamTitle: event.streamTitle || '',
-      enableLiveStream: !!event.liveStreamUrl || event.enableLiveStream || false
-    });
+      enableLiveStream: !!event.liveStreamUrl || event.enableLiveStream || false,
+      isFreeEvent: event.isFreeEvent !== undefined ? event.isFreeEvent : true,
+      registrationFee: event.registrationFee || 0
+    };
+    
+    console.log('Setting form data:', formData); // Debug log
+    setEventForm(formData);
     setActiveTab('edit');
   };
 
   const handleUpdateEvent = async () => {
-    if (!eventForm.title || !eventForm.description || !eventForm.date) {
-      showErrorToast('Please fill in all required fields');
+    // Validate form
+    if (!eventForm.title || !eventForm.description || !eventForm.date || !eventForm.time || !eventForm.endTime || !eventForm.location) {
+      showErrorToast('Please fill in all required fields (title, description, date, start time, end time, and location)');
+      return;
+    }
+
+    // Validate time logic
+    if (eventForm.time >= eventForm.endTime) {
+      showErrorToast('End time must be after start time');
       return;
     }
 
@@ -513,21 +621,42 @@ const EventManagement = () => {
         title: eventForm.title,
         description: eventForm.description,
         category: eventForm.category,
-        type: eventForm.type,
-        startDate: `${eventForm.date}T${eventForm.time}:00.000Z`,
-        endDate: `${eventForm.date}T${eventForm.endTime}:00.000Z`,
-        location: eventForm.location,
+        date: new Date(eventForm.date + 'T00:00:00'), // Ensure proper date format without timezone issues
+        startTime: eventForm.time, // Backend expects 'startTime' not combined datetime
+        endTime: eventForm.endTime, // Backend expects 'endTime' 
+        venue: eventForm.location, // Backend expects 'venue' not 'location'
         maxParticipants: parseInt(eventForm.maxParticipants) || null,
-        volunteerSpots: parseInt(eventForm.volunteerSpots) || 0,
-        prerequisites: eventForm.prerequisites.filter(p => p.trim()),
-        agenda: eventForm.agenda.filter(a => a.trim()),
-        tags: eventForm.tags.filter(t => t.trim()),
-        registrationDeadline: eventForm.registrationDeadline ? `${eventForm.registrationDeadline}T23:59:59.000Z` : null,
-        teamSize: eventForm.type === 'team' ? eventForm.teamSize : null,
-        image: imageUrl || null,
-        liveStreamUrl: eventForm.enableLiveStream ? eventForm.youtubeStreamUrl : null,
-        streamTitle: eventForm.enableLiveStream ? eventForm.streamTitle : null
+        registrationDeadline: eventForm.registrationDeadline ? new Date(`${eventForm.registrationDeadline}T23:59:59.000Z`) : null,
+        isTeamEvent: eventForm.type === 'team', // Backend expects 'isTeamEvent' boolean
+        images: imageUrl ? [{ url: imageUrl, caption: eventForm.title }] : undefined,
+        isFreeEvent: eventForm.isFreeEvent,
+        registrationFee: eventForm.isFreeEvent ? 0 : (parseFloat(eventForm.registrationFee) || 0)
       };
+
+      // Add streaming fields if live stream is enabled
+      if (eventForm.enableLiveStream && eventForm.youtubeStreamUrl) {
+        eventData.streamingUrl = eventForm.youtubeStreamUrl;
+        eventData.liveStreamUrl = eventForm.youtubeStreamUrl; // For PresentEvents compatibility
+        eventData.liveStream = {
+          isLive: true,
+          streamUrl: eventForm.youtubeStreamUrl,
+          streamTitle: eventForm.streamTitle || eventForm.title
+        };
+      }
+
+      // Only include prerequisites, agenda, tags if the backend model supports them
+      if (eventForm.prerequisites && eventForm.prerequisites.length > 0) {
+        eventData.prerequisites = eventForm.prerequisites.filter(p => p.trim());
+      }
+      if (eventForm.agenda && eventForm.agenda.length > 0) {
+        eventData.agenda = eventForm.agenda.filter(a => a.trim());
+      }
+      if (eventForm.tags && eventForm.tags.length > 0) {
+        eventData.tags = eventForm.tags.filter(t => t.trim());
+      }
+
+      console.log('Sending event update data:', eventData); // Debug log
+      console.log('Event ID:', editingEvent.id); // Debug log
 
       const response = await eventAPI.update(editingEvent.id, eventData);
       
@@ -554,7 +683,34 @@ const EventManagement = () => {
 
     } catch (error) {
       console.error('Error updating event:', error);
-      showErrorToast('Failed to update event. Please try again.');
+      console.error('Error details:', error.response); // Additional debug info
+      
+      // Handle validation errors specifically
+      if (error.response && error.response.errors) {
+        console.error('Validation errors:', error.response.errors);
+        
+        // Log each error individually for better debugging
+        error.response.errors.forEach((err, index) => {
+          console.error(`Validation error ${index + 1}:`, err);
+        });
+        
+        // Since errors is an array, let's properly extract the messages
+        const validationErrors = error.response.errors.map(err => {
+          if (typeof err === 'string') {
+            return err;
+          } else if (err.message || err.msg) {
+            return `${err.path || 'Field'}: ${err.message || err.msg}`;
+          } else {
+            return JSON.stringify(err);
+          }
+        }).join(', ');
+        
+        showErrorToast(`Validation failed: ${validationErrors}`);
+      } else if (error.message) {
+        showErrorToast(error.message);
+      } else {
+        showErrorToast('Failed to update event. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -582,15 +738,84 @@ const EventManagement = () => {
     }
   };
 
-  const viewParticipants = (eventId) => {
+  const viewParticipants = async (eventId) => {
     setSelectedEvent(eventId);
-    setShowParticipants(true);
+    setLoadingParticipants(true);
+    try {
+      const response = await eventAPI.getRegistrations(eventId);
+      if (response.success && response.data) {
+        const registrations = response.data.registrations || response.data;
+        setParticipants(registrations);
+      } else {
+        setParticipants([]);
+        showErrorToast('Failed to fetch participants');
+      }
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+      setParticipants([]);
+      showErrorToast('Failed to fetch participants');
+    } finally {
+      setLoadingParticipants(false);
+      setShowParticipants(true);
+      // Prevent body scroll when modal opens
+      document.body.classList.add('modal-open');
+    }
   };
 
-  const viewVolunteers = (eventId) => {
+  const viewVolunteers = async (eventId) => {
     setSelectedEvent(eventId);
-    setShowVolunteers(true);
+    setLoadingVolunteers(true);
+    try {
+      const response = await eventAPI.getVolunteerRegistrations(eventId);
+      if (response.success && response.data) {
+        setVolunteers(response.data);
+      } else {
+        setVolunteers([]);
+        showErrorToast('Failed to fetch volunteers');
+      }
+    } catch (error) {
+      console.error('Error fetching volunteers:', error);
+      setVolunteers([]);
+      showErrorToast('Failed to fetch volunteers');
+    } finally {
+      setLoadingVolunteers(false);
+      setShowVolunteers(true);
+      // Prevent body scroll when modal opens
+      document.body.classList.add('modal-open');
+    }
   };
+
+  // Helper functions to manage modal state and body scroll
+  const closeParticipantsModal = () => {
+    setShowParticipants(false);
+    document.body.classList.remove('modal-open');
+  };
+
+  const closeVolunteersModal = () => {
+    setShowVolunteers(false);
+    document.body.classList.remove('modal-open');
+  };
+
+  // Handle ESC key press to close modals
+  useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.keyCode === 27) { // ESC key
+        if (showParticipants) {
+          closeParticipantsModal();
+        } else if (showVolunteers) {
+          closeVolunteersModal();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    
+    // Cleanup function to ensure body scroll is restored
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.body.classList.remove('modal-open');
+    };
+  }, [showParticipants, showVolunteers]);
 
   if (!user) {
     return (
@@ -838,8 +1063,51 @@ const EventManagement = () => {
                   </div>
                 </div>
 
-                <div className="form-section">
-                  <h3>Live Stream Settings</h3>
+                <div className="form-section registration-settings-section">
+                  <h3>💰 Registration Settings</h3>
+                  
+                  <div className="form-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={eventForm.isFreeEvent}
+                        onChange={(e) => setEventForm({
+                          ...eventForm, 
+                          isFreeEvent: e.target.checked,
+                          registrationFee: e.target.checked ? 0 : eventForm.registrationFee
+                        })}
+                        disabled={loading}
+                      />
+                      Free Event (No Registration Fee)
+                    </label>
+                  </div>
+
+                  {!eventForm.isFreeEvent && (
+                    <div className="form-group">
+                      <label>Registration Fee *</label>
+                      <div className="fee-input-group">
+                        <span className="currency-symbol">₹</span>
+                        <input
+                          type="number"
+                          name="registrationFee"
+                          value={eventForm.registrationFee}
+                          onChange={handleInputChange}
+                          placeholder="Enter registration fee"
+                          min="0"
+                          step="0.01"
+                          required={!eventForm.isFreeEvent}
+                          disabled={loading}
+                        />
+                      </div>
+                      <small className="form-help">
+                        Set the registration fee for this event. Leave as 0 for free events.
+                      </small>
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-section live-stream-section">
+                  <h3>🔴 Live Stream Settings</h3>
                   
                   <div className="form-group">
                     <label className="checkbox-label">
@@ -1004,30 +1272,81 @@ const EventManagement = () => {
                   <div className="form-group">
                     <label>Event Image</label>
                     <div className="image-upload-section">
-                      {imagePreview ? (
-                        <div className="image-preview">
-                          <img src={imagePreview} alt="Event preview" className="preview-img" />
-                          <button type="button" onClick={removeImage} className="remove-image-btn">
-                            <i className="fas fa-times"></i>
+                      <div className="image-upload-options">
+                        <div className="upload-method-selector">
+                          <button
+                            type="button"
+                            className={`method-btn ${imageUploadMethod === 'upload' ? 'active' : ''}`}
+                            onClick={() => setImageUploadMethod('upload')}
+                          >
+                            <i className="fas fa-upload"></i> Upload File
+                          </button>
+                          <button
+                            type="button"
+                            className={`method-btn ${imageUploadMethod === 'url' ? 'active' : ''}`}
+                            onClick={() => setImageUploadMethod('url')}
+                          >
+                            <i className="fas fa-link"></i> Use URL
                           </button>
                         </div>
-                      ) : (
-                        <div className="image-upload-area">
-                          <input
-                            type="file"
-                            id="eventImage"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            disabled={loading}
-                            style={{ display: 'none' }}
-                          />
-                          <label htmlFor="eventImage" className="upload-label">
-                            <i className="fas fa-cloud-upload-alt"></i>
-                            <span>Click to upload event image</span>
-                            <small>Supports: JPEG, PNG, GIF, WebP (Max 5MB)</small>
-                          </label>
-                        </div>
-                      )}
+
+                        {imageUploadMethod === 'upload' ? (
+                          imagePreview ? (
+                            <div className="image-preview">
+                              <img src={imagePreview} alt="Event preview" className="preview-img" />
+                              <button type="button" onClick={removeImage} className="remove-image-btn">
+                                <i className="fas fa-times"></i>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="image-upload-area">
+                              <input
+                                type="file"
+                                id="eventImage"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                disabled={loading}
+                                style={{ display: 'none' }}
+                              />
+                              <label htmlFor="eventImage" className="upload-label">
+                                <i className="fas fa-cloud-upload-alt"></i>
+                                <span>Click to upload event image</span>
+                                <small>Supports: JPEG, PNG, GIF, WebP (Max 5MB)</small>
+                              </label>
+                            </div>
+                          )
+                        ) : (
+                          <div className="url-input-section">
+                            {imagePreview ? (
+                              <div className="image-preview">
+                                <img src={imagePreview} alt="Event preview" className="preview-img" />
+                                <button type="button" onClick={removeImage} className="remove-image-btn">
+                                  <i className="fas fa-times"></i>
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <input
+                                  type="url"
+                                  placeholder="Enter image URL..."
+                                  value={imageUrl}
+                                  onChange={(e) => setImageUrl(e.target.value)}
+                                  className="url-input"
+                                  disabled={loading}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleImageUrl}
+                                  className="url-submit-btn"
+                                  disabled={loading || !imageUrl.trim()}
+                                >
+                                  <i className="fas fa-check"></i> Add Image
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1224,37 +1543,90 @@ const EventManagement = () => {
                     </div>
                     <div className="form-group">
                       <label>Event Image</label>
-                      {imagePreview ? (
-                        <div className="image-preview-container">
-                          <img src={imagePreview} alt="Event preview" className="preview-img" />
-                          <button type="button" onClick={removeImage} className="remove-image-btn">
-                            <i className="fas fa-times"></i>
-                          </button>
+                      <div className="image-upload-section">
+                        <div className="image-upload-options">
+                          <div className="upload-method-selector">
+                            <button
+                              type="button"
+                              className={`method-btn ${imageUploadMethod === 'upload' ? 'active' : ''}`}
+                              onClick={() => setImageUploadMethod('upload')}
+                            >
+                              <i className="fas fa-upload"></i> Upload File
+                            </button>
+                            <button
+                              type="button"
+                              className={`method-btn ${imageUploadMethod === 'url' ? 'active' : ''}`}
+                              onClick={() => setImageUploadMethod('url')}
+                            >
+                              <i className="fas fa-link"></i> Use URL
+                            </button>
+                          </div>
+
+                          {imageUploadMethod === 'upload' ? (
+                            imagePreview ? (
+                              <div className="image-preview-container">
+                                <img src={imagePreview} alt="Event preview" className="preview-img" />
+                                <button type="button" onClick={removeImage} className="remove-image-btn">
+                                  <i className="fas fa-times"></i>
+                                </button>
+                              </div>
+                            ) : eventForm.image ? (
+                              <div className="image-preview-container">
+                                <img src={eventForm.image} alt="Current event image" className="preview-img" />
+                                <button type="button" onClick={() => setEventForm({ ...eventForm, image: '' })} className="remove-image-btn">
+                                  <i className="fas fa-times"></i>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="image-upload-area">
+                                <input
+                                  type="file"
+                                  id="editEventImage"
+                                  accept="image/*"
+                                  onChange={handleImageChange}
+                                  disabled={loading}
+                                  style={{ display: 'none' }}
+                                />
+                                <label htmlFor="editEventImage" className="upload-label">
+                                  <i className="fas fa-cloud-upload-alt"></i>
+                                  <span>Click to upload event image</span>
+                                  <small>Supports: JPEG, PNG, GIF, WebP (Max 5MB)</small>
+                                </label>
+                              </div>
+                            )
+                          ) : (
+                            <div className="url-input-section">
+                              {imagePreview || eventForm.image ? (
+                                <div className="image-preview-container">
+                                  <img src={imagePreview || eventForm.image} alt="Event preview" className="preview-img" />
+                                  <button type="button" onClick={removeImage} className="remove-image-btn">
+                                    <i className="fas fa-times"></i>
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <input
+                                    type="url"
+                                    placeholder="Enter image URL..."
+                                    value={imageUrl}
+                                    onChange={(e) => setImageUrl(e.target.value)}
+                                    className="url-input"
+                                    disabled={loading}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleImageUrl}
+                                    className="url-submit-btn"
+                                    disabled={loading || !imageUrl.trim()}
+                                  >
+                                    <i className="fas fa-check"></i> Add Image
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      ) : eventForm.image ? (
-                        <div className="image-preview-container">
-                          <img src={eventForm.image} alt="Current event image" className="preview-img" />
-                          <button type="button" onClick={() => setEventForm({ ...eventForm, image: '' })} className="remove-image-btn">
-                            <i className="fas fa-times"></i>
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="image-upload-area">
-                          <input
-                            type="file"
-                            id="editEventImage"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            disabled={loading}
-                            style={{ display: 'none' }}
-                          />
-                          <label htmlFor="editEventImage" className="upload-label">
-                            <i className="fas fa-cloud-upload-alt"></i>
-                            <span>Click to upload event image</span>
-                            <small>Supports: JPEG, PNG, GIF, WebP (Max 5MB)</small>
-                          </label>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1345,6 +1717,49 @@ const EventManagement = () => {
                   </div>
                 </div>
 
+                <div className="form-section">
+                  <h3>Registration Settings</h3>
+                  
+                  <div className="form-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={eventForm.isFreeEvent}
+                        onChange={(e) => setEventForm({
+                          ...eventForm, 
+                          isFreeEvent: e.target.checked,
+                          registrationFee: e.target.checked ? 0 : eventForm.registrationFee
+                        })}
+                        disabled={loading}
+                      />
+                      Free Event (No Registration Fee)
+                    </label>
+                  </div>
+
+                  {!eventForm.isFreeEvent && (
+                    <div className="form-group">
+                      <label>Registration Fee *</label>
+                      <div className="fee-input-group">
+                        <span className="currency-symbol">₹</span>
+                        <input
+                          type="number"
+                          name="registrationFee"
+                          value={eventForm.registrationFee}
+                          onChange={(e) => setEventForm({ ...eventForm, registrationFee: e.target.value })}
+                          placeholder="Enter registration fee"
+                          min="0"
+                          step="0.01"
+                          required={!eventForm.isFreeEvent}
+                          disabled={loading}
+                        />
+                      </div>
+                      <small className="form-help">
+                        Set the registration fee for this event. Leave as 0 for free events.
+                      </small>
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-actions">
                   <button type="button" className="btn btn-outline" onClick={() => {
                     setActiveTab('manage');
@@ -1364,20 +1779,68 @@ const EventManagement = () => {
 
       {/* Participants Modal */}
       {showParticipants && (
-        <div className="modal-overlay" onClick={() => setShowParticipants(false)}>
+        <div className="modal-overlay" onClick={closeParticipantsModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Event Participants</h3>
-              <button className="close-btn" onClick={() => setShowParticipants(false)}>
+              <button className="close-btn" onClick={closeParticipantsModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
             <div className="modal-body">
-              <p>Participants list will be displayed here.</p>
-              <small>This feature is coming soon!</small>
+              {loadingParticipants ? (
+                <div className="loading-container">
+                  <div className="spinner"></div>
+                  <p>Loading participants...</p>
+                </div>
+              ) : participants.length > 0 ? (
+                <div className="participants-list">
+                  <div className="list-header">
+                    <span>Total Participants: {participants.length}</span>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => exportRegistrations(selectedEvent)}
+                    >
+                      <i className="fas fa-download"></i> Export List
+                    </button>
+                  </div>
+                  <div className="participants-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>University</th>
+                          <th>Registration Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {participants.map((participant, index) => (
+                          <tr key={participant._id || index}>
+                            <td>{participant.fullName || `${participant.firstName} ${participant.lastName}`}</td>
+                            <td>{participant.email}</td>
+                            <td>{participant.university || 'N/A'}</td>
+                            <td>{new Date(participant.registeredAt || participant.createdAt).toLocaleDateString()}</td>
+                            <td>
+                              <span className={`status-badge ${participant.status || 'registered'}`}>
+                                {participant.status || 'Registered'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p>No participants found for this event.</p>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowParticipants(false)}>
+              <button className="btn btn-outline" onClick={closeParticipantsModal}>
                 Close
               </button>
             </div>
@@ -1387,20 +1850,72 @@ const EventManagement = () => {
 
       {/* Volunteers Modal */}
       {showVolunteers && (
-        <div className="modal-overlay" onClick={() => setShowVolunteers(false)}>
+        <div className="modal-overlay" onClick={closeVolunteersModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Event Volunteers</h3>
-              <button className="close-btn" onClick={() => setShowVolunteers(false)}>
+              <button className="close-btn" onClick={closeVolunteersModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
             <div className="modal-body">
-              <p>Volunteers list will be displayed here.</p>
-              <small>This feature is coming soon!</small>
+              {loadingVolunteers ? (
+                <div className="loading-container">
+                  <div className="spinner"></div>
+                  <p>Loading volunteers...</p>
+                </div>
+              ) : volunteers.length > 0 ? (
+                <div className="volunteers-list">
+                  <div className="list-header">
+                    <span>Total Volunteers: {volunteers.length}</span>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => exportVolunteers(selectedEvent)}
+                    >
+                      <i className="fas fa-download"></i> Export List
+                    </button>
+                  </div>
+                  <div className="volunteers-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>University</th>
+                          <th>Phone</th>
+                          <th>Skills</th>
+                          <th>Registration Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {volunteers.map((volunteer, index) => (
+                          <tr key={volunteer._id || index}>
+                            <td>{volunteer.fullName || `${volunteer.firstName} ${volunteer.lastName}`}</td>
+                            <td>{volunteer.email}</td>
+                            <td>{volunteer.university || 'N/A'}</td>
+                            <td>{volunteer.phone || 'N/A'}</td>
+                            <td>{volunteer.skills || volunteer.experience || 'N/A'}</td>
+                            <td>{new Date(volunteer.registeredAt || volunteer.createdAt).toLocaleDateString()}</td>
+                            <td>
+                              <span className={`status-badge ${volunteer.status || 'registered'}`}>
+                                {volunteer.status || 'Registered'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p>No volunteers found for this event.</p>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowVolunteers(false)}>
+              <button className="btn btn-outline" onClick={closeVolunteersModal}>
                 Close
               </button>
             </div>

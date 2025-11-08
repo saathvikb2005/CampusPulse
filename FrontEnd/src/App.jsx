@@ -1,9 +1,19 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import "./styles/themes.css";
+import "./styles/modal-fixes.css"; // Import modal fixes CSS
 import { isAuthenticated, getCurrentUser } from './utils/auth';
 import { initializeTheme } from './utils/preferences';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { initializeModalFixes } from './utils/modalFixes'; // Import modal fixes utility
+
+// Redirect component for backward compatibility
+const EventDetailsRedirect = () => {
+  const { eventId } = useParams();
+  return <Navigate to={`/events/details/${eventId}`} replace />;
+};
+
 import Home from "./pages/HomePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -90,6 +100,9 @@ function App() {
         // Initialize theme first
         initializeTheme();
         
+        // Initialize modal fixes for better popup layouts
+        initializeModalFixes();
+        
         // Clear any corrupted localStorage data
         const isLoggedIn = localStorage.getItem('isLoggedIn');
         const userEmail = localStorage.getItem('userEmail');
@@ -153,12 +166,13 @@ function App() {
   }
 
   return (
-    <Router
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <ThemeProvider>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -243,6 +257,11 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        {/* Backward compatibility redirect */}
+        <Route 
+          path="/events/:eventId" 
+          element={<EventDetailsRedirect />} 
+        />
         <Route 
           path="/events/register/:eventId" 
           element={
@@ -258,6 +277,11 @@ function App() {
               <RegistrationConfirmation />
             </ProtectedRoute>
           } 
+        />
+        {/* Redirect route for backward compatibility */}
+        <Route 
+          path="/events/:eventId" 
+          element={<EventDetailsRedirect />}
         />
         <Route 
           path="/events/manage" 
@@ -325,6 +349,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
+    </ThemeProvider>
   );
 }
 

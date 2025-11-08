@@ -41,10 +41,30 @@ router.get('/my-events', auth, eventController.getMyEvents);
 // @access  Private/Admin/Event Manager
 router.get('/pending', auth, authorize('admin', 'event_manager'), eventController.getPendingEvents);
 
-// @route   GET /api/events/:id
-// @desc    Get event by ID
+// Chat and Stream routes (must come before /:id to avoid conflicts)
+// @route   GET /api/events/:id/chat
+// @desc    Get chat messages for live stream
 // @access  Public
-router.get('/:id', eventController.getEventById);
+router.get('/:id/chat', eventController.getChatMessages);
+
+// @route   POST /api/events/:id/chat
+// @desc    Send chat message during live stream
+// @access  Private
+router.post('/:id/chat', auth, eventController.sendChatMessage);
+
+// @route   GET /api/events/:id/stream-stats
+// @desc    Get stream statistics (viewer count, etc.)
+// @access  Public
+router.get('/:id/stream-stats', eventController.getStreamStats);
+
+// Temporary fix for validation issue
+const tempEventController = require('../controllers/tempEventController');
+router.get('/:id', tempEventController.getEventByIdRaw);
+
+// @route   GET /api/events/:id
+// @desc    Get event by ID (original - temporarily disabled)
+// @access  Public
+// router.get('/:id', eventController.getEventById);
 
 // @route   POST /api/events
 // @desc    Create new event
@@ -135,5 +155,30 @@ router.delete('/:id/gallery/:photoId', auth, authorize('event_manager', 'admin')
 // @desc    Confirm event registration
 // @access  Private
 router.post('/:id/register/confirm', auth, eventController.confirmRegistration);
+
+// @route   GET /api/events/:id/registration/me
+// @desc    Get current user's registration details for an event
+// @access  Private
+router.get('/:id/registration/me', auth, eventController.getUserEventRegistration);
+
+// @desc    Get volunteers for an event
+// @access  Public
+router.get('/:id/volunteers', eventController.getEventVolunteers);
+
+// @desc    Get event registration count
+// @access  Public
+router.get('/:id/registration-count', eventController.getEventRegistrationCount);
+
+// @desc    Get event registration status
+// @access  Public
+router.get('/:id/registration-status', eventController.getEventRegistrationStatus);
+
+// @desc    Volunteer for event
+// @access  Private
+router.post('/:id/volunteer', auth, eventController.volunteerForEvent);
+
+// @desc    Unvolunteer from event
+// @access  Private
+router.post('/:id/volunteer/unregister', auth, eventController.unvolunteerFromEvent);
 
 module.exports = router;

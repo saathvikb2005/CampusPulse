@@ -8,6 +8,16 @@
 }
 
 :root {
+  /* ===== NAVBAR HEIGHT SYSTEM ===== */
+  --navbar-height: 70px;
+  
+  @media (max-width: 768px) { 
+    --navbar-height: 60px; 
+  }
+  
+  @media (max-width: 480px) { 
+    --navbar-height: 56px; 
+  }
   /* ===== COLOR SYSTEM ===== */
   --primary-50: #f0f9ff;
   --primary-100: #e0f2fe;
@@ -109,7 +119,7 @@
   --z-tooltip: 1060;
   
   /* ===== LAYOUT ===== */
-  --header-height: 4rem;
+  --header-height: var(--navbar-height);
   --sidebar-width: 16rem;
   --max-width: 1200px;
   --container-padding: 1rem;
@@ -189,7 +199,7 @@ a:hover {
 }
 
 /* ===== CARD COMPONENT ===== */
-.card {
+.card:not(.event-card) {
   background: var(--white);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -198,7 +208,7 @@ a:hover {
   border: 1px solid var(--secondary-200);
 }
 
-.card:hover {
+.card:not(.event-card):hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }

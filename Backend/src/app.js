@@ -8,9 +8,23 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 
+// Error handling
+process.on('unhandledRejection', (reason, p) => {
+  console.error('Unhandled Rejection at Promise:', p, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 // Load environment variables
 require('dotenv').config({ 
   path: path.join(__dirname, '..', '.env') 
+});
+
+// Load environment-specific config if available
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+require('dotenv').config({ 
+  path: path.join(__dirname, '..', envFile) 
 });
 
 const connectDB = require('./config/database');
@@ -28,6 +42,9 @@ const blogRoutes = require('./routes/blogRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const metadataRoutes = require('./routes/metadataRoutes');
+const qrTicketRoutes = require('./routes/qrTicketRoutes');
+const qrValidationRoutes = require('./routes/qrValidationRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -38,7 +55,7 @@ const io = socketIo(server, {
       "https://campuspulse-frontend-five.vercel.app",
       process.env.CORS_ORIGIN || "http://localhost:5173"
     ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true
   }
 });
@@ -88,7 +105,7 @@ app.use(cors({
     process.env.CORS_ORIGIN || "http://localhost:5173"
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -134,7 +151,9 @@ app.get('/', (req, res) => {
       analytics: '/api/analytics',
       admin: '/api/admin',
       upload: '/api/upload',
-      metadata: '/api/metadata'
+      metadata: '/api/metadata',
+      qrTickets: '/api/qr-tickets',
+      qrValidation: '/api/qr-validation'
     }
   });
 });
@@ -150,6 +169,9 @@ app.use('/api/blogs', blogRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/metadata', metadataRoutes);
+app.use('/api/qr-tickets', qrTicketRoutes);
+app.use('/api/qr-validation', qrValidationRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 404 handler for all unmatched routes
 app.use((req, res) => {
@@ -167,16 +189,20 @@ app.use(errorHandler);
 app.set('io', io);
 
 const PORT = process.env.PORT || 5000;
+try {
+  server.listen(PORT, () => {
+    console.log(`\n🚀 CampusPulse Backend Server is running!`);
+    console.log(`📍 Server: http://localhost:${PORT}`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📊 Health Check: http://localhost:${PORT}/health`);
+    console.log(`🗄️  MONGODB_URI present: ${!!process.env.MONGODB_URI}`);
+  });
+} catch (err) {
+  console.error('❌ Failed to start HTTP server:', err);
+  process.exit(1);
+}
 
-server.listen(PORT, () => {
-  console.log(`
-🚀 CampusPulse Backend Server is running!
-📍 Server: http://localhost:${PORT}
-🔧 Environment: ${process.env.NODE_ENV || 'development'}
-📊 Health Check: http://localhost:${PORT}/health
-🗄️  Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}
-  `);
-});
+
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

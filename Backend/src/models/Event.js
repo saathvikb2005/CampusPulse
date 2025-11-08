@@ -48,6 +48,15 @@ const eventSchema = new mongoose.Schema({
     type: Number,
     min: [1, 'Maximum participants must be at least 1']
   },
+  registrationFee: {
+    type: Number,
+    default: 0,
+    min: [0, 'Registration fee cannot be negative']
+  },
+  isFreeEvent: {
+    type: Boolean,
+    default: true
+  },
   registrationDeadline: {
     type: Date
   },
@@ -128,7 +137,32 @@ const eventSchema = new mongoose.Schema({
     },
     duration: {
       type: Number // in minutes
+    },
+    viewerCount: {
+      type: Number,
+      default: 0
     }
+  },
+  chatMessages: {
+    type: [{
+      id: Number,
+      user: String,
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      message: String,
+      timestamp: String,
+      isOrganizer: {
+        type: Boolean,
+        default: false
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    default: []
   },
   views: {
     type: Number,
@@ -197,7 +231,7 @@ const eventSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['registered', 'cancelled'],
+      enum: ['registered', 'cancelled', 'confirmed'],
       default: 'registered'
     }
   }],
@@ -211,7 +245,79 @@ const eventSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  
+  // QR Ticket System
+  qrEnabled: {
+    type: Boolean,
+    default: true
+  },
+  qrSettings: {
+    allowMultipleScans: {
+      type: Boolean,
+      default: false
+    },
+    scanWindowMinutes: {
+      type: Number,
+      default: 30 // How many minutes before event start scanning is allowed
+    },
+    requireLocation: {
+      type: Boolean,
+      default: false
+    },
+    allowedScanners: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }]
+  },
+  
+  // Attendance Tracking
+  attendance: {
+    expectedCount: Number,
+    actualCount: {
+      type: Number,
+      default: 0
+    },
+    checkInStart: Date,
+    checkInEnd: Date,
+    lastUpdated: Date
+  },
+  
+  // Analytics Data
+  analytics: {
+    totalViews: {
+      type: Number,
+      default: 0
+    },
+    uniqueViews: {
+      type: Number,
+      default: 0
+    },
+    registrationTrend: [{
+      date: Date,
+      count: Number
+    }],
+    attendanceRate: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    feedbackSummary: {
+      averageRating: Number,
+      totalResponses: Number
+    }
+  },
+  
+  // Location Data for QR validation
+  venueLocation: {
+    latitude: Number,
+    longitude: Number,
+    radius: {
+      type: Number,
+      default: 100 // meters
+    },
+    address: String
+  }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -256,6 +362,30 @@ eventSchema.virtual('isCapacityFull').get(function() {
   return this.registrationCount >= this.capacity;
 });
 
+// Virtual for QR scanning status
+eventSchema.virtual('qrScanningActive').get(function() {
+  if (!this.qrEnabled) return false;
+  
+  const now = new Date();
+  const eventDateTime = new Date(this.date);
+  const scanStart = new Date(eventDateTime.getTime() - (this.qrSettings?.scanWindowMinutes || 30) * 60000);
+  const scanEnd = new Date(eventDateTime.getTime() + 2 * 60 * 60 * 1000); // 2 hours after event start
+  
+  return now >= scanStart && now <= scanEnd;
+});
+
+// Virtual for attendance percentage
+eventSchema.virtual('attendancePercentage').get(function() {
+  if (!this.attendance?.expectedCount || this.attendance.expectedCount === 0) return 0;
+  return Math.round((this.attendance.actualCount / this.attendance.expectedCount) * 100);
+});
+
+// Virtual for tickets issued count
+eventSchema.virtual('ticketsIssuedCount').get(function() {
+  // This would be populated from QRTicket model
+  return this.attendance?.expectedCount || this.registrationCount;
+});
+
 // Indexes for better performance
 eventSchema.index({ date: 1, status: 1 });
 eventSchema.index({ category: 1, status: 1 });
@@ -292,16 +422,99 @@ eventSchema.pre('save', function(next) {
 
 // Instance methods
 eventSchema.methods.isRegistrationOpen = function() {
-  if (!this.maxParticipants) return true; // If no limit, registration is always open
+  // Registration logic:
+  // - Past events: Registration closed
+  // - Present events: Registration closed (on-spot only)
+  // - Future/Upcoming events: Registration open until deadline or capacity
+  
   if (this.status !== 'approved') return false;
-  if (this.date <= new Date()) return false;
-  if (this.registrationDeadline && this.registrationDeadline <= new Date()) return false;
+  
+  const now = new Date();
+  const eventStart = new Date(this.startDate || this.date);
+  const eventEnd = new Date(this.endDate || this.date);
+  
+  // If event has ended, registration is closed
+  if (eventEnd && eventEnd < now) return false;
+  
+  // If event is currently happening (present event), registration is closed
+  if (eventStart && eventStart <= now && eventEnd && eventEnd >= now) return false;
+  
+  // If event starts today but hasn't started yet, registration is closed (on-spot only)
+  if (eventStart && eventStart.toDateString() === now.toDateString()) return false;
+  
+  // For future events, check deadline and capacity
+  if (this.registrationDeadline && this.registrationDeadline <= now) return false;
   if (this.maxParticipants && this.registrationCount >= this.maxParticipants) return false;
+  
   return true;
 };
 
+// Helper methods to determine event timing status
+eventSchema.methods.isUpcomingEvent = function() {
+  const now = new Date();
+  const eventStart = new Date(this.startDate || this.date);
+  return eventStart && eventStart > now && eventStart.toDateString() !== now.toDateString();
+};
+
+eventSchema.methods.isPresentEvent = function() {
+  const now = new Date();
+  const eventStart = new Date(this.startDate || this.date);
+  const eventEnd = new Date(this.endDate || this.date);
+  
+  // Event is present if it's happening now OR it's today
+  return (eventStart && eventStart <= now && eventEnd && eventEnd >= now) ||
+         (eventStart && eventStart.toDateString() === now.toDateString());
+};
+
+eventSchema.methods.isPastEvent = function() {
+  const now = new Date();
+  const eventEnd = new Date(this.endDate || this.date);
+  return eventEnd && eventEnd < now;
+};
+
+eventSchema.methods.getRegistrationStatus = function() {
+  if (this.isPastEvent()) {
+    return {
+      canRegister: false,
+      message: 'Event has ended',
+      type: 'past'
+    };
+  }
+  
+  if (this.isPresentEvent()) {
+    return {
+      canRegister: false,
+      message: 'On-spot registration at venue',
+      type: 'present'
+    };
+  }
+  
+  if (this.isUpcomingEvent()) {
+    if (this.isRegistrationOpen()) {
+      return {
+        canRegister: true,
+        message: 'Registration open',
+        type: 'upcoming'
+      };
+    } else {
+      return {
+        canRegister: false,
+        message: 'On-spot registration at venue',
+        type: 'upcoming-closed'
+      };
+    }
+  }
+  
+  return {
+    canRegister: false,
+    message: 'Registration not available',
+    type: 'unknown'
+  };
+};
+
 eventSchema.methods.canUserRegister = function(userId) {
-  if (!this.isRegistrationOpen()) return false;
+  const status = this.getRegistrationStatus();
+  if (!status.canRegister) return false;
   
   // Check if user is already registered
   return !this.registrations.some(reg => 
@@ -313,6 +526,100 @@ eventSchema.methods.getUserRegistration = function(userId) {
   return this.registrations.find(reg => 
     reg.userId.toString() === userId.toString()
   );
+};
+
+// QR-related methods
+eventSchema.methods.canScanQR = function(scannerId = null) {
+  if (!this.qrEnabled) return { allowed: false, reason: 'QR scanning is disabled for this event' };
+  
+  const now = new Date();
+  const eventDateTime = new Date(this.date);
+  const scanStart = new Date(eventDateTime.getTime() - (this.qrSettings?.scanWindowMinutes || 30) * 60000);
+  const scanEnd = new Date(eventDateTime.getTime() + 2 * 60 * 60 * 1000);
+  
+  if (now < scanStart) {
+    return { 
+      allowed: false, 
+      reason: 'Scanning window not yet open',
+      opensAt: scanStart
+    };
+  }
+  
+  if (now > scanEnd) {
+    return { 
+      allowed: false, 
+      reason: 'Scanning window has closed',
+      closedAt: scanEnd
+    };
+  }
+  
+  // Check if scanner is authorized
+  if (this.qrSettings?.allowedScanners?.length > 0 && scannerId) {
+    const isAuthorized = this.qrSettings.allowedScanners.some(id => 
+      id.toString() === scannerId.toString()
+    );
+    if (!isAuthorized) {
+      return { 
+        allowed: false, 
+        reason: 'Scanner not authorized for this event'
+      };
+    }
+  }
+  
+  return { allowed: true, reason: 'Scanning allowed' };
+};
+
+eventSchema.methods.updateAttendance = function(increment = 1) {
+  if (!this.attendance) {
+    this.attendance = {
+      expectedCount: this.registrationCount,
+      actualCount: 0
+    };
+  }
+  
+  this.attendance.actualCount += increment;
+  this.attendance.lastUpdated = new Date();
+  
+  // Update analytics
+  if (!this.analytics) this.analytics = {};
+  this.analytics.attendanceRate = this.attendancePercentage;
+  
+  return this.save();
+};
+
+eventSchema.methods.isLocationValid = function(latitude, longitude) {
+  if (!this.venueLocation?.latitude || !this.venueLocation?.longitude) {
+    return { valid: true, reason: 'No location validation required' };
+  }
+  
+  if (!latitude || !longitude) {
+    return { valid: false, reason: 'User location not provided' };
+  }
+  
+  // Calculate distance using Haversine formula
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = latitude * Math.PI/180;
+  const φ2 = this.venueLocation.latitude * Math.PI/180;
+  const Δφ = (this.venueLocation.latitude - latitude) * Math.PI/180;
+  const Δλ = (this.venueLocation.longitude - longitude) * Math.PI/180;
+  
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  
+  const distance = R * c; // Distance in meters
+  const allowedRadius = this.venueLocation.radius || 100;
+  
+  if (distance <= allowedRadius) {
+    return { valid: true, reason: 'Location is within event venue', distance };
+  } else {
+    return { 
+      valid: false, 
+      reason: `Location is ${Math.round(distance)}m from venue (max: ${allowedRadius}m)`,
+      distance 
+    };
+  }
 };
 
 // Static methods

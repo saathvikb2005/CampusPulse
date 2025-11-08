@@ -14,6 +14,7 @@ const Feedback = () => {
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [recentEvents, setRecentEvents] = useState([]);
   const [previousFeedback, setPreviousFeedback] = useState([]);
   const [formData, setFormData] = useState({
@@ -31,6 +32,9 @@ const Feedback = () => {
     if (isAuthenticated()) {
       loadUserFeedback();
       loadUserInfo();
+    } else {
+      // Clear previous feedback for non-authenticated users
+      setPreviousFeedback([]);
     }
     
     // Load pre-filled data from localStorage if coming from event page
@@ -133,12 +137,26 @@ const Feedback = () => {
 
   const loadUserFeedback = async () => {
     try {
+      setFeedbackLoading(true);
+      console.log('🔍 Loading user feedback...');
       const response = await feedbackAPI.getUserFeedback();
-      if (response.success && response.data && response.data.feedback) {
-        setPreviousFeedback(response.data.feedback);
+      console.log('📋 Feedback API response:', response);
+      
+      if (response.success) {
+        // Handle the correct response structure from backend
+        const feedbackData = response.data?.feedback || [];
+        console.log('✅ Previous feedback loaded:', feedbackData.length, 'items');
+        setPreviousFeedback(feedbackData);
+      } else {
+        console.log('❌ Failed to load feedback:', response.message);
+        setPreviousFeedback([]);
       }
     } catch (error) {
-      console.error('Error loading user feedback:', error);
+      console.error('❌ Error loading user feedback:', error);
+      setPreviousFeedback([]);
+      // Don't show error toast for feedback loading as it's not critical
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -660,7 +678,12 @@ const Feedback = () => {
             <h2>📋 Your Feedback History</h2>
             <p className="section-subtitle">Track your feedback submissions and see admin responses</p>
             <div className="feedback-history">
-              {previousFeedback.length > 0 ? (
+              {feedbackLoading ? (
+                <div className="feedback-loading">
+                  <div className="loading-spinner"></div>
+                  <p>Loading your feedback history...</p>
+                </div>
+              ) : previousFeedback.length > 0 ? (
                 previousFeedback.map((feedback) => (
                   <div key={feedback._id} className="feedback-item">
                     <div className="feedback-header">

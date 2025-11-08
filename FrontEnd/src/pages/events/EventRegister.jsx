@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './EventRegister.css';
 import { eventAPI } from '../../services/api';
 import { getCurrentUser } from '../../utils/auth';
@@ -8,6 +8,7 @@ import { showSuccessToast, showErrorToast } from '../../utils/toastUtils';
 const EventRegister = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [registrationData, setRegistrationData] = useState({
@@ -40,63 +41,173 @@ const EventRegister = () => {
   const [user, setUser] = useState(null);
   const [registrationCount, setRegistrationCount] = useState(0);
   const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
+  const [usingCachedData, setUsingCachedData] = useState(false);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    
-    if (!currentUser) {
-      showErrorToast('Please log in to register for events');
-      navigate('/login');
-      return;
+    const fetchUserAndEvent = async () => {
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        showErrorToast('Please log in to register for events');
+        navigate('/login');
+        return;
+      }
+
+      console.log('👤 Current user from auth:', currentUser);
+      setUser(currentUser);
+
+      // Try to fetch fresh user details from API, but use currentUser as fallback
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+        const userResponse = await fetch(`${API_BASE_URL}/api/users/profile`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.success) {
+            console.log('📡 Fresh user data from API:', userData.data);
+            setUser(userData.data);
+          }
+        } else {
+          console.log('⚠️ Failed to fetch fresh user data, using current user');
+        }
+      } catch (error) {
+        console.log('⚠️ Error fetching user details, using current user:', error);
+        // Use currentUser as fallback - this is fine
+      }
+
+      // Check for cached event data from PresentEvents navigation
+      const cachedData = location.state;
+      const hasCachedData = cachedData?.eventData && cachedData?.fromPresentEvents;
+      
+      console.log('🔍 EventRegister checking for cached data:', {
+        hasCachedData,
+        isFromPresentEvents: cachedData?.fromPresentEvents,
+        cachedAt: cachedData?.cachedAt ? new Date(cachedData.cachedAt).toLocaleString() : 'N/A'
+      });
+      
+      if (hasCachedData) {
+        console.log('🔍 Using cached event data from PresentEvents as fallback');
+        setEvent(cachedData.eventData);
+        setUsingCachedData(true);
+        setLoading(false); // Show cached data immediately
+        
+        // Attempt background refresh
+        fetchEventData(true);
+      } else {
+        fetchEventData();
+      }
+    };
+
+    fetchUserAndEvent();
+  }, [eventId, navigate, location.state]);
+
+  // Update form data when user data is loaded
+  useEffect(() => {
+    if (user) {
+      console.log('🔄 Updating form with user data:', user);
+      
+      // Parse name if it's a full name string
+      const fullName = user.name || '';
+      const nameParts = fullName.split(' ');
+      const firstName = user.firstName || nameParts[0] || '';
+      const lastName = user.lastName || nameParts.slice(1).join(' ') || '';
+      
+      const formData = {
+        firstName: firstName,
+        lastName: lastName,
+        email: user.email || '',
+        phone: user.phone || user.phoneNumber || user.mobile || '',
+        organization: user.university || user.organization || user.department || user.college || user.institution || '',
+        designation: user.role === 'student' ? 'Student' : (user.designation || user.year || user.position || user.title || '')
+      };
+      
+      console.log('📝 Form data to be set:', formData);
+      
+      // Only update if we have some meaningful data
+      if (firstName || lastName || user.email) {
+        setRegistrationData(prev => ({
+          ...prev,
+          ...formData
+        }));
+      } else {
+        console.log('⚠️ No meaningful user data found, user needs to fill form manually');
+        // Set a default email at least if we have the user email from auth
+        if (user.email) {
+          setRegistrationData(prev => ({
+            ...prev,
+            email: user.email
+          }));
+        }
+      }
     }
+  }, [user]);
 
-    fetchEventData();
-  }, [eventId, navigate]);
-
-  const fetchEventData = async () => {
+  const fetchEventData = async (isBackgroundRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isBackgroundRefresh) {
+        setLoading(true);
+      }
+      
+      console.log('🔄 Loading event data for ID:', eventId);
       const response = await eventAPI.getById(eventId);
       
       if (response.success && response.data) {
         setEvent(response.data);
         
-        // Pre-fill form with user data
-        if (user) {
-          setRegistrationData(prev => ({
-            ...prev,
-            firstName: user.name?.split(' ')[0] || '',
-            lastName: user.name?.split(' ').slice(1).join(' ') || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            organization: user.university || user.organization || '',
-            designation: user.role === 'student' ? 'Student' : user.designation || ''
-          }));
+        // If this was a background refresh and we had cached data, clear the cached flag
+        if (isBackgroundRefresh && usingCachedData) {
+          setUsingCachedData(false);
         }
 
         // Check registration status
         try {
-          const registrationsResponse = await eventAPI.getRegistrations(eventId);
-          if (registrationsResponse.success) {
-            const registrations = registrationsResponse.data.registrations || registrationsResponse.data;
-            setRegistrationCount(registrations.length);
-            
-            const userRegistration = registrations.find(reg => 
-              reg.userId === user?._id || reg.email === user?.email
-            );
-            setIsAlreadyRegistered(!!userRegistration);
+          const registrationCountResponse = await eventAPI.getRegistrationCount(eventId);
+          if (registrationCountResponse.success) {
+            setRegistrationCount(registrationCountResponse.data.count || 0);
           }
         } catch (error) {
-          console.log('Could not fetch registrations (permission issue)');
+          console.log('Could not fetch registration count');
+        }
+
+        // Check if user is already registered
+        try {
+          const userRegistrationResponse = await eventAPI.getUserEventRegistration(eventId);
+          if (userRegistrationResponse.success) {
+            setIsAlreadyRegistered(true);
+          }
+        } catch (error) {
+          // User not registered yet, which is expected
+          setIsAlreadyRegistered(false);
         }
       }
     } catch (error) {
-      console.error('Error fetching event:', error);
-      showErrorToast('Failed to load event details');
+      console.log('🔍 Error loading event:', error);
+      console.log('🔍 Error details:', error.message);
+      console.log('🔍 Error stack:', error.stack);
+      
+      // Only show error toast if not using cached data or not a background refresh
+      if (!usingCachedData && !isBackgroundRefresh) {
+        showErrorToast('Failed to load event details');
+      } else if (isBackgroundRefresh && usingCachedData) {
+        console.log('🔍 Background refresh failed, keeping cached data');
+        // Keep the cached data visible, don't show error toast
+      }
     } finally {
-      setLoading(false);
+      if (!isBackgroundRefresh) {
+        setLoading(false);
+      }
     }
+  };
+
+  // Manual refresh function for cached data
+  const handleManualRefresh = async () => {
+    console.log('🔄 Manual refresh requested');
+    setUsingCachedData(false);
+    await fetchEventData();
   };
 
   // Generate dynamic event data based on API response
@@ -111,11 +222,13 @@ const EventRegister = () => {
         location: "TBA",
         description: "Loading event details...",
         image: "https://via.placeholder.com/400x300/4361ee/ffffff?text=Loading...",
+        isFreeEvent: true,
+        registrationFee: 0,
         ticketPrices: {
-          student: { price: 25, label: "Student" },
-          standard: { price: 75, label: "Standard" },
-          premium: { price: 150, label: "Premium" },
-          vip: { price: 300, label: "VIP" }
+          student: { price: 0, label: "Student" },
+          standard: { price: 0, label: "Standard" },
+          premium: { price: 0, label: "Premium" },
+          vip: { price: 0, label: "VIP" }
         },
         sessions: [
           "AI and Machine Learning",
@@ -136,20 +249,25 @@ const EventRegister = () => {
       };
     }
 
+    const isFree = event.isFreeEvent || event.registrationFee === 0 || !event.registrationFee;
+    const baseFee = isFree ? 0 : (event.registrationFee || 0);
+
     return {
       id: event._id,
       title: event.title,
-      date: new Date(event.startDate).toLocaleDateString(),
-      time: `${new Date(event.startDate).toLocaleTimeString()} - ${new Date(event.endDate).toLocaleTimeString()}`,
-      venue: event.location,
-      location: event.location,
+      date: new Date(event.startDate || event.date).toLocaleDateString(),
+      time: `${new Date(event.startDate || event.date).toLocaleTimeString()} - ${new Date(event.endDate || event.date).toLocaleTimeString()}`,
+      venue: event.venue || event.location,
+      location: event.venue || event.location,
       description: event.description,
       image: event.image || event.images?.[0]?.url || "https://via.placeholder.com/400x300/4361ee/ffffff?text=Event+Image",
+      isFreeEvent: isFree,
+      registrationFee: baseFee,
       ticketPrices: {
-        student: { price: event.ticketPrice?.student || 25, label: "Student" },
-        standard: { price: event.ticketPrice?.standard || 75, label: "Standard" },
-        premium: { price: event.ticketPrice?.premium || 150, label: "Premium" },
-        vip: { price: event.ticketPrice?.vip || 300, label: "VIP" }
+        student: { price: baseFee, label: "Student" },
+        standard: { price: baseFee, label: "Standard" },
+        premium: { price: baseFee, label: "Premium" },
+        vip: { price: baseFee, label: "VIP" }
       },
       sessions: event.sessions || [
         "Main Event Session",
@@ -189,16 +307,23 @@ const EventRegister = () => {
     const newErrors = {};
     
     if (step === 1) {
-      if (!registrationData.firstName) newErrors.firstName = 'First name is required';
-      if (!registrationData.lastName) newErrors.lastName = 'Last name is required';
-      if (!registrationData.email) newErrors.email = 'Email is required';
-      if (!registrationData.phone) newErrors.phone = 'Phone number is required';
-      if (!/\S+@\S+\.\S+/.test(registrationData.email)) newErrors.email = 'Email is invalid';
+      if (!registrationData.firstName?.trim()) newErrors.firstName = 'First name is required';
+      if (!registrationData.lastName?.trim()) newErrors.lastName = 'Last name is required';
+      if (!registrationData.email?.trim()) {
+        newErrors.email = 'Email is required';
+      } else if (!/\S+@\S+\.\S+/.test(registrationData.email)) {
+        newErrors.email = 'Email is invalid';
+      }
+      if (!registrationData.phone?.trim()) newErrors.phone = 'Phone number is required';
     }
     
     if (step === 2) {
       if (registrationData.sessionInterests.length === 0) {
         newErrors.sessionInterests = 'Please select at least one session of interest';
+      }
+      // For free events, terms are required in step 2
+      if (eventData.isFreeEvent && !registrationData.terms) {
+        newErrors.terms = 'You must accept the terms and conditions';
       }
     }
     
@@ -207,12 +332,24 @@ const EventRegister = () => {
     }
     
     setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      console.log('❌ Validation errors for step', step, ':', newErrors);
+    } else {
+      console.log('✅ Step', step, 'validation passed');
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => prev + 1);
+      // For free events, skip payment step (step 3) and go directly to registration
+      if (currentStep === 2 && eventData.isFreeEvent) {
+        handleSubmit();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
 
@@ -221,14 +358,35 @@ const EventRegister = () => {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(3)) return;
+    console.log('🚀 Starting registration submission...');
+    console.log('Current step:', currentStep);
+    console.log('Is free event:', eventData.isFreeEvent);
+    console.log('Terms accepted:', registrationData.terms);
+    console.log('📋 Current registration data:', registrationData);
     
+    // For free events, only validate the current step (1 or 2)
+    // For paid events, validate step 3 (payment/terms)
+    const stepToValidate = eventData.isFreeEvent ? currentStep : 3;
+    
+    // For free events on step 2, we also need to check step 1 is valid
+    if (eventData.isFreeEvent && currentStep === 2) {
+      if (!validateStep(1) || !validateStep(2)) {
+        console.log('❌ Validation failed for free event');
+        return;
+      }
+    } else if (!validateStep(stepToValidate)) {
+      console.log('❌ Validation failed for step:', stepToValidate);
+      return;
+    }
+    
+    console.log('✅ Validation passed, proceeding with registration...');
     setLoading(true);
     setPaymentProcessing(true);
     
     try {
       // Register for event via API
-      const response = await eventAPI.register(eventId, {
+      console.log('📡 Making API call to register for event:', eventId);
+      const registrationPayload = {
         name: `${registrationData.firstName} ${registrationData.lastName}`,
         email: registrationData.email,
         phone: registrationData.phone,
@@ -239,19 +397,26 @@ const EventRegister = () => {
         sessionInterests: registrationData.sessionInterests,
         ticketType: registrationData.ticketType,
         newsletter: registrationData.newsletter
-      });
+      };
+      console.log('📤 Registration payload:', registrationPayload);
+      
+      const response = await eventAPI.register(eventId, registrationPayload);
+      console.log('📥 API response:', response);
       
       if (response.success) {
-        // Create registration confirmation data
+        // Use the comprehensive registration data from backend response
         const newRegistration = {
+          ...response.data,
+          // Merge any additional form data that might not be in the backend response
           ...registrationData,
-          eventId: eventId,
-          eventTitle: eventData.title,
-          registrationDate: new Date().toISOString(),
-          confirmationNumber: response.data.confirmationNumber || `CR-${Date.now()}`,
-          status: 'confirmed',
-          totalAmount: calculateTotal(),
-          _id: response.data._id || Date.now().toString()
+          // Ensure backend data takes precedence for key fields
+          _id: response.data._id,
+          confirmationNumber: response.data.confirmationNumber,
+          eventTitle: response.data.eventTitle,
+          eventId: response.data.eventId,
+          registrationDate: response.data.registrationDate,
+          status: response.data.status || 'confirmed',
+          totalAmount: calculateTotal()
         };
         
         // Navigate to confirmation page
@@ -283,7 +448,10 @@ const EventRegister = () => {
   };
 
   const getProgressPercentage = () => {
-    return (currentStep / 3) * 100;
+    if (eventData.isFreeEvent) {
+      return (currentStep / 2) * 100; // Only 2 steps for free events
+    }
+    return (currentStep / 3) * 100; // 3 steps for paid events
   };
 
   // Show loading state
@@ -326,6 +494,14 @@ const EventRegister = () => {
         <div className="container">
           <div className="header-content">
             <div className="register-title">
+              <button 
+                className="back-to-event-btn"
+                onClick={() => navigate(`/events/details/${eventId}`)}
+                title="Back to event details"
+              >
+                <i className="fas fa-arrow-left"></i>
+                Back to Event
+              </button>
               <h1>Event Registration</h1>
               <p>Secure your spot at {eventData.title}</p>
             </div>
@@ -346,6 +522,24 @@ const EventRegister = () => {
           </div>
         </div>
       </div>
+
+      {/* Cached Data Notice */}
+      {usingCachedData && (
+        <div className="cached-data-notice">
+          <div className="container">
+            <div className="cached-notice-content">
+              <div className="cached-notice-text">
+                <i className="fas fa-info-circle"></i>
+                <span>Showing cached event information from live events page</span>
+              </div>
+              <button className="refresh-button" onClick={handleManualRefresh}>
+                <i className="fas fa-sync-alt"></i>
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="register-content">
@@ -392,20 +586,29 @@ const EventRegister = () => {
               <div className="info-section">
                 <h4>Price Breakdown</h4>
                 <div className="price-details">
-                  <div className="price-item">
-                    <span>{eventData.ticketPrices[registrationData.ticketType].label} Ticket</span>
-                    <span>${eventData.ticketPrices[registrationData.ticketType].price}</span>
-                  </div>
-                  {registrationData.promoCode === 'STUDENT10' && (
-                    <div className="price-item discount">
-                      <span>Student Discount (10%)</span>
-                      <span>-${(eventData.ticketPrices[registrationData.ticketType].price * 0.1).toFixed(2)}</span>
+                  {eventData.isFreeEvent ? (
+                    <div className="price-item free-event">
+                      <span>🎉 Free Event Registration</span>
+                      <span className="free-badge">FREE</span>
                     </div>
+                  ) : (
+                    <>
+                      <div className="price-item">
+                        <span>{eventData.ticketPrices[registrationData.ticketType].label} Ticket</span>
+                        <span>${eventData.ticketPrices[registrationData.ticketType].price}</span>
+                      </div>
+                      {registrationData.promoCode === 'STUDENT10' && (
+                        <div className="price-item discount">
+                          <span>Student Discount (10%)</span>
+                          <span>-${(eventData.ticketPrices[registrationData.ticketType].price * 0.1).toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="price-total">
+                        <span>Total</span>
+                        <span>${calculateTotal().toFixed(2)}</span>
+                      </div>
+                    </>
                   )}
-                  <div className="price-total">
-                    <span>Total</span>
-                    <span>${calculateTotal().toFixed(2)}</span>
-                  </div>
                 </div>
               </div>
 
@@ -416,11 +619,11 @@ const EventRegister = () => {
                 <div className="contact-info">
                   <div className="contact-item">
                     <i className="fas fa-envelope"></i>
-                    <span>support@campuspulse.edu</span>
+                    <span>saathvikbachali@gmail.com</span>
                   </div>
                   <div className="contact-item">
                     <i className="fas fa-phone"></i>
-                    <span>+1 (555) 123-4567</span>
+                    <span>+91 7075299255</span>
                   </div>
                 </div>
               </div>
@@ -436,7 +639,9 @@ const EventRegister = () => {
                 <div className="progress-steps">
                   <span className={`step ${currentStep >= 1 ? 'active' : ''}`}>Personal Info</span>
                   <span className={`step ${currentStep >= 2 ? 'active' : ''}`}>Preferences</span>
-                  <span className={`step ${currentStep >= 3 ? 'active' : ''}`}>Payment</span>
+                  {!eventData.isFreeEvent && (
+                    <span className={`step ${currentStep >= 3 ? 'active' : ''}`}>Payment</span>
+                  )}
                 </div>
               </div>
 
@@ -557,6 +762,30 @@ const EventRegister = () => {
                     {/* Session Interests */}
                     <div className="form-group">
                       <label>Sessions of Interest *</label>
+                      <div className="sessions-selection-header">
+                        <small>Click to select the sessions you're most interested in attending</small>
+                        <button
+                          type="button"
+                          className="select-all-btn"
+                          onClick={() => {
+                            if (registrationData.sessionInterests.length === eventData.sessions.length) {
+                              // Deselect all
+                              setRegistrationData(prev => ({
+                                ...prev,
+                                sessionInterests: []
+                              }));
+                            } else {
+                              // Select all
+                              setRegistrationData(prev => ({
+                                ...prev,
+                                sessionInterests: [...eventData.sessions]
+                              }));
+                            }
+                          }}
+                        >
+                          {registrationData.sessionInterests.length === eventData.sessions.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
                       <div className="sessions-grid">
                         {eventData.sessions.map((session) => (
                           <div
@@ -568,8 +797,15 @@ const EventRegister = () => {
                           </div>
                         ))}
                       </div>
-                      {errors.sessionInterests && <span className="error">{errors.sessionInterests}</span>}
-                      <small>Select sessions you're most interested in attending</small>
+                      {errors.sessionInterests && (
+                        <div className="session-error">
+                          <i className="fas fa-exclamation-triangle"></i>
+                          <span className="error">{errors.sessionInterests}</span>
+                        </div>
+                      )}
+                      <div className="sessions-selected-count">
+                        {registrationData.sessionInterests.length} of {eventData.sessions.length} sessions selected
+                      </div>
                     </div>
 
                     <div className="form-row">
@@ -616,6 +852,23 @@ const EventRegister = () => {
                         rows="3"
                       />
                     </div>
+
+                    {/* Terms and Conditions for Free Events */}
+                    {eventData.isFreeEvent && (
+                      <div className="terms-section">
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            name="terms"
+                            checked={registrationData.terms}
+                            onChange={handleInputChange}
+                          />
+                          <span className="checkmark"></span>
+                          I agree to the <a href="/terms" target="_blank">Terms and Conditions</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+                        </label>
+                        {errors.terms && <span className="error">{errors.terms}</span>}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -774,13 +1027,13 @@ const EventRegister = () => {
                       Previous
                     </button>
                   )}
-                  {currentStep < 3 ? (
+                  {(currentStep < 3 && !eventData.isFreeEvent) || (currentStep < 2 && eventData.isFreeEvent) ? (
                     <button 
                       type="button" 
                       className="btn btn-primary"
                       onClick={handleNext}
                     >
-                      Next Step
+                      {eventData.isFreeEvent && currentStep === 2 ? 'Complete Registration' : 'Next Step'}
                     </button>
                   ) : (
                     <button 
@@ -793,6 +1046,11 @@ const EventRegister = () => {
                         <>
                           <i className="fas fa-spinner fa-spin"></i>
                           Processing...
+                        </>
+                      ) : eventData.isFreeEvent ? (
+                        <>
+                          <i className="fas fa-check"></i>
+                          Complete Free Registration
                         </>
                       ) : (
                         <>

@@ -1,5 +1,5 @@
-// src/pages/Login.jsx
-import React, { useState } from "react";
+// src/pages/Login.jsx - ENHANCED WITH DARK THEME & ANIMATIONS
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../utils/auth";
 import "./Login.css";
@@ -14,6 +14,16 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Load saved credentials if "Remember me" was checked previously
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
@@ -62,6 +72,13 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
+        // Save email if "Remember me" is checked
+        if (rememberMe) {
+          localStorage.setItem('rememberedEmail', formData.email);
+        } else {
+          localStorage.removeItem('rememberedEmail');
+        }
+        
         // Navigate based on user role
         const userRole = localStorage.getItem('userRole');
         if (userRole === "admin") {
@@ -92,6 +109,12 @@ const Login = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  const handleRememberMeChange = (e) => {
+    setRememberMe(e.target.checked);
+  };
+
+
 
   return (
     <div className="login-container">
@@ -125,7 +148,6 @@ const Login = () => {
               <div className="form-group">
                 <label htmlFor="loginEmail">Email Address</label>
                 <div className="input-wrapper">
-                  
                   <input
                     type="email"
                     id="loginEmail"
@@ -136,7 +158,6 @@ const Login = () => {
                     className={errors.email ? "error" : ""}
                     disabled={isLoading}
                   />
-                  
                 </div>
                 {errors.email && (
                   <span className="error-text">{errors.email}</span>
@@ -161,6 +182,7 @@ const Login = () => {
                     className="password-toggle"
                     onClick={togglePasswordVisibility}
                     disabled={isLoading}
+                    tabIndex={-1}
                   >
                     <svg viewBox="0 0 24 24" fill="currentColor">
                       {showPassword ? (
@@ -187,7 +209,11 @@ const Login = () => {
 
               <div className="form-options">
                 <label className="remember-me">
-                  <input type="checkbox" />
+                  <input 
+                    type="checkbox" 
+                    checked={rememberMe}
+                    onChange={handleRememberMeChange}
+                  />
                   <span className="checkmark"></span>
                   Remember me
                 </label>
@@ -238,12 +264,6 @@ const Login = () => {
                 <Link to="/register">Create account</Link>
               </div>
             </form>
-
-            {/* Demo Accounts Notice for Development */}
-            <div>
-              
-              
-            </div>
           </div>
         </div>
       </div>

@@ -265,6 +265,74 @@
   transform: scale(1.05);
 }
 
+/* Upcoming Events Specific Styles - Override Global Styles */
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-image {
+  position: relative !important;
+  height: 180px !important;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-image::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200"><defs><pattern id="code" patternUnits="userSpaceOnUse" width="120" height="30"><text x="5" y="12" fill="%23ffffff" font-family="monospace" font-size="8" opacity="0.6">function digital_event() {</text><text x="10" y="22" fill="%2393c5fd" font-family="monospace" font-size="7" opacity="0.5">const query = data;</text></pattern></defs><rect width="100%" height="100%" fill="url(%23code)"/></svg>');
+  background-size: 300px 150px;
+  animation: codeScroll 25s linear infinite;
+  z-index: 1;
+}
+
+@keyframes codeScroll {
+  0% { transform: translateX(0) translateY(0); }
+  100% { transform: translateX(-40px) translateY(-40px); }
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-date-badge {
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  padding: 8px 16px !important;
+  border-radius: 12px !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  z-index: 5 !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-date-badge .day {
+  display: block !important;
+  font-size: 0.7rem !important;
+  opacity: 0.9 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: white !important;
+  margin: 0 !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-date-badge .date {
+  display: block !important;
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+  margin-top: 2px !important;
+  color: white !important;
+}
+
 .event-countdown {
   position: absolute;
   top: 16px;
@@ -275,7 +343,6 @@
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 600;
-  backdrop-filter: blur(10px);
 }
 
 .spots-warning {
@@ -293,6 +360,67 @@
 /* Event Content */
 .event-content {
   padding: 32px;
+}
+
+/* Upcoming Events Content Layout */
+.event-card.upcoming-events .event-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-title-section {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-title,
+html body div.events-page .events-grid-section .container .events-grid .event-card h3 {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  margin: 0 !important;
+  line-height: 1.3 !important;
+  flex: 1 !important;
+  background: none !important;
+  background-color: transparent !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #1e293b !important;
+  background-clip: unset !important;
+  text-align: left !important;
+}
+
+.event-card.upcoming-events .event-category-badge {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.event-card.upcoming-events .event-category-badge.cultural {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.event-card.upcoming-events .event-category-badge.sports {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.event-card.upcoming-events .event-category-badge.technical {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.event-card.upcoming-events .event-category-badge.social {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
 .event-header {
@@ -362,6 +490,90 @@
 .event-details i {
   color: #3b82f6;
   width: 16px;
+}
+
+/* Upcoming Events Details */
+.event-card.upcoming-events .event-timing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.event-card.upcoming-events .event-timing i {
+  color: #3b82f6;
+  width: 16px;
+}
+
+.event-card.upcoming-events .event-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.event-card.upcoming-events .event-location i {
+  color: #3b82f6;
+  width: 16px;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-description,
+html body div.events-page .events-grid-section .container .events-grid .event-card p {
+  color: #64748b !important;
+  line-height: 1.6 !important;
+  font-size: 0.95rem !important;
+  margin-bottom: 16px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-align: left !important;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+.event-card.upcoming-events .registration-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border-left: 4px solid #3b82f6;
+}
+
+.event-card.upcoming-events .registration-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.event-card.upcoming-events .registration-count i {
+  color: #3b82f6;
+}
+
+.event-card.upcoming-events .volunteer-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.event-card.upcoming-events .volunteer-count i {
+  color: #f59e0b;
 }
 
 .event-description {
@@ -441,6 +653,36 @@
   border-top: 1px solid #f1f5f9;
 }
 
+/* Upcoming Events Prerequisites */
+.event-card.upcoming-events .prerequisites-section {
+  margin-bottom: 20px;
+}
+
+.event-card.upcoming-events .prerequisites-title {
+  font-size: 0.9rem;
+  color: #1e293b;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-card.upcoming-events .prerequisites-title i {
+  color: #f59e0b;
+  font-size: 0.8rem;
+}
+
+.event-card.upcoming-events .prerequisites-text {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  background: #fffbeb;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 3px solid #f59e0b;
+}
+
 /* Prerequisites & Agenda */
 .prerequisites,
 .agenda {
@@ -482,6 +724,71 @@
 .registration-deadline i {
   color: #f59e0b;
   margin-right: 8px;
+}
+
+/* Upcoming Events Actions */
+.event-card.upcoming-events .event-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.events-page .event-card.upcoming-events .btn-view-details {
+  flex: 1 !important;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: white !important;
+  padding: 12px 20px !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  text-decoration: none !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25) !important;
+  width: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.event-card.upcoming-events .btn-view-details:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
+}
+
+.event-card.upcoming-events .registration-badge {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.event-card.upcoming-events .registration-badge.closed {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.event-card.upcoming-events .registration-badge.open {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.event-card.upcoming-events .registration-badge.spot-registration {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  font-size: 0.75rem;
+  padding: 6px 12px;
 }
 
 /* Event Actions */
@@ -658,6 +965,37 @@
   .btn {
     flex: none;
   }
+  
+  /* Upcoming Events Mobile Adjustments */
+  .event-card.upcoming-events .event-title-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .event-card.upcoming-events .event-category-badge {
+    align-self: flex-start;
+  }
+  
+  .event-card.upcoming-events .event-date-badge {
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+  }
+  
+  .event-card.upcoming-events .registration-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .event-card.upcoming-events .event-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .event-card.upcoming-events .registration-badge {
+    align-self: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -682,6 +1020,171 @@
   .event-image {
     height: 160px;
   }
+}
+
+/* ULTIMATE OVERRIDE: Force all upcoming events styles with maximum specificity */
+html body div.events-page .events-grid-section .container .events-grid .event-card {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  background: white !important;
+  background-color: white !important;
+  padding: 0 !important;
+  text-align: left !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: #1e293b !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card::before,
+html body div.events-page .events-grid-section .container .events-grid .event-card::after {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  content: none !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card:hover {
+  transform: translateY(-12px) scale(1.02) !important;
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(59, 130, 246, 0.1) !important;
+  background: white !important;
+  background-color: white !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card:hover .event-image::before {
+  animation-duration: 15s;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card:hover .event-date-badge {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 24px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+html body div.events-page .events-grid-section .container .events-grid .event-card .event-actions {
+  margin-top: auto !important;
+}
+
+/* =================================================================== */
+/* ULTIMATE OVERRIDE: Upcoming Events Cards - Force Override ALL Global Styles */
+/* =================================================================== */
+
+/* HIGHEST SPECIFICITY: Override themes.css, Home.css, LandingPage.css, Events.css */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card,
+.events-page.upcoming-events .events-grid .event-card,
+body .events-page .events-grid-section .events-grid .event-card {
+  background: white !important;
+  background-color: white !important;
+  padding: 0 !important;
+  text-align: left !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  backdrop-filter: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: #1e293b !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* NUCLEAR OPTION: Remove all pseudo-elements from global styles */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card::before,
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card::after,
+.events-page.upcoming-events .events-grid .event-card::before,
+.events-page.upcoming-events .events-grid .event-card::after,
+body .events-page .events-grid-section .events-grid .event-card::before,
+body .events-page .events-grid-section .events-grid .event-card::after {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  content: none !important;
+}
+
+/* FORCE OVERRIDE: Global hover effects */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card:hover,
+.events-page.upcoming-events .events-grid .event-card:hover,
+body .events-page .events-grid-section .events-grid .event-card:hover {
+  transform: translateY(-8px) scale(1.02) !important;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(59, 130, 246, 0.1) !important;
+  background: white !important;
+  background-color: white !important;
+}
+
+/* FORCE OVERRIDE: Typography */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card h3,
+.events-page.upcoming-events .events-grid .event-card h3,
+body .events-page .events-grid-section .events-grid .event-card h3 {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  margin: 0 0 8px 0 !important;
+  line-height: 1.3 !important;
+  background: none !important;
+  background-color: transparent !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #1e293b !important;
+  background-clip: unset !important;
+  text-align: left !important;
+}
+
+/* FORCE OVERRIDE: Paragraph styles */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card p,
+.events-page.upcoming-events .events-grid .event-card p,
+body .events-page .events-grid-section .events-grid .event-card p {
+  color: #64748b !important;
+  line-height: 1.6 !important;
+  font-size: 0.95rem !important;
+  margin-bottom: 16px !important;
+  text-align: left !important;
+}
+
+/* FORCE OVERRIDE: Button styles */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card .btn,
+.events-page.upcoming-events .events-grid .event-card .btn,
+body .events-page .events-grid-section .events-grid .event-card .btn {
+  width: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+  padding: 12px 20px !important;
+}
+
+/* FORCE OVERRIDE: Content container */
+.upcoming-events-header ~ .events-grid-section .container .events-grid .event-card .event-content,
+.events-page.upcoming-events .events-grid .event-card .event-content,
+body .events-page .events-grid-section .events-grid .event-card .event-content {
+  padding: 24px !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: transparent !important;
 }
 
 /* Custom Scrollbar */

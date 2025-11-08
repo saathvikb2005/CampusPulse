@@ -19,6 +19,8 @@ const LandingPage = () => {
   const [featureStats, setFeatureStats] = useState({});
   const [loading, setLoading] = useState(true);
 
+  
+
   useEffect(() => {
     const handleScroll = () => {
       const isScrolled = window.scrollY > 50;
@@ -290,7 +292,7 @@ const LandingPage = () => {
             title: 'Campus Demo Event',
             description: 'Explore Campus Pulse features and connect with the community.',
             date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-            location: 'Campus Hub',
+            location: 'Vignan\'s University Campus',
             image: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400&h=200&fit=crop&q=60'
           },
           {

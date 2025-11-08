@@ -8,6 +8,7 @@ const About = () => {
   return (
     <div className="about-page">
       <Navigation />
+      
       {/* About Hero Section */}
       <section className="about-hero">
         <div className="container">
@@ -20,6 +21,7 @@ const About = () => {
           </p>
         </div>
       </section>
+
       {/* Mission Section */}
       <section className="mission-section">
         <div className="container">
@@ -36,6 +38,7 @@ const About = () => {
           </div>
         </div>
       </section>
+
       {/* Key Features Section */}
       <section className="key-features-section">
         <div className="container">
@@ -48,14 +51,8 @@ const About = () => {
               <div className="feature-content">
                 <h3>Centralized Announcements</h3>
                 <ul>
-                  <li>
-                    One place for official notices, exam updates, circulars, and
-                    urgent alerts.
-                  </li>
-                  <li>
-                    Push notifications or emails ensure no important information
-                    is missed.
-                  </li>
+                  <li>One place for official notices, exam updates, circulars, and urgent alerts.</li>
+                  <li>Push notifications or emails ensure no important information is missed.</li>
                 </ul>
               </div>
             </div>
@@ -66,17 +63,9 @@ const About = () => {
               <div className="feature-content">
                 <h3>Event & Activity Hub</h3>
                 <ul>
-                  <li>
-                    Browse upcoming events, cultural fests, workshops,
-                    hackathons, and club meetings.
-                  </li>
-                  <li>
-                    Register or RSVP directly and receive automatic reminders.
-                  </li>
-                  <li>
-                    Event organizers can track participant lists and send
-                    updates.
-                  </li>
+                  <li>Browse upcoming events, cultural fests, workshops, hackathons, and club meetings.</li>
+                  <li>Register or RSVP directly and receive automatic reminders.</li>
+                  <li>Event organizers can track participant lists and send updates.</li>
                 </ul>
               </div>
             </div>
@@ -87,14 +76,8 @@ const About = () => {
               <div className="feature-content">
                 <h3>Student Feedback & Polls</h3>
                 <ul>
-                  <li>
-                    Anonymous feedback forms for courses, facilities, or campus
-                    life.
-                  </li>
-                  <li>
-                    Quick polls to capture student opinions and help
-                    decision-making.
-                  </li>
+                  <li>Anonymous feedback forms for courses, facilities, or campus life.</li>
+                  <li>Quick polls to capture student opinions and help decision-making.</li>
                 </ul>
               </div>
             </div>
@@ -105,13 +88,8 @@ const About = () => {
               <div className="feature-content">
                 <h3>Discussion Forums & Communities</h3>
                 <ul>
-                  <li>
-                    Dedicated spaces for clubs, societies, and interest groups.
-                  </li>
-                  <li>
-                    Students can discuss ideas, share resources, and collaborate
-                    on projects.
-                  </li>
+                  <li>Dedicated spaces for clubs, societies, and interest groups.</li>
+                  <li>Students can discuss ideas, share resources, and collaborate on projects.</li>
                 </ul>
               </div>
             </div>
@@ -123,18 +101,9 @@ const About = () => {
                 <h3>Personalised Dashboard</h3>
                 <p>Each user sees customised content:</p>
                 <ul>
-                  <li>
-                    <strong>Students:</strong> class schedules, club notices,
-                    event reminders.
-                  </li>
-                  <li>
-                    <strong>Faculty:</strong> academic updates, announcements,
-                    feedback summaries.
-                  </li>
-                  <li>
-                    <strong>Admin:</strong> analytics on participation and
-                    feedback trends.
-                  </li>
+                  <li><strong>Students:</strong> class schedules, club notices, event reminders.</li>
+                  <li><strong>Faculty:</strong> academic updates, announcements, feedback summaries.</li>
+                  <li><strong>Admin:</strong> analytics on participation and feedback trends.</li>
                 </ul>
               </div>
             </div>
@@ -145,13 +114,8 @@ const About = () => {
               <div className="feature-content">
                 <h3>Smart Notifications & Reminders</h3>
                 <ul>
-                  <li>
-                    Instant notifications for new announcements or event
-                    updates.
-                  </li>
-                  <li>
-                    Optional integration with SMS or email for critical alerts.
-                  </li>
+                  <li>Instant notifications for new announcements or event updates.</li>
+                  <li>Optional integration with SMS or email for critical alerts.</li>
                 </ul>
               </div>
             </div>
@@ -164,10 +128,7 @@ const About = () => {
                   Resource Library <span className="optional">(Optional)</span>
                 </h3>
                 <ul>
-                  <li>
-                    Upload and access study materials, recordings, and important
-                    documents securely.
-                  </li>
+                  <li>Upload and access study materials, recordings, and important documents securely.</li>
                 </ul>
               </div>
             </div>
@@ -178,16 +139,14 @@ const About = () => {
               <div className="feature-content">
                 <h3>Analytics & Insights</h3>
                 <ul>
-                  <li>
-                    <strong>For administrators:</strong> data-driven reports on
-                    student engagement, event attendance, and feedback trends.
-                  </li>
+                  <li><strong>For administrators:</strong> data-driven reports on student engagement, event attendance, and feedback trends.</li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
       </section>
+
       {/* Statistics Section */}
       <section className="stats-section">
         <div className="container">
@@ -212,13 +171,13 @@ const About = () => {
           </div>
         </div>
       </section>
+
       {/* Join Team Section */}
       <section className="join-team-section">
         <div className="container">
           <h2>Join Our Team</h2>
           <p className="team-description">
-            We're always looking for passionate individuals to help us improve
-            Campus Pulse.
+            We're always looking for passionate individuals to help us improve Campus Pulse.
           </p>
 
           <div className="contact-info">
@@ -232,11 +191,8 @@ const About = () => {
                   <h4>Email Us</h4>
                   <p>
                     Send us your resume and portfolio at{" "}
-                    <a
-                      href="mailto:careers@campus-pulse.edu"
-                      className="contact-link"
-                    >
-                      careers@campus-pulse.edu
+                    <a href="mailto:saathvikbachali@gmail.com" className="contact-link">
+                      saathvikbachali@gmail.com
                     </a>
                   </p>
                 </div>
@@ -249,9 +205,9 @@ const About = () => {
                 <div className="contact-text">
                   <h4>Call Us</h4>
                   <p>
-                    Reach out to our HR team at{" "}
-                    <a href="tel:+1-555-123-4567" className="contact-link">
-                      +1 (555) 123-4567
+                    Reach out to our team at{" "}
+                    <a href="tel:+917075299255" className="contact-link">
+                      +91 7075299255
                     </a>
                   </p>
                 </div>
@@ -264,11 +220,11 @@ const About = () => {
                 <div className="contact-text">
                   <h4>Visit Us</h4>
                   <p>
-                    Campus Innovation Center
+                    Vignan's Foundation for Science, Technology and Research
                     <br />
-                    123 University Avenue
+                    Vadlamudi, Guntur
                     <br />
-                    Campus City, CC 12345
+                    Andhra Pradesh, India
                   </p>
                 </div>
               </div>
@@ -276,6 +232,7 @@ const About = () => {
           </div>
         </div>
       </section>
+
       {/* Vision Section */}
       <section className="vision-section">
         <div className="container">
@@ -302,6 +259,7 @@ const About = () => {
           </div>
         </div>
       </section>
+
       {/* CTA Section */}
       <section className="cta-section">
         <div className="container">

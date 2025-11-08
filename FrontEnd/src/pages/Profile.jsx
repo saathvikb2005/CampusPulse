@@ -5,6 +5,7 @@ import { showSuccessToast, showErrorToast } from '../utils/toastUtils';
 import { getCurrentUser, isAuthenticated, logout } from '../utils/auth';
 import { userAPI, eventAPI, blogAPI } from '../services/api';
 import { applyTheme } from '../utils/preferences';
+import { INTEREST_CATEGORIES, getInterestSuggestions } from '../utils/interests';
 import './Profile.css';
 import '../styles/preferences.css';
 
@@ -47,6 +48,15 @@ const Profile = () => {
   // Activity data
   const [activities, setActivities] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  
+  // Avatar upload method
+  const [avatarUploadMethod, setAvatarUploadMethod] = useState('upload');
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  // Interest management
+  const [showInterestSuggestions, setShowInterestSuggestions] = useState(false);
+  const [interestQuery, setInterestQuery] = useState('');
+  const [interestSuggestions, setInterestSuggestions] = useState([]);
 
   // Load user data on component mount
   useEffect(() => {
@@ -229,17 +239,82 @@ const Profile = () => {
       const [firstName, ...lastNameParts] = profile.name.split(' ');
       const lastName = lastNameParts.join(' ');
 
+      // Validate required fields
+      if (!firstName || firstName.trim().length === 0) {
+        showErrorToast('First name is required');
+        setLoading(false);
+        return;
+      }
+
+      if (!lastName || lastName.trim().length === 0) {
+        showErrorToast('Last name is required');
+        setLoading(false);
+        return;
+      }
+
+      if (firstName.length > 50) {
+        showErrorToast('First name cannot exceed 50 characters');
+        setLoading(false);
+        return;
+      }
+
+      if (lastName.length > 50) {
+        showErrorToast('Last name cannot exceed 50 characters');
+        setLoading(false);
+        return;
+      }
+
+      if (profile.department && profile.department.length > 100) {
+        showErrorToast('Department name cannot exceed 100 characters');
+        setLoading(false);
+        return;
+      }
+
+      if (profile.bio && profile.bio.length > 1000) {
+        showErrorToast('Bio cannot exceed 1000 characters');
+        setLoading(false);
+        return;
+      }
+
+      // Validate phone number format if provided
+      if (profile.phone && profile.phone.trim() !== '') {
+        const phoneRegex = /^\+?[\d\s-()]+$/;
+        if (!phoneRegex.test(profile.phone)) {
+          showErrorToast('Please provide a valid phone number (numbers, spaces, dashes, and parentheses only)');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Validate interests
+      const validInterests = Array.isArray(profile.interests) 
+        ? profile.interests.filter(interest => 
+            typeof interest === 'string' && 
+            interest.trim().length > 0 && 
+            interest.trim().length <= 50
+          )
+        : [];
+
       const profileData = {
-        firstName: firstName || '',
-        lastName: lastName || '',
-        email: profile.email,
-        studentId: profile.regNumber, // Map regNumber to studentId for backend
-        department: profile.department,
-        year: profile.year,
-        phone: profile.phone,
-        bio: profile.bio,
-        interests: profile.interests
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        department: profile.department ? profile.department.trim() : '',
+        phone: profile.phone ? profile.phone.trim() : '',
+        bio: profile.bio ? profile.bio.trim() : '',
+        interests: validInterests
       };
+
+      // Remove empty fields except for required ones (firstName, lastName)
+      Object.keys(profileData).forEach(key => {
+        if ((profileData[key] === '' || profileData[key] === undefined || profileData[key] === null) && 
+            key !== 'firstName' && key !== 'lastName') {
+          delete profileData[key];
+        }
+        // Keep empty arrays for interests as they are valid
+        if (key === 'interests' && Array.isArray(profileData[key]) && profileData[key].length === 0) {
+          // Keep empty interests array - it's valid
+        }
+      });
 
       const response = await userAPI.updateProfile(profileData);
       
@@ -251,11 +326,24 @@ const Profile = () => {
         setIsEditing(false);
         showSuccessToast('Profile updated successfully!');
       } else {
-        showErrorToast(response.message || 'Failed to update profile');
+        // Show specific validation errors if available
+        if (response.errors && Array.isArray(response.errors)) {
+          response.errors.forEach(error => showErrorToast(error.msg || error.message || error));
+        } else {
+          showErrorToast(response.message || 'Failed to update profile');
+        }
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      showErrorToast('Failed to update profile. Please try again.');
+      
+      // Show more specific error messages
+      if (error.message && error.message.includes('Validation failed')) {
+        showErrorToast('Please check your input fields and try again. Some fields may have invalid data.');
+      } else if (error.message && error.message.includes('400')) {
+        showErrorToast('Invalid data provided. Please check your input and try again.');
+      } else {
+        showErrorToast('Failed to update profile. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -335,13 +423,51 @@ const Profile = () => {
     }
   };
 
-  const addInterest = () => {
-    const interest = prompt('Enter a new interest:');
+  const handleAvatarUrl = async () => {
+    if (!avatarUrl.trim()) {
+      showErrorToast('Please enter a valid image URL');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Validate URL format
+      try {
+        new URL(avatarUrl);
+      } catch {
+        showErrorToast('Please enter a valid URL');
+        return;
+      }
+
+      // Save avatar URL to backend
+      const response = await userAPI.updateProfile({ avatar: avatarUrl });
+      
+      if (response.success) {
+        // Update local profile state
+        setProfile(prev => ({ ...prev, avatar: avatarUrl }));
+        showSuccessToast('Avatar updated successfully!');
+        setAvatarUrl('');
+      } else {
+        showErrorToast(response.message || 'Failed to update avatar');
+      }
+      
+    } catch (error) {
+      console.error('Error setting avatar URL:', error);
+      showErrorToast('Failed to set avatar URL');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addInterest = (interest) => {
     if (interest && !profile.interests.includes(interest)) {
       setProfile(prev => ({
         ...prev,
         interests: [...prev.interests, interest]
       }));
+      setShowInterestSuggestions(false);
+      setInterestQuery('');
     }
   };
 
@@ -350,6 +476,19 @@ const Profile = () => {
       ...prev,
       interests: prev.interests.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleInterestSearch = (query) => {
+    setInterestQuery(query);
+    const suggestions = getInterestSuggestions(query);
+    setInterestSuggestions(suggestions);
+  };
+
+  const toggleInterestSuggestions = () => {
+    setShowInterestSuggestions(!showInterestSuggestions);
+    if (!showInterestSuggestions) {
+      setInterestSuggestions(getInterestSuggestions(''));
+    }
   };
 
   return (
@@ -371,10 +510,48 @@ const Profile = () => {
               className="profile-avatar" 
             />
             {isEditing && (
-              <label className="avatar-upload">
-                <input type="file" accept="image/*" onChange={handleAvatarChange} />
-                <i className="fas fa-camera"></i>
-              </label>
+              <div className="avatar-upload-options">
+                <div className="upload-method-selector">
+                  <button
+                    type="button"
+                    className={`method-btn ${avatarUploadMethod === 'upload' ? 'active' : ''}`}
+                    onClick={() => setAvatarUploadMethod('upload')}
+                  >
+                    <i className="fas fa-upload"></i> Upload
+                  </button>
+                  <button
+                    type="button"
+                    className={`method-btn ${avatarUploadMethod === 'url' ? 'active' : ''}`}
+                    onClick={() => setAvatarUploadMethod('url')}
+                  >
+                    <i className="fas fa-link"></i> URL
+                  </button>
+                </div>
+                
+                {avatarUploadMethod === 'upload' ? (
+                  <label className="avatar-upload">
+                    <input type="file" accept="image/*" onChange={handleAvatarChange} />
+                    <i className="fas fa-camera"></i>
+                  </label>
+                ) : (
+                  <div className="avatar-url-input">
+                    <input
+                      type="url"
+                      placeholder="Enter image URL..."
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleAvatarUrl}
+                      disabled={loading || !avatarUrl.trim()}
+                      className="url-submit-btn"
+                    >
+                      <i className="fas fa-check"></i>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <div className="profile-summary">
@@ -543,11 +720,50 @@ const Profile = () => {
                     ))}
                   </div>
                   {isEditing && (
-                    <button type="button" className="add-interest-btn" onClick={addInterest}>
-                      + Add Interest
-                    </button>
+                    <div className="interest-input-section">
+                      <button 
+                        type="button" 
+                        className="add-interest-btn" 
+                        onClick={toggleInterestSuggestions}
+                      >
+                        + Add Interest
+                      </button>
+                      
+                      {showInterestSuggestions && (
+                        <div className="interest-suggestions-container">
+                          <input
+                            type="text"
+                            placeholder="Search interests..."
+                            value={interestQuery}
+                            onChange={(e) => handleInterestSearch(e.target.value)}
+                            className="interest-search-input"
+                          />
+                          <div className="interest-suggestions">
+                            {interestSuggestions.map((suggestion, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                className={`interest-suggestion ${
+                                  profile.interests.includes(suggestion) ? 'already-selected' : ''
+                                }`}
+                                onClick={() => addInterest(suggestion)}
+                                disabled={profile.interests.includes(suggestion)}
+                              >
+                                {suggestion}
+                                {profile.interests.includes(suggestion) && ' ✓'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
+                {profile.interests.length > 0 && (
+                  <p className="interests-help-text">
+                    🤖 These interests help our AI recommend personalized events for you!
+                  </p>
+                )}
               </div>
 
               {isEditing && (
@@ -618,12 +834,20 @@ const Profile = () => {
                     <div className={`registration-status ${registration.status || 'confirmed'}`}>
                       {registration.status || 'confirmed'}
                     </div>
-                    <button 
-                      className="btn btn-outline btn-small"
-                      onClick={() => navigate(`/events/details/${registration.id}`)}
-                    >
-                      View Details
-                    </button>
+                    <div className="registration-actions">
+                      <button 
+                        className="btn btn-outline btn-small"
+                        onClick={() => navigate(`/events/details/${registration.id}`)}
+                      >
+                        View Details
+                      </button>
+                      <button 
+                        className="btn btn-primary btn-small"
+                        onClick={() => navigate(`/events/register/${registration.id}/confirmation`)}
+                      >
+                        View Confirmation
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (

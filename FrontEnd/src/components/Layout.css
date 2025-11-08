@@ -1,27 +1,58 @@
 /* src/components/Layout.css */
 
+:root {
+  --primary-color: #2563eb;
+  --secondary-color: #64748b;
+  --background-color: #ffffff;
+  --surface-color: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --transition-fast: 0.15s ease-in-out;
+  --transition-normal: 0.3s ease-in-out;
+  --transition-slow: 0.5s ease-in-out;
+}
+
 .app-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
+  background-color: var(--background-color);
+  position: relative;
 }
 
+/* Navigation Styles with Enhanced Sticky Behavior */
 .navigation-wrapper {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: #ffffff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: var(--background-color);
+  box-shadow: var(--shadow-sm);
   width: 100%;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.95);
 }
 
+/* Scrolled state for navigation */
+.navigation-wrapper.scrolled {
+  box-shadow: var(--shadow-lg);
+  background-color: rgba(255, 255, 255, 0.98);
+}
+
+/* Main Content Area with Smooth Animations */
 .main-content {
   flex: 1;
   width: 100%;
   padding: 0;
   margin: 0;
-  background: #ffffff;
+  background: var(--background-color);
+  opacity: 0;
+  animation: fadeInUp var(--transition-slow) forwards;
+  animation-delay: 0.1s;
 }
 
 .content-container {
@@ -29,30 +60,91 @@
   max-width: 100%;
   margin: 0 auto;
   padding: 0;
+  animation: slideIn var(--transition-normal) forwards;
 }
 
-/* Ensure proper spacing when navigation is hidden */
+/* Enhanced Spacing Logic */
 .app-layout:not(:has(.navigation-wrapper)) .main-content {
   padding-top: 0;
+  animation-delay: 0s;
 }
 
-/* Ensure proper spacing when footer is hidden */
 .app-layout:not(:has(.footer-wrapper)) .main-content {
   padding-bottom: 0;
 }
 
-/* Responsive design */
+/* Footer Styles */
+.footer-wrapper {
+  background: var(--surface-color);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all var(--transition-normal);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Hover Effects for Interactive Elements */
+.navigation-wrapper:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Responsive Design with Better Breakpoints */
+@media (max-width: 1200px) {
+  .content-container {
+    padding: 0 2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .main-content {
     padding: 0;
   }
   
   .content-container {
-    padding: 0;
+    padding: 0 1rem;
+  }
+  
+  .navigation-wrapper {
+    backdrop-filter: none; /* Performance optimization for mobile */
   }
 }
 
-/* Print styles */
+@media (max-width: 480px) {
+  .content-container {
+    padding: 0 0.5rem;
+  }
+}
+
+/* Print Styles */
 @media print {
   .navigation-wrapper,
   .footer-wrapper {
@@ -62,13 +154,43 @@
   .main-content {
     padding: 0;
     margin: 0;
+    animation: none;
+    opacity: 1;
+  }
+  
+  .content-container {
+    animation: none;
   }
 }
 
+/* Accessibility & Enhanced User Experience */
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .navigation-wrapper {
-    border-bottom: 2px solid #000000;
+    border-bottom: 3px solid #000000;
+    background-color: #ffffff;
+  }
+  
+  .footer-wrapper {
+    border-top: 3px solid #000000;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .app-layout {
+    --background-color: #0f172a;
+    --surface-color: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+  }
+  
+  .navigation-wrapper {
+    background-color: rgba(15, 23, 42, 0.95);
+  }
+  
+  .navigation-wrapper.scrolled {
+    background-color: rgba(15, 23, 42, 0.98);
   }
 }
 
@@ -78,5 +200,39 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+  
+  .main-content,
+  .content-container {
+    animation: fadeIn 0.01ms !important;
+  }
+}
+
+/* Focus styles for keyboard navigation */
+.app-layout *:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: var(--border-radius);
+}
+
+/* Loading state */
+.app-layout.loading .main-content {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Enhanced scroll behavior */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }

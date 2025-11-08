@@ -1,14 +1,14 @@
 // src/services/api.js - Backend API Integration Service
 
-// Force production URL - temporary fix for deployment issue
-const API_BASE_URL = 'https://campuspulse-28.onrender.com';
+// Development configuration - using local backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-// Debug log for production troubleshooting
+// Debug log for development
 console.log('🔍 API Configuration:', {
   envVar: import.meta.env.VITE_API_BASE_URL,
   finalURL: API_BASE_URL,
   mode: import.meta.env.MODE,
-  forced: true
+  isLocal: API_BASE_URL.includes('localhost')
 });
 
 // Helper function to get auth headers
@@ -104,6 +104,13 @@ const del = (endpoint) => apiRequest(endpoint, { method: 'DELETE' });
 
 // API service object
 export const api = {
+  // Direct HTTP methods for flexibility
+  get,
+  post,
+  put,
+  patch,
+  delete: del,
+  
   // Health check
   health: () => get('/health'),
 
@@ -157,11 +164,14 @@ export const api = {
     create: (eventData) => post('/api/events', eventData),
     update: (id, eventData) => put(`/api/events/${id}`, eventData),
     delete: (id) => del(`/api/events/${id}`),
-    register: (id) => post(`/api/events/${id}/register`),
+    register: (id, registrationData) => post(`/api/events/${id}/register`, registrationData),
     unregister: (id) => post(`/api/events/${id}/unregister`),
     volunteerRegister: (id) => post(`/api/events/${id}/volunteer`),
     volunteerUnregister: (id) => post(`/api/events/${id}/volunteer/unregister`),
-    getRegistrations: (id) => get(`/api/events/${id}/registrations`),
+    getRegistrations: (id) => get(`/api/events/${id}/registrations`), // Admin only
+    getRegistrationCount: (id) => get(`/api/events/${id}/registration-count`), // Public
+    getUserEventRegistration: (id) => get(`/api/events/${id}/registration/me`), // User's own registration
+    getVolunteerRegistrations: (id) => get(`/api/events/${id}/volunteers`),
     uploadImage: (formData) => {
       const token = localStorage.getItem('token');
       return fetch(`${API_BASE_URL}/api/upload/event-image`, {
@@ -184,8 +194,11 @@ export const api = {
     getMyEvents: () => get('/api/events/my-events', { cache: 'no-store' }),
     getPending: () => get('/api/events/pending', { cache: 'no-store' }),
     search: (query) => get(`/api/events/search?q=${encodeURIComponent(query)}`),
-    startLiveStream: (id) => post(`/api/events/${id}/start-stream`),
-    endLiveStream: (id) => post(`/api/events/${id}/end-stream`),
+    startLiveStream: (id, data = {}) => post(`/api/events/${id}/start-stream`, data),
+    endLiveStream: (id, data = {}) => post(`/api/events/${id}/end-stream`, data),
+    getChatMessages: (id) => get(`/api/events/${id}/chat`),
+    sendChatMessage: (id, messageData) => post(`/api/events/${id}/chat`, messageData),
+    getStreamStats: (id) => get(`/api/events/${id}/stream-stats`),
     getGallery: (id) => get(`/api/events/${id}/gallery`),
     addPhotosToGallery: (id, formData) => apiRequest(`/api/events/${id}/gallery`, {
       method: 'POST',
@@ -193,7 +206,8 @@ export const api = {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     }),
     removePhotoFromGallery: (id, photoId) => del(`/api/events/${id}/gallery/${photoId}`),
-    confirmRegistration: (id) => post(`/api/events/${id}/register/confirm`)
+    confirmRegistration: (id) => post(`/api/events/${id}/register/confirm`),
+    getUserRegistration: (id) => get(`/api/events/${id}/registration/me`)
   },
 
   // Blog system endpoints
@@ -242,7 +256,7 @@ export const api = {
     getUserNotifications: () => get('/api/notifications', { cache: 'no-store' }),
     create: (notificationData) => post('/api/notifications', notificationData),
     markAsRead: (id) => put(`/api/notifications/${id}/read`),
-    markAllAsRead: () => patch('/api/notifications/mark-all-read'),
+    markAllAsRead: () => put('/api/notifications/mark-all-read'), // Changed from patch to put for CORS compatibility
     delete: (id) => del(`/api/notifications/${id}`),
     getUnreadCount: () => get('/api/notifications/count', { cache: 'no-store' })
   },
@@ -254,7 +268,7 @@ export const api = {
     getById: (id) => get(`/api/feedback/${id}`),
     updateStatus: (id, statusData) => put(`/api/feedback/${id}/status`, statusData),
     delete: (id) => del(`/api/feedback/${id}`),
-    getUserFeedback: () => get('/api/feedback/my-feedback')
+    getUserFeedback: () => get('/api/feedback/my-feedback', { cache: 'no-store' })
   },
 
   // Analytics endpoints
@@ -297,6 +311,15 @@ export const api = {
         data: ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Graduate', 'Post Graduate']
       });
     }
+  },
+
+  // AI and Recommendation endpoints
+  ai: {
+    getRecommendations: (limit = 10) => get(`/api/ai/recommendations?limit=${limit}`),
+    getTrending: (limit = 5) => get(`/api/ai/trending?limit=${limit}`),
+    getSimilar: (eventId, limit = 5) => get(`/api/ai/similar/${eventId}?limit=${limit}`),
+    getInsights: (eventId) => get(`/api/ai/insights/${eventId}`),
+    healthCheck: () => get('/api/ai/health')
   }
 };
 
@@ -310,6 +333,10 @@ export const notificationAPI = api.notifications;
 export const feedbackAPI = api.feedback;
 export const analyticsAPI = api.analytics;
 export const metadataAPI = api.metadata;
+export const aiAPI = api.ai;
+
+// Export individual HTTP methods
+export { get, post, put, patch, del as delete };
 
 // Default export
 export default api;

@@ -1,99 +1,96 @@
-/* Basic Theme Support CSS */
+/* Comprehensive Theme System for CampusPulse */
 
-/* Light Theme (Default) */
+/* CSS Custom Properties for Theme Variables */
+:root {
+  /* Light Theme Colors (Default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
+  --border-color: #dee2e6;
+  --accent-color: #4361ee;
+  --accent-hover: #3c5ce6;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --info-color: #17a2b8;
+  
+  /* Shadows */
+  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+/* Light Theme */
 body.theme-light {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
   --text-primary: #212529;
   --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
   --border-color: #dee2e6;
   --accent-color: #4361ee;
+  --accent-hover: #3c5ce6;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --info-color: #17a2b8;
+  
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Dark Theme */
 body.theme-dark {
   --bg-primary: #1a1a1a;
   --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
   --text-primary: #ffffff;
   --text-secondary: #adb5bd;
+  --text-muted: #6c757d;
   --border-color: #495057;
   --accent-color: #6366f1;
+  --accent-hover: #5b5ff1;
+  --success-color: #198754;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --info-color: #0dcaf0;
+  
+  /* Darker shadows for dark theme */
+  --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.5);
   
   background-color: var(--bg-primary);
   color: var(--text-primary);
 }
 
-/* Apply theme variables to common elements */
-body.theme-dark .profile-page,
-body.theme-dark .profile-card,
-body.theme-dark .profile-content,
-body.theme-dark .preferences-tab,
-body.theme-dark .activity-tab,
-body.theme-dark .registrations-tab {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-body.theme-dark .profile-form input,
-body.theme-dark .profile-form select,
-body.theme-dark .profile-form textarea {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-body.theme-dark .tab {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--border-color);
-}
-
-body.theme-dark .tab.active {
-  background-color: var(--accent-color);
-  color: white;
-}
-
-body.theme-dark .activity-item,
-body.theme-dark .registration-item {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-body.theme-dark .preferences-section {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-}
-
-/* Auto theme detection */
+/* Auto Theme - System Preference */
 @media (prefers-color-scheme: dark) {
   body.theme-auto {
     --bg-primary: #1a1a1a;
     --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3a3a3a;
     --text-primary: #ffffff;
     --text-secondary: #adb5bd;
+    --text-muted: #6c757d;
     --border-color: #495057;
     --accent-color: #6366f1;
+    --accent-hover: #5b5ff1;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.5);
     
     background-color: var(--bg-primary);
     color: var(--text-primary);
-  }
-  
-  body.theme-auto .profile-page,
-  body.theme-auto .profile-card,
-  body.theme-auto .profile-content,
-  body.theme-auto .preferences-tab,
-  body.theme-auto .activity-tab,
-  body.theme-auto .registrations-tab {
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-  }
-  
-  body.theme-auto .profile-form input,
-  body.theme-auto .profile-form select,
-  body.theme-auto .profile-form textarea {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
   }
 }
 
@@ -101,9 +98,341 @@ body.theme-dark .preferences-section {
   body.theme-auto {
     --bg-primary: #ffffff;
     --bg-secondary: #f8f9fa;
+    --bg-tertiary: #e9ecef;
     --text-primary: #212529;
     --text-secondary: #6c757d;
+    --text-muted: #adb5bd;
     --border-color: #dee2e6;
     --accent-color: #4361ee;
+    --accent-hover: #3c5ce6;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
   }
+}
+
+/* ===========================================
+   GLOBAL THEME APPLICATION
+   =========================================== */
+
+/* Apply theme variables to ALL components */
+body.theme-dark,
+body.theme-auto {
+  /* Navigation */
+  .navigation,
+  .nav-brand,
+  .nav-links,
+  .nav-link,
+  .mobile-menu {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Cards and Containers */
+  .card,
+  .event-card,
+  .profile-card,
+  .blog-card,
+  .notification-card,
+  .feedback-card,
+  .admin-card,
+  .dashboard-card,
+  .feature-card,
+  .registration-item,
+  .activity-item {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+  
+  /* Sections and Pages */
+  .home-page,
+  .profile-page,
+  .admin-page,
+  .events-page,
+  .blogs-page,
+  .feedback-page,
+  .notifications-page,
+  .landing-page,
+  .about-page,
+  .features-page {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  /* Event Sections */
+  .event-strip,
+  .hero,
+  .feature-section,
+  .ai-recommendations-section,
+  .recent-events-section,
+  .event-details-section,
+  .event-gallery-section {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  /* Forms and Inputs */
+  .form-group input,
+  .form-group select,
+  .form-group textarea,
+  .search-input,
+  .filter-select,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25) !important;
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+    color: white !important;
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+  }
+  
+  .btn-secondary {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--border-color) !important;
+  }
+  
+  /* Tabs */
+  .tab,
+  .tab-button {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  .tab.active,
+  .tab-button.active {
+    background-color: var(--accent-color) !important;
+    color: white !important;
+    border-color: var(--accent-color) !important;
+  }
+  
+  /* Tables */
+  .table,
+  .table th,
+  .table td {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  .table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--bg-tertiary) !important;
+  }
+  
+  /* Modals and Overlays */
+  .modal,
+  .modal-content,
+  .modal-header,
+  .modal-body,
+  .modal-footer,
+  .dropdown-menu,
+  .popover,
+  .tooltip {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Text Elements */
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary) !important;
+  }
+  
+  p, span, div, a {
+    color: var(--text-primary) !important;
+  }
+  
+  .text-muted {
+    color: var(--text-muted) !important;
+  }
+  
+  .text-secondary {
+    color: var(--text-secondary) !important;
+  }
+  
+  /* Links */
+  a {
+    color: var(--accent-color) !important;
+  }
+  
+  a:hover {
+    color: var(--accent-hover) !important;
+  }
+  
+  /* Borders */
+  .border,
+  .border-top,
+  .border-bottom,
+  .border-left,
+  .border-right {
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Alerts and Status */
+  .alert-success {
+    background-color: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: white !important;
+  }
+  
+  .alert-warning {
+    background-color: var(--warning-color) !important;
+    border-color: var(--warning-color) !important;
+    color: #212529 !important;
+  }
+  
+  .alert-danger {
+    background-color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: white !important;
+  }
+  
+  .alert-info {
+    background-color: var(--info-color) !important;
+    border-color: var(--info-color) !important;
+    color: white !important;
+  }
+  
+  /* Footer */
+  .footer {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Loading States */
+  .loading-spinner {
+    border-color: var(--border-color) !important;
+    border-top-color: var(--accent-color) !important;
+  }
+  
+  /* QR Components */
+  .qr-scanner,
+  .qr-ticket,
+  .attendance-dashboard {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* AI Recommendations */
+  .ai-recommendations,
+  .recommendation-card,
+  .trending-events,
+  .similar-events {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Analytics Dashboard */
+  .analytics-card,
+  .chart-container,
+  .stats-card,
+  .metrics-grid {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Event Management */
+  .event-management,
+  .event-form,
+  .event-list,
+  .event-approval {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Notification System */
+  .notification-banner,
+  .notification-item,
+  .notification-list {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  /* Blog System */
+  .blog-post,
+  .blog-content,
+  .blog-sidebar,
+  .comment-section {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+  }
+}
+
+/* ===========================================
+   SMOOTH TRANSITIONS
+   =========================================== */
+
+* {
+  transition: background-color 0.3s ease, 
+              color 0.3s ease, 
+              border-color 0.3s ease,
+              box-shadow 0.3s ease !important;
+}
+
+/* ===========================================
+   SCROLLBAR THEMING
+   =========================================== */
+
+body.theme-dark::-webkit-scrollbar,
+body.theme-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.theme-dark::-webkit-scrollbar-track,
+body.theme-auto::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+body.theme-dark::-webkit-scrollbar-thumb,
+body.theme-auto::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+body.theme-dark::-webkit-scrollbar-thumb:hover,
+body.theme-auto::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }

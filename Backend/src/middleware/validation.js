@@ -76,13 +76,15 @@ const validateLogin = [
 // Validation rules for profile update
 const validateProfileUpdate = [
   body('firstName')
-    .optional()
+    .notEmpty()
+    .withMessage('First name is required')
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('First name must be between 1 and 50 characters'),
   
   body('lastName')
-    .optional()
+    .notEmpty()
+    .withMessage('Last name is required')
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters'),
@@ -100,8 +102,8 @@ const validateProfileUpdate = [
   
   body('bio')
     .optional()
-    .isLength({ max: 500 })
-    .withMessage('Bio cannot exceed 500 characters'),
+    .isLength({ max: 1000 })
+    .withMessage('Bio cannot exceed 1000 characters'),
   
   body('interests')
     .optional()
@@ -251,7 +253,7 @@ const validateEventUpdate = [
   
   body('category')
     .optional()
-    .isIn(['Academic', 'Sports', 'Cultural', 'Technical', 'Social', 'Workshop', 'Seminar', 'Other'])
+    .isIn(['academic', 'cultural', 'sports', 'workshop', 'seminar'])
     .withMessage('Invalid event category'),
   
   body('eventDate')
@@ -411,6 +413,22 @@ const validateBlogCreate = [
     .optional()
     .isMongoId()
     .withMessage('Invalid event ID'),
+    
+  body('image')
+    .optional()
+    .isURL()
+    .withMessage('Image must be a valid URL'),
+    
+  body('featuredImage')
+    .optional()
+    .isURL()
+    .withMessage('Featured image must be a valid URL'),
+    
+  body('excerpt')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Excerpt cannot exceed 500 characters'),
   
   checkValidation
 ];
@@ -431,7 +449,7 @@ const validateBlogUpdate = [
   
   body('category')
     .optional()
-    .isIn(['academic', 'cultural', 'sports', 'technical', 'social', 'other'])
+    .isIn(['event', 'academic', 'cultural', 'sports', 'workshop', 'news', 'announcement', 'other'])
     .withMessage('Invalid blog category'),
   
   body('tags')

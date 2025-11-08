@@ -319,7 +319,7 @@ const Events = () => {
                   </div>
 
                   <div className="event-actions">
-                    <Link to={`/events/${event._id}`} className="view-details-btn">
+                    <Link to={`/events/details/${event._id}`} className="view-details-btn">
                       View Details
                     </Link>
 

@@ -1,8 +1,17 @@
-/* src/pages/LandingPage.css */
+/* src/pages/LandingPage.css - ENHANCED WITH ANIMATIONS & DARK THEME */
 
 .landing-page {
   min-height: 100vh;
-  color: #1e293b; /* Default text color */
+  color: var(--text-primary, #333333);
+  background-color: var(--bg-primary, #ffffff);
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }
 
 /* ---------- Hero Section ---------- */
@@ -12,7 +21,7 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--bg-secondary, #f8f9fa) 0%, var(--bg-tertiary, #e9ecef) 100%);
   padding: 80px 0;
 }
 
@@ -28,14 +37,20 @@
 
 .hero-content {
   z-index: 2;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: slideUpFade 0.8s ease-out 0.2s forwards;
 }
 
 .hero-badge {
   margin-bottom: 20px;
+  opacity: 0;
+  transform: translateX(-20px);
+  animation: slideRightFade 0.6s ease-out 0.4s forwards;
 }
 
 .hero-badge span {
-  background: #3b82f6;
+  background: var(--accent-color, #007bff);
   color: white;
   padding: 8px 16px;
   border-radius: 20px;
@@ -49,22 +64,29 @@
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 20px;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUpFade 0.8s ease-out 0.6s forwards;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--accent-color, #007bff) 0%, var(--accent-hover, #0056b3) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: var(--accent-color, #007bff); /* Fallback for unsupported browsers */
 }
 
 .hero-subtitle {
   font-size: 1.25rem;
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   line-height: 1.6;
   margin-bottom: 40px;
   max-width: 500px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUpFade 0.8s ease-out 0.8s forwards;
 }
 
 .cta-buttons {
@@ -72,6 +94,9 @@
   gap: 16px;
   margin-bottom: 60px;
   flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUpFade 0.8s ease-out 1s forwards;
 }
 
 .btn {
@@ -86,30 +111,50 @@
   border: 2px solid transparent;
   cursor: pointer;
   font-size: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: var(--accent-color, #007bff);
   color: white;
-  border-color: #3b82f6;
+  border-color: var(--accent-color, #007bff);
 }
 
 .btn-primary:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--accent-hover, #0056b3);
+  border-color: var(--accent-hover, #0056b3);
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 10px 25px rgba(0, 123, 255, 0.3);
   color: white;
 }
 
 .btn-outline {
   background: transparent;
-  color: #3b82f6;
-  border-color: #3b82f6;
+  color: var(--accent-color, #007bff);
+  border-color: var(--accent-color, #007bff);
 }
 
 .btn-outline:hover {
-  background: #3b82f6;
+  background: var(--accent-color, #007bff);
   color: white;
   transform: translateY(-2px);
 }
@@ -122,33 +167,62 @@
 .btn svg {
   width: 20px;
   height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.btn:hover svg {
+  transform: translateX(4px);
 }
 
 .hero-stats {
   display: flex;
   gap: 40px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUpFade 0.8s ease-out 1.2s forwards;
 }
 
 .stat {
   text-align: center;
+  position: relative;
+}
+
+.stat::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--accent-color, #007bff);
+  transition: width 0.3s ease, left 0.3s ease;
+}
+
+.stat:hover::after {
+  width: 100%;
+  left: 0;
 }
 
 .stat-number {
   font-size: 2rem;
   font-weight: 800;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
   margin-bottom: 4px;
+  display: block;
 }
 
 .stat-label {
   font-size: 0.875rem;
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   font-weight: 500;
 }
 
 .hero-visual {
   position: relative;
   z-index: 2;
+  opacity: 0;
+  transform: translateX(30px);
+  animation: slideLeftFade 0.8s ease-out 0.4s forwards;
 }
 
 .hero-cards {
@@ -158,17 +232,14 @@
 
 .card {
   position: absolute;
-  background: white;
+  background: var(--bg-primary, #ffffff);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  transition: transform 0.3s ease;
-  color: #1e293b; /* Ensure text color in cards */
-}
-
-.card:hover {
-  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg, 0 10px 25px rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--border-color, #e0e0e0);
+  transition: all 0.3s ease;
+  color: var(--text-primary, #333333);
+  opacity: 0;
 }
 
 .card-1 {
@@ -176,6 +247,7 @@
   left: 0;
   width: 250px;
   z-index: 3;
+  animation: cardSlideIn 0.6s ease-out 1s forwards;
 }
 
 .card-2 {
@@ -183,6 +255,7 @@
   right: 0;
   width: 220px;
   z-index: 2;
+  animation: cardSlideIn 0.6s ease-out 1.2s forwards;
 }
 
 .card-3 {
@@ -191,6 +264,12 @@
   transform: translateX(-50%);
   width: 240px;
   z-index: 1;
+  animation: cardSlideIn 0.6s ease-out 1.4s forwards;
+}
+
+.card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--shadow-color) 20%, transparent);
 }
 
 .card-header {
@@ -206,12 +285,12 @@
 
 .card-header span {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
   font-size: 0.9rem;
 }
 
 .card p {
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   margin-bottom: 12px;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -219,7 +298,7 @@
 
 .card-time {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted, #999999);
   font-weight: 500;
 }
 
@@ -235,8 +314,9 @@
 .bg-circle {
   position: absolute;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--accent-color, #007bff) 0%, var(--accent-hover, #0056b3) 100%);
   opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
 }
 
 .circle-1 {
@@ -244,6 +324,7 @@
   height: 300px;
   top: 10%;
   right: 10%;
+  animation-delay: 0s;
 }
 
 .circle-2 {
@@ -251,6 +332,7 @@
   height: 200px;
   bottom: 20%;
   left: 5%;
+  animation-delay: 2s;
 }
 
 .circle-3 {
@@ -258,12 +340,13 @@
   height: 150px;
   top: 50%;
   right: 20%;
+  animation-delay: 4s;
 }
 
 /* ---------- Features Section ---------- */
 .features-section {
   padding: 100px 0;
-  background: white;
+  background: var(--bg-primary, #ffffff);
 }
 
 .container {
@@ -275,18 +358,26 @@
 .section-header {
   text-align: center;
   margin-bottom: 80px;
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+  transition: all 0.8s ease;
+}
+
+.section-header.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .section-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
   margin-bottom: 16px;
 }
 
 .section-subtitle {
   font-size: 1.125rem;
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   max-width: 600px;
   margin: 0 auto;
   line-height: 1.6;
@@ -299,31 +390,44 @@
 }
 
 .feature-card {
-  background: white;
+  background: var(--bg-secondary, #f8f9fa);
   padding: 40px 30px;
   border-radius: 12px;
   text-align: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color, #e0e0e0);
   transition: all 0.3s ease;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+}
+
+.feature-card.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border-color: #3b82f6;
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-xl, 0 20px 40px rgba(0, 0, 0, 0.25));
+  border-color: var(--accent-color, #007bff);
 }
 
 .feature-icon {
   width: 80px;
   height: 80px;
   margin: 0 auto 24px;
-  background: #eff6ff;
+  background: rgba(0, 123, 255, 0.1);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3b82f6;
+  color: var(--accent-color, #007bff);
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(5deg);
+  background: rgba(0, 123, 255, 0.2);
 }
 
 .feature-icon svg {
@@ -334,12 +438,12 @@
 .feature-card h3 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
   margin-bottom: 16px;
 }
 
 .feature-card p {
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   line-height: 1.6;
   font-size: 1rem;
 }
@@ -347,7 +451,7 @@
 /* ---------- Events Section ---------- */
 .events-section {
   padding: 100px 0;
-  background: #f8fafc;
+  background: var(--bg-secondary, #f8f9fa);
 }
 
 .events-grid {
@@ -358,18 +462,25 @@
 }
 
 .event-card {
-  background: white;
+  background: var(--bg-primary, #ffffff);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
   transition: all 0.3s ease;
-  border: 1px solid #e2e8f0;
-  color: #1e293b;
+  border: 1px solid var(--border-color, #e0e0e0);
+  color: var(--text-primary, #333333);
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+}
+
+.event-card.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .event-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-xl, 0 20px 40px rgba(0, 0, 0, 0.25));
 }
 
 .event-image {
@@ -382,25 +493,36 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.event-card:hover .event-image img {
+  transform: scale(1.1);
 }
 
 .event-date {
   position: absolute;
   top: 16px;
   right: 16px;
-  background: white;
+  background: var(--bg-primary, #ffffff);
   padding: 12px;
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  color: #1e293b;
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+  color: var(--text-primary, #333333);
+  transition: all 0.3s ease;
+}
+
+.event-card:hover .event-date {
+  background: var(--accent-color, #007bff);
+  color: white;
 }
 
 .date-day {
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1e293b;
+  color: inherit;
   line-height: 1;
 }
 
@@ -408,7 +530,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #3b82f6;
+  color: inherit;
   text-transform: uppercase;
 }
 
@@ -419,12 +541,12 @@
 .event-content h3 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary, #333333);
   margin-bottom: 12px;
 }
 
 .event-content p {
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   line-height: 1.6;
   margin-bottom: 20px;
   font-size: 1rem;
@@ -442,31 +564,62 @@
   align-items: center;
   gap: 6px;
   font-size: 0.875rem;
-  color: #475569; /* Darker gray for better readability */
+  color: var(--text-secondary, #666666);
   font-weight: 500;
 }
 
 .meta-item svg {
   width: 16px;
   height: 16px;
-  color: #64748b;
+  color: var(--text-muted, #999999);
 }
 
 .section-cta {
   text-align: center;
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+  transition: all 0.8s ease;
+}
+
+.section-cta.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ---------- CTA Section ---------- */
 .cta-section {
   padding: 100px 0;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--accent-color, #007bff) 0%, var(--accent-hover, #0056b3) 100%);
   color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: backgroundShift 20s linear infinite;
 }
 
 .cta-content {
   text-align: center;
   max-width: 600px;
   margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+  transition: all 0.8s ease;
+}
+
+.cta-content.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .cta-content h2 {
@@ -499,7 +652,106 @@
 
 .cta-section .btn-outline:hover {
   background: white;
-  color: #3b82f6;
+  color: var(--accent-color, #007bff);
+}
+
+/* ---------- Animation Keyframes ---------- */
+@keyframes slideUpFade {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideRightFade {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideLeftFade {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cardSlideIn {
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+}
+
+@keyframes backgroundShift {
+  0% {
+    transform: translateX(0) translateY(0);
+  }
+  100% {
+    transform: translateX(-60px) translateY(-60px);
+  }
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Scroll Animation Classes ---------- */
+.scroll-fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s ease;
+}
+
+.scroll-fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-scale-in {
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.6s ease;
+}
+
+.scroll-scale-in.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.scroll-slide-left {
+  opacity: 0;
+  transform: translateX(-50px);
+  transition: all 0.8s ease;
+}
+
+.scroll-slide-left.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.scroll-slide-right {
+  opacity: 0;
+  transform: translateX(50px);
+  transition: all 0.8s ease;
+}
+
+.scroll-slide-right.visible {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 /* ---------- Responsive Design ---------- */
@@ -539,6 +791,8 @@
     margin-bottom: 20px;
     width: 100% !important;
     transform: none !important;
+    animation: none !important;
+    opacity: 1;
   }
   
   .card-1, .card-2, .card-3 {
@@ -552,6 +806,10 @@
   
   .section-title {
     font-size: 2rem;
+  }
+  
+  .bg-circle {
+    display: none; /* Hide floating circles on mobile for better performance */
   }
 }
 
@@ -591,4 +849,185 @@
   .cta-content h2 {
     font-size: 2rem;
   }
+}
+
+/* ---------- Reduced Motion Support ---------- */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .hero-content,
+  .hero-badge,
+  .hero-subtitle,
+  .cta-buttons,
+  .hero-stats,
+  .hero-visual,
+  .card,
+  .section-header,
+  .feature-card,
+  .event-card,
+  .section-cta,
+  .cta-content {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  
+  .bg-circle {
+    animation: none;
+  }
+}
+
+/* ---------- Dark Theme Specific Adjustments ---------- */
+body.theme-dark .hero-section,
+body.theme-auto .hero-section {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+body.theme-dark .features-section,
+body.theme-auto .features-section {
+  background: var(--bg-primary);
+}
+
+body.theme-dark .events-section,
+body.theme-auto .events-section {
+  background: var(--bg-secondary);
+}
+
+body.theme-dark .event-date,
+body.theme-auto .event-date {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+body.theme-dark .event-card:hover .event-date,
+body.theme-auto .event-card:hover .event-date {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .feature-card,
+  .event-card {
+    border: 2px solid var(--text-primary);
+  }
+  
+  .btn {
+    border-width: 2px;
+  }
+}
+
+/* ----------------------------- */
+/* Subtle page animations add-ons */
+/* ----------------------------- */
+
+:root {
+  --stagger-step: 0.10s; /* base delay for stagger */
+}
+
+/* Staggered entrance for feature cards */
+.features-grid .feature-card {
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+  animation: fadeInUp 0.6s cubic-bezier(.2,.9,.2,1) forwards;
+}
+.features-grid .feature-card:nth-child(1) { animation-delay: calc(var(--stagger-step) * 1); }
+.features-grid .feature-card:nth-child(2) { animation-delay: calc(var(--stagger-step) * 2); }
+.features-grid .feature-card:nth-child(3) { animation-delay: calc(var(--stagger-step) * 3); }
+.features-grid .feature-card:nth-child(4) { animation-delay: calc(var(--stagger-step) * 4); }
+.features-grid .feature-card:nth-child(5) { animation-delay: calc(var(--stagger-step) * 5); }
+.features-grid .feature-card:nth-child(6) { animation-delay: calc(var(--stagger-step) * 6); }
+
+/* Staggered entrance for event cards */
+.events-grid .event-card {
+  opacity: 1; /* Make visible by default */
+  transform: translateY(0); /* Remove transform by default */
+  animation: fadeInUp 0.62s cubic-bezier(.2,.9,.2,1) forwards;
+}
+.events-grid .event-card:nth-child(1) { animation-delay: calc(var(--stagger-step) * 1.5); }
+.events-grid .event-card:nth-child(2) { animation-delay: calc(var(--stagger-step) * 2.5); }
+.events-grid .event-card:nth-child(3) { animation-delay: calc(var(--stagger-step) * 3.5); }
+
+/* Slight pulsing badge to draw attention */
+.hero-badge span {
+  display: inline-block;
+  transform-origin: center;
+  animation: badgePulse 3.5s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+/* Gentle shimmer for gradient heading text */
+.gradient-text {
+  position: relative;
+}
+.gradient-text::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.0) 100%);
+  transform: translateX(-120%);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  animation: shimmer 2.8s linear infinite;
+}
+
+@keyframes shimmer {
+  to { transform: translateX(120%); }
+}
+
+/* Micro-interactions for cards & buttons */
+.feature-card:hover,
+.event-card:hover,
+.card:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(16,24,40,0.25);
+}
+
+.feature-card .feature-icon,
+.event-card .event-date,
+.card .card-header {
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+.feature-card:hover .feature-icon {
+  transform: rotate(4deg) scale(1.05);
+}
+
+/* Subtle icon translate on btn hover (only small movement already present but ensure smooth) */
+.btn:hover svg {
+  transform: translateX(6px) rotate(0.01deg);
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .features-grid .feature-card,
+  .events-grid .event-card,
+  .hero-badge span,
+  .gradient-text::after,
+  .feature-card .feature-icon,
+  .event-card .event-date,
+  .card .card-header,
+  .btn:hover svg {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Ensure critical sections are always visible */
+.features-section,
+.events-section,
+.feature-card,
+.event-card,
+.section-header,
+.section-cta,
+.cta-content {
+  opacity: 1 !important;
+  transform: none !important;
 }

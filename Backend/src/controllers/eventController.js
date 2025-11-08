@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const multer = require('multer');
@@ -100,38 +101,109 @@ const getAllEvents = async (req, res) => {
 // @access  Public
 const getEventById = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id)
-      .populate('organizerId', 'firstName lastName email phone department')
-      .populate('registrations.userId', 'firstName lastName email');
+    console.log('🔍 Fetching event with ID:', req.params.id);
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event ID format'
+      });
+    }
+
+    // Temporary workaround: Use raw MongoDB aggregation to avoid validation issues
+    const events = await Event.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'organizerId',
+          foreignField: '_id',
+          as: 'organizerId',
+          pipeline: [
+            { $project: { firstName: 1, lastName: 1, email: 1, phone: 1, department: 1 } }
+          ]
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'registrations.userId',
+          foreignField: '_id',
+          as: 'registrationUsers',
+          pipeline: [
+            { $project: { firstName: 1, lastName: 1, email: 1 } }
+          ]
+        }
+      },
+      {
+        $addFields: {
+          organizerId: { $arrayElemAt: ['$organizerId', 0] },
+          registrations: {
+            $map: {
+              input: '$registrations',
+              as: 'reg',
+              in: {
+                $mergeObjects: [
+                  '$$reg',
+                  {
+                    userId: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$registrationUsers',
+                            cond: { $eq: ['$$this._id', '$$reg.userId'] }
+                          }
+                        },
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      { $unset: 'registrationUsers' }
+    ]);
+
+    const event = events[0];
 
     if (!event) {
+      console.log('🔍 Event not found for ID:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
 
+    console.log('🔍 Event found, incrementing views');
+    
     // Increment views count
-    event.views += 1;
-    await event.save();
+    await Event.updateOne(
+      { _id: req.params.id },
+      { $inc: { views: 1 } }
+    );
+    
+    // Update the event object to reflect the incremented views
+    event.views = (event.views || 0) + 1;
 
+    console.log('🔍 Sending event data response');
     res.json({
       success: true,
-      data: {
-        event
-      }
+      data: event
     });
   } catch (error) {
     console.error('Get event by ID error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error fetching event',
       error: error.message
     });
   }
-};
-
-// @desc    Create new event
+};// @desc    Create new event
 // @route   POST /api/events
 // @access  Private/Event Manager/Admin
 const createEvent = async (req, res) => {
@@ -161,6 +233,28 @@ const createEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Create event error:', error);
+    console.error('Error details:', error.errors); // Additional debug
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const errors = [];
+      Object.keys(error.errors).forEach(key => {
+        errors.push({
+          path: key,
+          message: error.errors[key].message,
+          value: error.errors[key].value
+        });
+      });
+      
+      console.log('Formatted validation errors:', errors); // Debug log
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating event',
@@ -216,6 +310,28 @@ const updateEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Update event error:', error);
+    console.error('Error details:', error.errors); // Additional debug
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const errors = [];
+      Object.keys(error.errors).forEach(key => {
+        errors.push({
+          path: key,
+          message: error.errors[key].message,
+          value: error.errors[key].value
+        });
+      });
+      
+      console.log('Formatted validation errors:', errors); // Debug log
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error updating event',
@@ -280,22 +396,42 @@ const deleteEvent = async (req, res) => {
 // @access  Private
 const registerForEvent = async (req, res) => {
   try {
+    console.log('🎯 Register for Event - ID:', req.params.id);
     const event = await Event.findById(req.params.id);
     
     if (!event) {
+      console.log('❌ Event not found for ID:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
 
-    // Check if registration is open
-    if (!event.isRegistrationOpen()) {
+    console.log('📅 Event found:', event.title);
+    console.log('📅 Event status:', event.status);
+    console.log('📅 Start date:', event.startDate);
+    console.log('📅 End date:', event.endDate);
+    console.log('📅 Registration deadline:', event.registrationDeadline);
+    console.log('📅 Max participants:', event.maxParticipants);
+    console.log('📅 Current registrations:', event.registrationCount);
+    
+    const registrationStatus = event.getRegistrationStatus();
+    console.log('🔍 Registration status:', registrationStatus);
+
+    // Check if registration is allowed
+    if (!registrationStatus.canRegister) {
+      console.log('❌ Registration is NOT ALLOWED for event:', event.title);
+      console.log('  - Reason:', registrationStatus.message);
+      console.log('  - Type:', registrationStatus.type);
+      
       return res.status(400).json({
         success: false,
-        message: 'Registration is not currently open for this event'
+        message: registrationStatus.message,
+        registrationStatus: registrationStatus
       });
     }
+
+    console.log('✅ Registration is ALLOWED, proceeding...');
 
     // Check if already registered
     const alreadyRegistered = event.registrations.some(
@@ -339,13 +475,37 @@ const registerForEvent = async (req, res) => {
 
     await event.save();
 
+    // Get updated event and user details for response
+    const updatedEvent = await Event.findById(event._id).populate('organizerId', 'firstName lastName email');
+    const user = await User.findById(req.user._id);
+    
+    // Generate confirmation number
+    const confirmationNumber = `CR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     res.json({
       success: true,
       message: 'Successfully registered for event',
       data: {
+        _id: `reg_${event._id}_${req.user._id}`,
+        confirmationNumber,
         eventId: event._id,
-        title: event.title,
-        registeredAt: now
+        eventTitle: updatedEvent.title,
+        eventDate: updatedEvent.startDate,
+        eventEndDate: updatedEvent.endDate,
+        eventLocation: updatedEvent.location,
+        eventVenue: updatedEvent.venue,
+        eventCategory: updatedEvent.category,
+        organizerName: updatedEvent.organizerId ? 
+          `${updatedEvent.organizerId.firstName} ${updatedEvent.organizerId.lastName}` : 'Event Organizer',
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        department: user.department,
+        year: user.year,
+        phone: user.phone,
+        regNumber: user.regNumber,
+        registrationDate: now,
+        status: 'confirmed',
+        registrationType: 'participant'
       }
     });
   } catch (error) {
@@ -423,10 +583,16 @@ const volunteerForEvent = async (req, res) => {
       });
     }
 
-    // Check if already volunteering
-    const alreadyVolunteering = event.volunteers.some(
-      volunteer => volunteer.userId.toString() === req.user._id.toString()
-    );
+    // Check if already volunteering - populate to get user details for comparison
+    await event.populate('volunteers.userId', 'firstName lastName email');
+    
+    const alreadyVolunteering = event.volunteers.some(volunteer => {
+      const userIdMatch = volunteer.userId._id.toString() === req.user._id.toString() ||
+                         volunteer.userId.toString() === req.user._id.toString();
+      const emailMatch = volunteer.userId.email === req.user.email;
+      return userIdMatch || emailMatch;
+    });
+    
     if (alreadyVolunteering) {
       return res.status(400).json({
         success: false,
@@ -468,7 +634,11 @@ const volunteerForEvent = async (req, res) => {
 // @access  Private
 const unvolunteerFromEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    console.log('🔍 Unvolunteer request for event:', req.params.id);
+    console.log('🔍 Current user:', { _id: req.user._id, email: req.user.email });
+    
+    const event = await Event.findById(req.params.id)
+      .populate('volunteers.userId', 'firstName lastName email');
     
     if (!event) {
       return res.status(404).json({
@@ -477,10 +647,28 @@ const unvolunteerFromEvent = async (req, res) => {
       });
     }
 
-    // Check if volunteering
-    const volunteerIndex = event.volunteers.findIndex(
-      volunteer => volunteer.userId.toString() === req.user._id.toString()
-    );
+    console.log('🔍 Event volunteers:', event.volunteers.map(v => ({
+      userId: v.userId._id || v.userId,
+      email: v.userId.email
+    })));
+
+    // More robust volunteer lookup - check both user ID and email
+    const volunteerIndex = event.volunteers.findIndex(volunteer => {
+      const userIdMatch = volunteer.userId._id.toString() === req.user._id.toString() ||
+                         volunteer.userId.toString() === req.user._id.toString();
+      const emailMatch = volunteer.userId.email === req.user.email;
+      
+      console.log('🔍 Checking volunteer:', {
+        volunteerId: volunteer.userId._id || volunteer.userId,
+        volunteerEmail: volunteer.userId.email,
+        userIdMatch,
+        emailMatch
+      });
+      
+      return userIdMatch || emailMatch;
+    });
+    
+    console.log('🔍 Volunteer found at index:', volunteerIndex);
     
     if (volunteerIndex === -1) {
       return res.status(400).json({
@@ -493,6 +681,8 @@ const unvolunteerFromEvent = async (req, res) => {
     event.volunteers.splice(volunteerIndex, 1);
 
     await event.save();
+    
+    console.log('🔍 Successfully removed volunteer from event');
 
     res.json({
       success: true,
@@ -503,6 +693,84 @@ const unvolunteerFromEvent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error removing volunteer registration',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get event volunteers
+// @route   GET /api/events/:id/volunteers
+// @access  Public
+const getEventVolunteers = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate('volunteers.userId', 'firstName lastName email department year');
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    const volunteers = event.volunteers.map(volunteer => ({
+      _id: volunteer._id,
+      user: {
+        _id: volunteer.userId._id,
+        firstName: volunteer.userId.firstName,
+        lastName: volunteer.userId.lastName,
+        email: volunteer.userId.email,
+        department: volunteer.userId.department,
+        year: volunteer.userId.year
+      },
+      registeredAt: volunteer.registeredAt,
+      status: volunteer.status || 'active'
+    }));
+
+    res.json({
+      success: true,
+      data: volunteers,
+      count: volunteers.length
+    });
+  } catch (error) {
+    console.error('Get event volunteers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching event volunteers',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get event registration count
+// @route   GET /api/events/:id/registration-count
+// @access  Public
+const getEventRegistrationCount = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    const registrationCount = event.registrations ? event.registrations.length : 0;
+
+    res.json({
+      success: true,
+      data: {
+        count: registrationCount,
+        maxParticipants: event.maxParticipants,
+        spotsLeft: event.maxParticipants ? event.maxParticipants - registrationCount : null
+      }
+    });
+  } catch (error) {
+    console.error('Get event registration count error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching registration count',
       error: error.message
     });
   }
@@ -762,32 +1030,78 @@ const getUserCreatedEvents = async (req, res) => {
 // @access  Private/Event Manager/Admin
 const startLiveStream = async (req, res) => {
   try {
+    console.log('Starting live stream for event:', req.params.id);
+    console.log('Request body:', req.body);
+    console.log('User:', req.user._id, req.user.role);
+
     const event = await Event.findById(req.params.id);
     
     if (!event) {
+      console.log('Event not found:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Event not found'
       });
     }
 
-    // Check if user owns the event or is admin
-    if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'Admin') {
+    console.log('Event found:', event.title);
+    console.log('Event organizerId:', event.organizerId);
+
+    // Check if user owns the event or is admin/event_manager
+    const userRoles = req.user.role || req.user.roles || [];
+    const isOwner = event.organizerId.toString() === req.user._id.toString();
+    const isAuthorized = isOwner || 
+                        userRoles.includes('admin') || 
+                        userRoles.includes('event_manager') ||
+                        req.user.role === 'admin' ||
+                        req.user.role === 'event_manager';
+    
+    console.log('Authorization check:', { isOwner, userRoles, isAuthorized });
+    
+    if (!isAuthorized) {
+      console.log('Not authorized to start stream');
       return res.status(403).json({
         success: false,
         message: 'Not authorized to start stream for this event'
       });
     }
 
+    // Use existing stream URL from event or from request body
+    const streamUrl = event.streamingUrl || event.liveStreamUrl || req.body.streamUrl;
+    
+    console.log('Stream URL check:', {
+      streamingUrl: event.streamingUrl,
+      liveStreamUrl: event.liveStreamUrl,
+      bodyStreamUrl: req.body.streamUrl,
+      finalStreamUrl: streamUrl
+    });
+    
+    if (!streamUrl) {
+      console.log('No stream URL configured');
+      return res.status(400).json({
+        success: false,
+        message: 'No stream URL configured for this event'
+      });
+    }
+
     const now = new Date();
-    const { streamUrl, streamKey } = req.body;
+    const { streamKey } = req.body;
+
+    console.log('Setting stream data...');
+
+    // Initialize liveStream object if it doesn't exist
+    if (!event.liveStream) {
+      event.liveStream = {};
+    }
 
     event.liveStream.isLive = true;
     event.liveStream.streamUrl = streamUrl;
-    event.liveStream.streamKey = streamKey;
+    event.liveStream.streamKey = streamKey || `stream_${event._id}_${Date.now()}`;
     event.liveStream.startTime = now;
 
+    console.log('Saving event...');
     await event.save();
+    console.log('Event saved successfully');
 
     // Notify all registered users about live stream start
     emitToEventRoom(event._id, 'stream-started', {
@@ -796,6 +1110,8 @@ const startLiveStream = async (req, res) => {
       streamUrl: streamUrl,
       message: 'Live stream has started!'
     });
+
+    console.log('Stream started successfully');
 
     res.json({
       success: true,
@@ -809,6 +1125,7 @@ const startLiveStream = async (req, res) => {
     });
   } catch (error) {
     console.error('Start live stream error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error starting live stream',
@@ -831,8 +1148,16 @@ const endLiveStream = async (req, res) => {
       });
     }
 
-    // Check if user owns the event or is admin
-    if (event.organizer.toString() !== req.user._id.toString() && req.user.role !== 'Admin') {
+    // Check if user owns the event or is admin/event_manager
+    const userRoles = req.user.role || req.user.roles || [];
+    const isOwner = event.organizerId.toString() === req.user._id.toString();
+    const isAuthorized = isOwner || 
+                        userRoles.includes('admin') || 
+                        userRoles.includes('event_manager') ||
+                        req.user.role === 'admin' ||
+                        req.user.role === 'event_manager';
+    
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to end stream for this event'
@@ -840,6 +1165,11 @@ const endLiveStream = async (req, res) => {
     }
 
     const now = new Date();
+
+    // Initialize liveStream object if it doesn't exist
+    if (!event.liveStream) {
+      event.liveStream = {};
+    }
 
     event.liveStream.isLive = false;
     event.liveStream.endTime = now;
@@ -879,6 +1209,156 @@ const endLiveStream = async (req, res) => {
   }
 };
 
+// @desc    Get chat messages for event live stream
+// @route   GET /api/events/:id/chat
+// @access  Public
+const getChatMessages = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id).select('chatMessages');
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Return chat messages or empty array
+    const messages = event.chatMessages || [];
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (error) {
+    console.error('Get chat messages error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching chat messages',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Send chat message during live stream
+// @route   POST /api/events/:id/chat
+// @access  Private
+const sendChatMessage = async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Message content is required'
+      });
+    }
+
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Create message object
+    const chatMessage = {
+      id: Date.now(),
+      user: `${req.user.firstName} ${req.user.lastName}` || req.user.email,
+      userId: req.user._id,
+      message: message.trim(),
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      isOrganizer: event.organizerId.toString() === req.user._id.toString(),
+      createdAt: new Date()
+    };
+
+    // Initialize chatMessages array if it doesn't exist
+    if (!event.chatMessages) {
+      event.chatMessages = [];
+    }
+
+    // Add message to event
+    event.chatMessages.push(chatMessage);
+    
+    // Keep only last 100 messages to prevent excessive storage
+    if (event.chatMessages.length > 100) {
+      event.chatMessages = event.chatMessages.slice(-100);
+    }
+
+    await event.save();
+
+    // Emit message to all connected users in real-time
+    emitToEventRoom(event._id, 'new-chat-message', chatMessage);
+
+    res.json({
+      success: true,
+      message: 'Message sent successfully',
+      data: chatMessage
+    });
+  } catch (error) {
+    console.error('Send chat message error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error sending message',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get stream statistics (viewer count, etc.)
+// @route   GET /api/events/:id/stream-stats
+// @access  Public
+const getStreamStats = async (req, res) => {
+  try {
+    // Add caching headers to improve performance
+    res.set({
+      'Cache-Control': 'public, max-age=30', // Cache for 30 seconds
+      'ETag': `"stream-${req.params.id}-${Date.now()}"`
+    });
+
+    const event = await Event.findById(req.params.id)
+      .select('liveStream registrations analytics')
+      .lean(); // Use lean() for better performance
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Calculate basic stats
+    const registrationCount = event.registrations?.length || 0;
+    const viewerCount = event.liveStream?.viewerCount || registrationCount;
+    const totalViews = event.analytics?.totalViews || viewerCount;
+
+    const stats = {
+      viewerCount: event.liveStream?.isLive ? viewerCount : 0,
+      totalViews: totalViews,
+      registrationCount: registrationCount,
+      isLive: event.liveStream?.isLive || false,
+      duration: event.liveStream?.duration || 0,
+      startTime: event.liveStream?.startTime,
+      endTime: event.liveStream?.endTime,
+      lastUpdated: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Get stream stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching stream statistics',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Get past events
 // @route   GET /api/events/past
 // @access  Public
@@ -892,7 +1372,7 @@ const getPastEvents = async (req, res) => {
     today.setHours(0, 0, 0, 0); // Start of today
     
     let filter = { 
-      status: 'approved',
+      status: { $in: ['approved', 'completed'] }, // Include both approved past events and completed events
       date: { $lt: today } // Events before today
     };
     
@@ -1228,6 +1708,112 @@ const confirmRegistration = async (req, res) => {
   }
 };
 
+// @desc    Get current user's registration details for an event
+// @route   GET /api/events/:id/registration/me
+// @access  Private
+const getUserEventRegistration = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = req.user._id;
+
+    // Get the event details
+    const event = await Event.findById(eventId).populate('organizerId', 'firstName lastName email');
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Find user's registration in the event
+    const eventRegistration = event.registrations.find(
+      reg => reg.userId.toString() === userId.toString()
+    );
+
+    if (!eventRegistration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found for this event'
+      });
+    }
+
+    // Get user details from User model
+    const user = await User.findById(userId).populate({
+      path: 'eventsRegistered.event',
+      match: { _id: eventId }
+    });
+
+    // Find the detailed registration info from user's eventsRegistered
+    const userEventRegistration = user.eventsRegistered.find(
+      reg => reg.event._id.toString() === eventId.toString()
+    );
+
+    // Construct comprehensive registration details
+    const registrationDetails = {
+      _id: eventRegistration._id || `reg_${eventId}_${userId}`,
+      confirmationNumber: eventRegistration.confirmationNumber || `CR-${Date.now()}`,
+      eventId: event._id,
+      userId: user._id,
+      
+      // Event details
+      eventTitle: event.title,
+      eventDescription: event.description,
+      eventDate: event.startDate,
+      eventEndDate: event.endDate,
+      eventTime: event.startDate ? new Date(event.startDate).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : null,
+      eventLocation: event.location,
+      eventVenue: event.venue,
+      eventCategory: event.category,
+      maxParticipants: event.maxParticipants,
+      organizerName: event.organizerId ? 
+        `${event.organizerId.firstName} ${event.organizerId.lastName}` : 'Event Organizer',
+      organizerEmail: event.organizerId?.email,
+
+      // Registration details
+      registrationDate: eventRegistration.registeredAt || userEventRegistration?.registeredAt,
+      status: eventRegistration.status || 'confirmed',
+      registrationType: eventRegistration.type || 'participant',
+      
+      // User details
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      department: user.department,
+      year: user.year,
+      phone: user.phone,
+      regNumber: user.regNumber,
+
+      // Additional registration fields if they exist
+      skills: eventRegistration.skills || [],
+      motivation: eventRegistration.motivation,
+      teamPreference: eventRegistration.teamPreference,
+      teamName: eventRegistration.teamName,
+      dietaryRestrictions: eventRegistration.dietaryRestrictions,
+      emergencyContact: eventRegistration.emergencyContact,
+
+      // Metadata
+      createdAt: eventRegistration.registeredAt || userEventRegistration?.registeredAt,
+      updatedAt: eventRegistration.updatedAt || new Date()
+    };
+
+    res.json({
+      success: true,
+      data: registrationDetails
+    });
+
+  } catch (error) {
+    console.error('Error getting user event registration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving registration details',
+      error: error.message
+    });
+  }
+};
+
 // @desc    Search events
 // @route   GET /api/events/search
 // @access  Public
@@ -1409,6 +1995,47 @@ const getPendingEvents = async (req, res) => {
   }
 };
 
+// @desc    Get event registration status
+// @route   GET /api/events/:id/registration-status
+// @access  Public
+const getEventRegistrationStatus = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    const registrationStatus = event.getRegistrationStatus();
+    
+    res.json({
+      success: true,
+      data: {
+        eventId: event._id,
+        eventTitle: event.title,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        isPastEvent: event.isPastEvent(),
+        isPresentEvent: event.isPresentEvent(),
+        isUpcomingEvent: event.isUpcomingEvent(),
+        registrationStatus: registrationStatus,
+        registrationCount: event.registrationCount,
+        maxParticipants: event.maxParticipants
+      }
+    });
+  } catch (error) {
+    console.error('Get registration status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching registration status',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -1433,7 +2060,16 @@ module.exports = {
   addPhotosToGallery,
   removePhotoFromGallery,
   confirmRegistration,
+  getUserEventRegistration,
   searchEvents,
   getMyEvents,
-  getPendingEvents
+  getPendingEvents,
+  getEventVolunteers,
+  getEventRegistrationCount,
+  getEventRegistrationStatus,
+  volunteerForEvent,
+  unvolunteerFromEvent,
+  getChatMessages,
+  sendChatMessage,
+  getStreamStats
 };

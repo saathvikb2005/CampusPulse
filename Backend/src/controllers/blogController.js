@@ -75,31 +75,46 @@ const createBlog = async (req, res) => {
       featured,
       metaDescription,
       status,
-      authorName
+      authorName,
+      image, // Handle image field from frontend
+      featuredImage
     } = req.body;
+    
+    // Validate required fields
+    if (!title || !content || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: title, content, and category are required'
+      });
+    }
     
     const blogData = {
       title,
       content,
       excerpt: excerpt || summary, // Use summary if excerpt not provided
       category,
-      tags,
+      tags: Array.isArray(tags) ? tags : (tags ? [tags] : []),
       author: req.user._id,
       authorName: authorName || `${req.user.firstName} ${req.user.lastName}`,
       metaDescription,
       status: status || 'published', // Auto-publish blogs for now
-      publishedAt: status === 'published' || !status ? new Date() : undefined
+      publishedAt: status === 'published' || !status ? new Date() : undefined,
+      featuredImage: featuredImage || image // Handle both featuredImage and image fields
     };
     
+
+    
+    // Add event reference if provided
     if (eventId) {
-      const event = await Event.findById(eventId);
-      if (!event) {
-        return res.status(404).json({
-          success: false,
-          message: 'Event not found'
-        });
+      try {
+        const event = await Event.findById(eventId);
+        if (event) {
+          blogData.relatedEvent = eventId;
+        }
+      } catch (eventError) {
+        // Don't fail the entire blog creation, just proceed without the event link
+        console.log('Event reference error:', eventError.message);
       }
-      blogData.relatedEvent = eventId;
     }
     
     if (featured && (req.user.role === 'admin' || req.user.role === 'faculty')) {
@@ -118,6 +133,29 @@ const createBlog = async (req, res) => {
     });
   } catch (error) {
     console.error('Create blog error:', error);
+    
+    // Check if it's a validation error
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      }));
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validationErrors
+      });
+    }
+    
+    // Check if it's a duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Blog with this title already exists'
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error creating blog',

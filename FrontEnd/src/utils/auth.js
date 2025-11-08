@@ -4,7 +4,15 @@
  * Authentication and authorization utility functions - Backend Integrated
  */
 
-const API_BASE_URL = 'https://campuspulse-28.onrender.com';
+// Use environment variable or fallback to localhost for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+// Debug log for API URL
+console.log('🔧 Auth.js API Configuration:', {
+  envVar: import.meta.env.VITE_API_BASE_URL,
+  finalURL: API_BASE_URL,
+  mode: import.meta.env.MODE
+});
 
 // Helper function to get auth headers
 const getAuthHeaders = () => ({
@@ -21,6 +29,7 @@ export const isAuthenticated = () => {
 // Login function - Backend API integration
 export const login = async (email, password) => {
   try {
+    console.log('🚀 Making login request to:', `${API_BASE_URL}/api/auth/login`);
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

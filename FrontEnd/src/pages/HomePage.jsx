@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
+import EventRecommendations from "../components/EventRecommendations";
 import { getCurrentUser, isAuthenticated, logout, canManageEvents, canManageFeedback } from "../utils/auth";
 import { eventAPI, notificationAPI, analyticsAPI } from "../services/api";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
@@ -195,7 +196,6 @@ const Home = () => {
           <div className="card-icon">📅</div>
           <h3>Past Events</h3>
           <p>Explore details, photos, and blogs (no registrations).</p>
-          <div className="event-count">{loading ? '...' : eventStats.pastEvents} events</div>
           <Link to="/events/past" className="card-btn">View Past</Link>
         </article>
 
@@ -205,7 +205,6 @@ const Home = () => {
           <p>
             See what's happening now. Register only if spot registration is open.
           </p>
-          <div className="event-count">{loading ? '...' : eventStats.presentEvents} live now</div>
           <Link to="/events/present" className="card-btn">View Ongoing</Link>
         </article>
 
@@ -213,10 +212,30 @@ const Home = () => {
           <div className="card-icon">🚀</div>
           <h3>Upcoming Events</h3>
           <p>Browse details, register as a participant, or volunteer.</p>
-          <div className="event-count">{loading ? '...' : eventStats.upcomingEvents} upcoming</div>
           <Link to="/events/upcoming" className="card-btn">View Upcoming</Link>
         </article>
       </section>
+
+      {/* AI-Powered Event Recommendations - Only for authenticated users */}
+      {user && (
+        <section className="ai-recommendations-section">
+          <div className="container">
+            <div className="ai-section-header">
+              <div className="ai-title-group">
+                <h2 className="ai-section-title">🤖 Personalized for You</h2>
+                <p className="ai-section-subtitle">
+                  AI-powered recommendations based on your interests and activity
+                </p>
+              </div>
+              <div className="ai-badges">
+                <span className="ai-badge">Smart</span>
+                <span className="ai-badge">Personalized</span>
+              </div>
+            </div>
+            <EventRecommendations userId={user.id} limit={6} />
+          </div>
+        </section>
+      )}
 
       {/* Recent Events Section */}
       {recentEvents.length > 0 && (
@@ -258,6 +277,13 @@ const Home = () => {
         <h2 className="section-title">Platform Features</h2>
         <div className="feature-grid">
           <div className="feature-card">
+            <div className="feature-icon">🤖</div>
+            <h4>AI Recommendations</h4>
+            <p>Get personalized event suggestions powered by machine learning.</p>
+            <Link to="/recommendations" className="feature-link">View Recommendations</Link>
+          </div>
+
+          <div className="feature-card">
             <div className="feature-icon">💬</div>
             <h4>Feedback</h4>
             <p>Submit anonymous or verified feedback after each event.</p>
@@ -289,7 +315,16 @@ const Home = () => {
 
           {canManageFeedback() && (
             <div className="feature-card">
-              <div className="feature-icon">💬</div>
+              <div className="feature-icon">📊</div>
+              <h4>AI Analytics</h4>
+              <p>Advanced AI recommendations and event insights.</p>
+              <Link to="/analytics" className="feature-link">View Analytics</Link>
+            </div>
+          )}
+
+          {canManageFeedback() && (
+            <div className="feature-card">
+              <div className="feature-icon">�💬</div>
               <h4>Feedback Management</h4>
               <p>Review and respond to user feedback and suggestions.</p>
               <Link to="/feedback/manage" className="feature-link">Manage Feedback</Link>

@@ -28,30 +28,48 @@ const EventBlogs = () => {
 
       // Load event data
       const eventResponse = await eventAPI.getById(eventId);
+      
       if (eventResponse.success) {
         const eventData = eventResponse.data || eventResponse.event;
         setEvent(eventData);
       } else {
-        throw new Error('Failed to load event data');
+        console.error('🔍 [EventBlogs] Event API failed:', eventResponse);
+        throw new Error(`Failed to load event data: ${eventResponse.message || 'Unknown error'}`);
       }
 
       // Load blogs for this event
       const blogsResponse = await blogAPI.getEventBlogs(eventId);
+      
       if (blogsResponse.success) {
         const blogsData = blogsResponse.data?.blogs || blogsResponse.blogs || [];
         setBlogs(blogsData);
       } else {
         // If no blogs API response, set empty array (not an error)
         setBlogs([]);
-        console.log('No blogs found for this event');
       }
     } catch (error) {
       console.error('Error loading event and blogs:', error);
-      setError(error.message || 'Failed to load event data');
-      showErrorToast('Failed to load event blogs. Please try again.');
+      const errorMessage = error.message || 'Failed to load event data';
+      
+      // Check if it's a server error and provide more specific guidance
+      if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+        setError('The event data is temporarily unavailable due to a server issue. Please try again later or contact support.');
+        showErrorToast('Event temporarily unavailable. Please try again later.');
+      } else {
+        setError(errorMessage);
+        showErrorToast('Failed to load event blogs. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to extract author name consistently
+  const getAuthorName = (author) => {
+    if (typeof author === 'object' && author) {
+      return author.fullName || `${author.firstName} ${author.lastName}` || author.name || 'Anonymous';
+    }
+    return author || 'Anonymous';
   };
 
   // Filters
@@ -59,7 +77,7 @@ const EventBlogs = () => {
     const title = blog.title || '';
     const excerpt = blog.excerpt || blog.description || '';
     const tags = blog.tags || [];
-    const authorName = blog.author?.name || blog.author || '';
+    const authorName = getAuthorName(blog.author);
     
     const matchesSearch =
       title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,7 +90,7 @@ const EventBlogs = () => {
     return matchesSearch && matchesAuthor;
   });
 
-  const authors = ["all", ...new Set(blogs.map((blog) => blog.author?.name || blog.author || 'Anonymous'))];
+  const authors = ["all", ...new Set(blogs.map((blog) => getAuthorName(blog.author)))];
 
   // Handle Like with backend integration
   const handleLike = async (blogId) => {
@@ -207,8 +225,8 @@ const EventBlogs = () => {
           <button className="btn btn-primary" onClick={loadEventAndBlogs}>
             Try Again
           </button>
-          <button className="btn btn-outline" onClick={() => navigate("/events")}>
-            Back to Events
+          <button className="btn btn-outline" onClick={() => navigate(-1)}>
+            Back
           </button>
         </div>
       </div>
@@ -221,8 +239,8 @@ const EventBlogs = () => {
         <i className="fas fa-exclamation-triangle"></i>
         <h3>Event not found</h3>
         <p>The requested event blogs could not be loaded.</p>
-        <button className="btn btn-primary" onClick={() => navigate("/events")}>
-          Back to Events
+        <button className="btn btn-primary" onClick={() => navigate(-1)}>
+          Back
         </button>
       </div>
     );
@@ -234,21 +252,21 @@ const EventBlogs = () => {
       <header className="blogs-header">
         <div className="container">
           <div className="header-content">
-            <button onClick={() => navigate("/events")} className="back-btn">
+            <button onClick={() => navigate(-1)} className="back-btn">
               <i className="fas fa-arrow-left"></i>
-              Back to Events
+              Back
             </button>
             <div className="blogs-title">
               <h1>📝 {event.title || event.name} Blogs</h1>
               <p>{blogs.length} articles from participants and organizers</p>
             </div>
             <div className="blogs-actions">
-              <Link to={`/events/${eventId}`} className="btn btn-outline">
+              <Link to={`/events/details/${eventId}`} className="btn btn-outline">
                 <i className="fas fa-eye"></i>
                 View Event
               </Link>
               <button className="btn btn-primary" onClick={() => {
-                const eventUrl = `${window.location.origin}/events/${eventId}/blogs`;
+                const eventUrl = `${window.location.origin}/events/blogs/${eventId}`;
                 navigator.clipboard.writeText(eventUrl);
                 showSuccessToast("Blogs link copied to clipboard!");
               }}>
@@ -280,8 +298,8 @@ const EventBlogs = () => {
                 className="author-filter"
               >
                 <option value="all">All Authors</option>
-                {authors.slice(1).map((author) => (
-                  <option key={author} value={author}>
+                {authors.slice(1).map((author, index) => (
+                  <option key={`author-${index}-${author}`} value={author}>
                     {author}
                   </option>
                 ))}
@@ -326,10 +344,10 @@ const EventBlogs = () => {
                   <div className="blog-author">
                     <img 
                       src={blog.authorImage || blog.author?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'} 
-                      alt={blog.author?.name || blog.author || 'Author'} 
+                      alt={getAuthorName(blog.author)} 
                     />
                     <div className="author-info">
-                      <span className="author-name">{blog.author?.name || blog.author || 'Anonymous'}</span>
+                      <span className="author-name">{getAuthorName(blog.author)}</span>
                       <div className="blog-details">
                         <span>
                           {new Date(blog.publishDate || blog.createdAt).toLocaleDateString()}
@@ -408,10 +426,10 @@ const EventBlogs = () => {
                 <div className="reader-author">
                   <img
                     src={selectedBlog.authorImage || selectedBlog.author?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'}
-                    alt={selectedBlog.author?.name || selectedBlog.author || 'Author'}
+                    alt={getAuthorName(selectedBlog.author)}
                   />
                   <div className="author-details">
-                    <h4>{selectedBlog.author?.name || selectedBlog.author || 'Anonymous'}</h4>
+                    <h4>{getAuthorName(selectedBlog.author)}</h4>
                     <div className="publish-info">
                       <span>
                         Published on{" "}

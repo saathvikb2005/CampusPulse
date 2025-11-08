@@ -1,0 +1,414 @@
+/* Privacy.css - COMPLETE WITH DARK THEME & TEXT VISIBILITY FIXES */
+
+.privacy-page {
+  background-color: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #333333);
+  min-height: 100vh;
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.privacy-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: var(--font-family-base, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif);
+  line-height: 1.7;
+  min-height: 50vh;
+  padding-top: 6rem; /* Account for fixed navigation */
+}
+
+.privacy-header {
+  color: var(--text-primary, #333333);
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  opacity: 1;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.privacy-content {
+  color: var(--text-secondary, #666666);
+  opacity: 1;
+}
+
+.privacy-section {
+  margin-bottom: 2rem;
+  opacity: 1;
+}
+
+.section-title {
+  color: var(--text-primary, #333333);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--accent-color, #007bff);
+  padding-bottom: 0.5rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent-color, #007bff);
+  transition: width 0.3s ease;
+}
+
+.section-title:hover::before {
+  width: 100%;
+}
+
+.section-text {
+  color: var(--text-secondary, #666666);
+  margin-bottom: 1.5rem;
+  transition: color 0.3s ease;
+}
+
+.privacy-link {
+  color: var(--accent-color, #007bff);
+  text-decoration: none;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.privacy-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--accent-color, #007bff);
+  transition: width 0.3s ease;
+}
+
+.privacy-link:hover {
+  color: var(--accent-hover, #0056b3);
+  text-decoration: none;
+}
+
+.privacy-link:hover::after {
+  width: 100%;
+}
+
+.privacy-email {
+  color: var(--accent-color, #007bff);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+.privacy-email::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--accent-color, #007bff);
+  transition: width 0.3s ease;
+}
+
+.privacy-email:hover {
+  color: var(--accent-hover, #0056b3);
+  text-decoration: none;
+}
+
+.privacy-email:hover::after {
+  width: 100%;
+}
+
+.privacy-footer {
+  margin-top: 3rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, #999999);
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  opacity: 1;
+}
+
+/* Enhanced list styling for better readability */
+.privacy-content ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.privacy-content li {
+  margin-bottom: 0.5rem;
+  position: relative;
+  color: var(--text-secondary, #666666);
+}
+
+.privacy-content li::marker {
+  color: var(--accent-color, #007bff);
+}
+
+/* Code block styling for any code snippets */
+.privacy-code {
+  background: var(--bg-secondary, #f8f9fa);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  color: var(--text-primary, #333333);
+}
+
+/* Highlight important sections */
+.privacy-important {
+  background: color-mix(in srgb, var(--accent-color, #007bff) 5%, transparent);
+  border-left: 4px solid var(--accent-color, #007bff);
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.privacy-important .section-title {
+  border-bottom: none;
+  margin-top: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .privacy-container {
+    padding: 1rem;
+    padding-top: 5rem;
+  }
+  
+  .privacy-header {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-title {
+    font-size: 1.3rem;
+    margin-top: 1.5rem;
+  }
+  
+  .privacy-content {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .privacy-container {
+    padding: 0.5rem;
+    padding-top: 4rem;
+  }
+  
+  .privacy-header {
+    font-size: 1.75rem;
+  }
+  
+  .section-title {
+    font-size: 1.2rem;
+  }
+  
+  .privacy-content ul {
+    padding-left: 1rem;
+  }
+  
+  .privacy-important {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .privacy-page {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .privacy-header {
+    color: black !important;
+  }
+  
+  .privacy-content {
+    color: #333 !important;
+  }
+  
+  .section-title {
+    color: black !important;
+    border-bottom-color: #000 !important;
+  }
+  
+  .privacy-link,
+  .privacy-email {
+    color: #000 !important;
+    text-decoration: underline !important;
+  }
+  
+  .privacy-footer {
+    color: #666 !important;
+    border-top-color: #ccc !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .privacy-page,
+  .privacy-header,
+  .privacy-content,
+  .privacy-section,
+  .privacy-footer {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  
+  .section-title::before,
+  .privacy-link::after,
+  .privacy-email::after {
+    display: none;
+  }
+  
+  .section-title,
+  .privacy-link,
+  .privacy-email {
+    transition: none;
+  }
+}
+
+/* Focus styles for accessibility */
+.privacy-link:focus,
+.privacy-email:focus {
+  outline: 2px solid var(--accent-color, #007bff);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Dark theme specific enhancements */
+body.theme-dark .privacy-page,
+[data-theme="dark"] .privacy-page {
+  background-color: var(--bg-primary, #1a1a1a);
+  color: var(--text-primary, #ffffff);
+}
+
+body.theme-dark .privacy-header,
+[data-theme="dark"] .privacy-header {
+  color: var(--text-primary, #ffffff);
+}
+
+body.theme-dark .privacy-content,
+[data-theme="dark"] .privacy-content {
+  color: var(--text-secondary, #cccccc);
+}
+
+body.theme-dark .section-title,
+[data-theme="dark"] .section-title {
+  color: var(--text-primary, #ffffff);
+  border-bottom-color: var(--accent-color, #4dabf7);
+}
+
+body.theme-dark .section-text,
+[data-theme="dark"] .section-text {
+  color: var(--text-secondary, #cccccc);
+}
+
+body.theme-dark .privacy-link,
+[data-theme="dark"] .privacy-link {
+  color: var(--accent-color, #4dabf7);
+}
+
+body.theme-dark .privacy-email,
+[data-theme="dark"] .privacy-email {
+  color: var(--accent-color, #4dabf7);
+}
+
+body.theme-dark .privacy-footer,
+[data-theme="dark"] .privacy-footer {
+  color: var(--text-muted, #888888);
+  border-top-color: var(--border-color, #333333);
+}
+
+body.theme-dark .privacy-content li,
+[data-theme="dark"] .privacy-content li {
+  color: var(--text-secondary, #cccccc);
+}
+
+body.theme-dark .privacy-code,
+[data-theme="dark"] .privacy-code {
+  background: var(--bg-tertiary, #2a2a2a);
+  border-color: var(--border-color, #333333);
+  color: var(--text-primary, #ffffff);
+}
+
+body.theme-dark .privacy-important,
+body.theme-auto .privacy-important {
+  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  border-left-color: var(--accent-color);
+}
+
+/* Fallback styles when CSS variables are not available */
+.privacy-page {
+  background-color: #ffffff;
+  color: #333333;
+}
+
+.privacy-header {
+  color: #333333;
+}
+
+.privacy-content {
+  color: #666666;
+}
+
+.section-title {
+  color: #333333;
+  border-bottom-color: #007bff;
+}
+
+.section-text {
+  color: #666666;
+}
+
+.privacy-link,
+.privacy-email {
+  color: #007bff;
+}
+
+.privacy-footer {
+  color: #999999;
+  border-top-color: #e0e0e0;
+}
+
+.privacy-content li {
+  color: #666666;
+}
+
+.privacy-code {
+  background-color: #f8f9fa;
+  border-color: #e0e0e0;
+  color: #333333;
+}

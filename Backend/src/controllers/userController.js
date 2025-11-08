@@ -69,7 +69,7 @@ const updateProfile = async (req, res) => {
   try {
     const allowedUpdates = [
       'firstName', 'lastName', 'phone', 'department', 'bio', 
-      'interests', 'socialLinks', 'notificationPreferences'
+      'interests', 'socialLinks', 'notificationPreferences', 'avatar'
     ];
     
     const updates = {};

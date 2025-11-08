@@ -1,12 +1,307 @@
 /* PresentEvents.css */
 
-/* Reset and Base Styles */
+/* =================================================================== */
+/* ULTIMATE OVERRIDE: Present Events Cards - Force Override ALL Global Styles */
+/* =================================================================== */
+
+/* HIGHEST SPECIFICITY: Override themes.css, Home.css, LandingPage.css, Events.css */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event,
+body .live-events-section .events-grid .event-card.present-event {
+  background: white !important;
+  background-color: white !important;
+  padding: 0 !important;
+  text-align: left !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  backdrop-filter: none !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  color: #1e293b !important;
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+/* NUCLEAR OPTION: Remove all pseudo-elements from global styles */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card::before,
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card::after,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event::before,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event::after,
+body .live-events-section .events-grid .event-card.present-event::before,
+body .live-events-section .events-grid .event-card.present-event::after {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  content: none !important;
+}
+
+/* FORCE OVERRIDE: Global hover effects */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card:hover,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event:hover,
+body .live-events-section .events-grid .event-card.present-event:hover {
+  transform: translateY(-4px) scale(1.02) !important;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(72, 187, 120, 0.1) !important;
+  background: white !important;
+  background-color: white !important;
+}
+
+/* FORCE OVERRIDE: Typography */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card h3,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event h3,
+body .live-events-section .events-grid .event-card.present-event h3,
+.event-card.present-event .event-header h3 {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  margin: 0 0 8px 0 !important;
+  line-height: 1.3 !important;
+  background: none !important;
+  background-color: transparent !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #1e293b !important;
+  background-clip: unset !important;
+  text-align: left !important;
+}
+
+/* FORCE OVERRIDE: Paragraph styles */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card p,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event p,
+body .live-events-section .events-grid .event-card.present-event p,
+.event-card.present-event .event-description {
+  color: #64748b !important;
+  line-height: 1.6 !important;
+  font-size: 0.95rem !important;
+  margin-bottom: 16px !important;
+  text-align: left !important;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* FORCE OVERRIDE: All text elements */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card *,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event *,
+body .live-events-section .events-grid .event-card.present-event *,
+.event-card.present-event * {
+  color: inherit !important;
+}
+
+/* FORCE OVERRIDE: Specific text elements */
+.event-card.present-event .event-date,
+.event-card.present-event .event-location,
+.event-card.present-event .event-organizer,
+.event-card.present-event .event-organizer small,
+.event-card.present-event .stat,
+.event-card.present-event .schedule-time,
+.event-card.present-event .schedule-activity,
+.event-card.present-event .update-item,
+.event-card.present-event .time-label,
+.event-card.present-event .time-number {
+  color: #64748b !important;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* FORCE OVERRIDE: Category badge */
+.event-card.present-event .event-category {
+  background: #e2e8f0 !important;
+  color: #4a5568 !important;
+  padding: 4px 12px !important;
+  border-radius: 16px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+}
+
+/* FORCE OVERRIDE: Headers and labels */
+.event-card.present-event h5,
+.event-card.present-event .live-schedule h5,
+.event-card.present-event .live-updates h5,
+.event-card.present-event .time-remaining h5 {
+  color: #374151 !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* =================================================================== */
+/* OVERRIDE DARK MODE AND GLOBAL TEXT ISSUES */
+/* =================================================================== */
+
+/* Force light text colors regardless of theme */
+@media (prefers-color-scheme: dark) {
+  .event-card.present-event,
+  .event-card.present-event *,
+  html body div.app-layout .live-events-section .event-card.present-event,
+  html body div.app-layout .live-events-section .event-card.present-event * {
+    color: #1e293b !important;
+  }
+  
+  .event-card.present-event h3,
+  .event-card.present-event .event-header h3 {
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
+  }
+  
+  .event-card.present-event p,
+  .event-card.present-event .event-description,
+  .event-card.present-event .event-date,
+  .event-card.present-event .event-location,
+  .event-card.present-event .stat {
+    color: #64748b !important;
+  }
+}
+
+/* Force override any theme classes */
+body.theme-dark .event-card.present-event,
+body.theme-dark .event-card.present-event *,
+body.theme-auto .event-card.present-event,
+body.theme-auto .event-card.present-event *,
+.theme-dark .event-card.present-event,
+.theme-dark .event-card.present-event *,
+.theme-auto .event-card.present-event,
+.theme-auto .event-card.present-event * {
+  color: #1e293b !important;
+}
+
+body.theme-dark .event-card.present-event h3,
+body.theme-auto .event-card.present-event h3,
+.theme-dark .event-card.present-event h3,
+.theme-auto .event-card.present-event h3 {
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+}
+
+body.theme-dark .event-card.present-event p,
+body.theme-dark .event-card.present-event .event-description,
+body.theme-auto .event-card.present-event p,
+body.theme-auto .event-card.present-event .event-description,
+.theme-dark .event-card.present-event p,
+.theme-dark .event-card.present-event .event-description,
+.theme-auto .event-card.present-event p,
+.theme-auto .event-card.present-event .event-description {
+  color: #64748b !important;
+}
+
+/* FORCE OVERRIDE: Button styles */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card .btn,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event .btn,
+body .live-events-section .events-grid .event-card.present-event .btn {
+  width: auto !important;
+  margin: 0 !important;
+  transform: none !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+}
+
+/* FORCE OVERRIDE: Content container */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card .event-content,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event .event-content,
+body .live-events-section .events-grid .event-card.present-event .event-content {
+  padding: 24px !important;
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* FORCE OVERRIDE: Event image */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card .event-image,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event .event-image,
+body .live-events-section .events-grid .event-card.present-event .event-image {
+  position: relative !important;
+  height: 200px !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: #f8f9fa !important;
+  background-color: #f8f9fa !important;
+}
+
+/* FORCE OVERRIDE: Event image img */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card .event-image img,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event .event-image img,
+body .live-events-section .events-grid .event-card.present-event .event-image img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* FORCE OVERRIDE: Event status badge */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card .event-status,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event .event-status,
+body .live-events-section .events-grid .event-card.present-event .event-status {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  background: rgba(255, 107, 107, 0.9) !important;
+  color: white !important;
+  padding: 4px 12px !important;
+  border-radius: 16px !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  z-index: 5 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* FORCE OVERRIDE: Live stream button */
+html body div.app-layout div.main-content div.content-container .live-events-section .container .events-grid .event-card .live-stream-btn,
+html body .app-layout .main-content .content-container .live-events-section .events-grid .event-card.present-event .live-stream-btn,
+body .live-events-section .events-grid .event-card.present-event .live-stream-btn {
+  position: absolute !important;
+  bottom: 8px !important;
+  left: 8px !important;
+  background: rgba(59, 130, 246, 0.9) !important;
+  color: white !important;
+  padding: 6px 12px !important;
+  border-radius: 16px !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  z-index: 5 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  backdrop-filter: blur(10px) !important;
+  cursor: pointer !important;
+}
+
+/* Reset and Base Styles with Fallback Values */
 .events-page {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--bg-primary, #f8fafc);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
-  color: #2d3748;
+  color: var(--text-primary, #2d3748);
 }
 
 .container {
@@ -52,7 +347,6 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 6px;
   transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
 }
 
 .back-btn:hover {
@@ -83,7 +377,6 @@
   border-radius: 20px;
   font-weight: 600;
   font-size: 0.9rem;
-  backdrop-filter: blur(4px);
 }
 
 .live-dot {
@@ -112,6 +405,7 @@
 /* Live Events Section */
 .live-events-section {
   padding: 60px 0;
+  background-color: var(--bg-primary, #f8fafc);
 }
 
 .events-grid {
@@ -123,12 +417,12 @@
 
 /* Event Card */
 .event-card.present-event {
-  background: white;
+  background: var(--bg-secondary, white);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--border-color, #f1f5f9);
   position: relative;
 }
 
@@ -141,13 +435,22 @@
   position: relative;
   height: 200px;
   overflow: hidden;
+  background-color: #f8f9fa !important;
+  background: #f8f9fa !important;
 }
 
 .event-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  transition: transform 0.3s ease !important;
+  display: block !important;
+  border: none !important;
+  outline: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .event-card:hover .event-image img {
@@ -156,50 +459,60 @@
 
 .event-status {
   position: absolute;
-  top: 16px;
-  right: 16px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  top: 8px;
+  right: 8px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  backdrop-filter: blur(4px);
+  gap: 4px;
+  backdrop-filter: blur(10px);
 }
 
 .event-status.live {
-  background: rgba(255, 107, 107, 0.95);
+  background: rgba(255, 107, 107, 0.9);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .live-stream-btn {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
-  background: rgba(59, 130, 246, 0.95);
+  bottom: 8px;
+  left: 8px;
+  background: rgba(59, 130, 246, 0.9);
   color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.7rem;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: blur(4px);
+  z-index: 10;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .live-stream-btn:hover {
   background: rgba(59, 130, 246, 1);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .event-content {
   padding: 24px;
+  background-color: var(--bg-secondary, white);
 }
 
 .event-header {
@@ -212,14 +525,14 @@
 .event-header h3 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a202c;
+  color: var(--text-primary, #1a202c);
   margin: 0;
   flex: 1;
 }
 
 .event-category {
-  background: #e2e8f0;
-  color: #4a5568;
+  background: var(--bg-tertiary, #e2e8f0);
+  color: var(--text-secondary, #4a5568);
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 0.75rem;
@@ -232,7 +545,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   font-size: 0.9rem;
   margin-bottom: 8px;
 }
@@ -243,7 +556,7 @@
 }
 
 .event-description {
-  color: #4a5568;
+  color: var(--text-secondary, #4a5568);
   margin-bottom: 20px;
   line-height: 1.6;
 }
@@ -260,7 +573,7 @@
 .time-remaining h5 {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #2d3748;
+  color: var(--text-primary, #2d3748);
   margin-bottom: 12px;
   text-align: center;
 }
@@ -286,7 +599,7 @@
 
 .time-label {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-top: 4px;
@@ -301,7 +614,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
   font-size: 0.875rem;
   margin-bottom: 8px;
 }
@@ -313,7 +626,7 @@
 .participation-bar {
   width: 100%;
   height: 6px;
-  background: #e2e8f0;
+  background: var(--border-color, #e2e8f0);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -330,7 +643,7 @@
 }
 
 .event-organizer small {
-  color: #94a3b8;
+  color: var(--text-muted, #94a3b8);
   font-style: italic;
 }
 
@@ -342,21 +655,23 @@
 .live-schedule h5 {
   font-size: 1rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary, #374151);
   margin-bottom: 12px;
 }
 
 .schedule-list {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   overflow: hidden;
+  background-color: var(--bg-primary, white);
 }
 
 .schedule-item {
   display: flex;
   padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
   transition: background-color 0.2s ease;
+  background-color: var(--bg-primary, white);
 }
 
 .schedule-item:last-child {
@@ -364,7 +679,7 @@
 }
 
 .schedule-item:hover {
-  background: #f8fafc;
+  background: var(--bg-tertiary, #f8fafc);
 }
 
 .schedule-time {
@@ -375,7 +690,7 @@
 }
 
 .schedule-activity {
-  color: #4a5568;
+  color: var(--text-secondary, #4a5568);
   flex: 1;
   font-size: 0.9rem;
 }
@@ -388,13 +703,13 @@
 .live-updates h5 {
   font-size: 1rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary, #374151);
   margin-bottom: 12px;
 }
 
 .updates-list {
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-tertiary, #f7fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
   padding: 16px;
 }
@@ -404,13 +719,13 @@
   align-items: flex-start;
   gap: 8px;
   padding: 8px 0;
-  color: #4a5568;
+  color: var(--text-secondary, #4a5568);
   font-size: 0.9rem;
   line-height: 1.4;
 }
 
 .update-item:not(:last-child) {
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--border-color, #edf2f7);
 }
 
 .update-item i {
@@ -449,6 +764,7 @@
 .btn-primary {
   background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
   color: white;
+  border: none;
 }
 
 .btn-primary:hover {
@@ -459,6 +775,7 @@
 .btn-secondary {
   background: #3b82f6;
   color: white;
+  border: none;
 }
 
 .btn-secondary:hover {
@@ -469,40 +786,93 @@
 
 .btn-outline {
   background: transparent;
-  color: #48bb78;
-  border: 2px solid #48bb78;
+  color: var(--accent-color, #48bb78);
+  border: 2px solid var(--accent-color, #48bb78);
 }
 
 .btn-outline:hover {
-  background: #48bb78;
+  background: var(--accent-color, #48bb78);
   color: white;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(72, 187, 120, 0.2);
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-secondary, #64748b);
+  background-color: var(--bg-primary, #f8fafc);
+}
+
+.loading-state i {
+  font-size: 3rem;
+  color: var(--accent-color, #48bb78);
+  margin-bottom: 20px;
+}
+
+.loading-state p {
+  font-size: 1.1rem;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-secondary, #64748b);
+  background-color: var(--bg-primary, #f8fafc);
+}
+
+.error-state i {
+  font-size: 3rem;
+  color: #ef4444;
+  margin-bottom: 20px;
+}
+
+.error-state h3 {
+  font-size: 1.5rem;
+  color: var(--text-primary, #2d3748);
+  margin-bottom: 12px;
+}
+
+.error-state p {
+  font-size: 1rem;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 24px;
 }
 
 /* No Events State */
 .no-events {
   text-align: center;
   padding: 80px 20px;
-  color: #64748b;
+  color: var(--text-secondary, #64748b);
+  background-color: var(--bg-primary, #f8fafc);
 }
 
 .no-events i {
   font-size: 4rem;
-  color: #cbd5e0;
+  color: var(--text-muted, #cbd5e0);
   margin-bottom: 24px;
 }
 
 .no-events h3 {
   font-size: 1.5rem;
-  color: #4a5568;
+  color: var(--text-primary, #4a5568);
   margin-bottom: 8px;
 }
 
 .no-events p {
   font-size: 1rem;
-  color: #94a3b8;
+  color: var(--text-muted, #94a3b8);
   margin-bottom: 24px;
+}
+
+.no-events-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* Responsive Design */
@@ -550,6 +920,15 @@
     flex: none;
     width: 100%;
   }
+  
+  .no-events-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .no-events-actions .btn {
+    width: 200px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -573,4 +952,172 @@
   .schedule-time {
     min-width: auto;
   }
+}
+
+/* Dark Theme Specific Adjustments */
+@media (prefers-color-scheme: dark) {
+  .time-remaining {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+  
+  .schedule-list {
+    background-color: var(--bg-secondary, #2d2d2d);
+  }
+  
+  .schedule-item {
+    background-color: var(--bg-secondary, #2d2d2d);
+  }
+  
+  .schedule-item:hover {
+    background: var(--bg-tertiary, #3a3a3a);
+  }
+  
+  .updates-list {
+    background: var(--bg-tertiary, #3a3a3a);
+  }
+}
+
+/* Ensure proper contrast in dark mode */
+body.theme-dark .event-card.present-event,
+body.theme-auto .event-card.present-event {
+  background: var(--bg-secondary, #2d2d2d);
+  border-color: var(--border-color, #404040);
+}
+
+body.theme-dark .event-header h3,
+body.theme-auto .event-header h3 {
+  color: var(--text-primary, #ffffff);
+}
+
+body.theme-dark .event-description,
+body.theme-auto .event-description {
+  color: var(--text-secondary, #b0b0b0);
+}
+
+body.theme-dark .schedule-activity,
+body.theme-auto .schedule-activity {
+  color: var(--text-secondary, #b0b0b0);
+}
+
+body.theme-dark .update-item,
+body.theme-auto .update-item {
+  color: var(--text-secondary, #b0b0b0);
+}
+
+body.theme-dark .event-category,
+body.theme-auto .event-category {
+  background: var(--bg-tertiary, #3a3a3a);
+  color: var(--text-secondary, #b0b0b0);
+}
+
+/* Focus states for accessibility */
+.btn:focus-visible {
+  outline: 2px solid var(--accent-color, #48bb78);
+  outline-offset: 2px;
+}
+
+.live-stream-btn:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.back-btn:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .events-header.present-header {
+    background: #48bb78 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .event-card.present-event {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .btn {
+    display: none;
+  }
+  
+  .live-stream-btn {
+    display: none;
+  }
+  
+  .back-btn {
+    display: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .event-card.present-event {
+    border: 2px solid var(--text-primary, #000000);
+  }
+  
+  .btn {
+    border: 2px solid currentColor;
+  }
+  
+  .search-box input,
+  .category-filter {
+    border: 2px solid var(--text-primary, #000000);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .event-card.present-event,
+  .btn,
+  .live-stream-btn,
+  .back-btn {
+    transition: none;
+  }
+  
+  .event-card.present-event:hover {
+    transform: none;
+  }
+  
+  .event-card:hover .event-image img {
+    transform: none;
+  }
+  
+  .btn:hover,
+  .live-stream-btn:hover,
+  .back-btn:hover {
+    transform: none;
+  }
+  
+  .live-dot {
+    animation: none;
+  }
+}
+
+/* Registration Info Styles */
+.registration-info.present-event-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  color: #475569 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  margin-bottom: 16px !important;
+}
+
+.registration-info.present-event-info i {
+  color: #3b82f6 !important;
+  font-size: 16px !important;
+}
+
+.registration-info.present-event-info span {
+  color: #1e293b !important;
 }

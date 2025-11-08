@@ -3,8 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { eventAPI, blogAPI, analyticsAPI } from "../../services/api";
 import { showErrorToast } from "../../utils/toastUtils";
 import { canViewAnalytics } from "../../utils/auth";
-import Navigation from "../../components/Navigation";
-import Footer from "../../components/Footer";
+import Layout from "../../components/Layout";
 import "./PastEvents.css";
 
 const PastEvents = () => {
@@ -13,6 +12,48 @@ const PastEvents = () => {
   const [pastEvents, setPastEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Force light theme for main content only (preserve header/footer)
+  useEffect(() => {
+    document.body.classList.add('past-events-light-content');
+    
+    // Only target the main content area, not header/footer
+    const mainContent = document.querySelector('.main-content');
+    const contentContainer = document.querySelector('.content-container');
+    const eventsPage = document.querySelector('.events-page.past-events');
+    
+    if (mainContent) {
+      mainContent.style.setProperty('background-color', '#ffffff', 'important');
+      mainContent.style.setProperty('background', '#ffffff', 'important');
+    }
+    
+    if (contentContainer) {
+      contentContainer.style.setProperty('background-color', '#ffffff', 'important');
+      contentContainer.style.setProperty('background', '#ffffff', 'important');
+    }
+    
+    if (eventsPage) {
+      eventsPage.style.setProperty('background-color', '#ffffff', 'important');
+      eventsPage.style.setProperty('background', '#ffffff', 'important');
+    }
+    
+    return () => {
+      document.body.classList.remove('past-events-light-content');
+      // Reset styles on cleanup
+      if (mainContent) {
+        mainContent.style.removeProperty('background-color');
+        mainContent.style.removeProperty('background');
+      }
+      if (contentContainer) {
+        contentContainer.style.removeProperty('background-color');
+        contentContainer.style.removeProperty('background');
+      }
+      if (eventsPage) {
+        eventsPage.style.removeProperty('background-color');
+        eventsPage.style.removeProperty('background');
+      }
+    };
+  }, []);
 
   // Fetch past events from API
   useEffect(() => {
@@ -33,6 +74,7 @@ const PastEvents = () => {
           }
           
           // Map API response to match the existing structure
+          console.log('Raw events data:', events); // Debug log
           const eventsWithDetails = await Promise.all(
             events.map(async (event) => {
               try {
@@ -54,17 +96,29 @@ const PastEvents = () => {
                 const fallbackAttendees = Math.floor(Math.random() * 300) + 50;
                 const fallbackRating = (Math.random() * 1.5 + 3.5).toFixed(1); // 3.5-5.0 rating
 
+                // Generate better fallback images based on category
+                const categoryImages = {
+                  technical: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=400&h=200&fit=crop&crop=center",
+                  cultural: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=200&fit=crop&crop=center",
+                  sports: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=200&fit=crop&crop=center",
+                  academic: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400&h=200&fit=crop&crop=center",
+                  workshop: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=200&fit=crop&crop=center"
+                };
+
+                const eventCategory = event.category || "technical";
+                const fallbackImage = categoryImages[eventCategory] || categoryImages.technical;
+
                 return {
                   id: event._id || event.id,
-                  title: event.title || 'Untitled Event',
+                  title: event.title || event.name || `${eventCategory.charAt(0).toUpperCase() + eventCategory.slice(1)} Event`,
                   date: event.startDate || event.date,
                   endDate: event.endDate,
-                  category: event.category || "technical",
-                  description: event.description || 'No description available',
-                  image: event.image || event.images?.[0]?.url || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop",
+                  category: eventCategory,
+                  description: event.description || 'This event has been successfully completed. Thank you to all participants!',
+                  image: event.image || event.images?.[0]?.url || fallbackImage,
                   attendees: analyticsResponse?.success ? analyticsResponse.data.attendees || fallbackAttendees : fallbackAttendees,
                   rating: analyticsResponse?.success ? analyticsResponse.data.averageRating || fallbackRating : fallbackRating,
-                  organizer: event.organizer?.name || event.organizer || "Event Organizer",
+                  organizer: event.organizer?.name || event.organizer || "Campus Event Team",
                   highlights: [
                     `${Math.floor(Math.random() * 100) + 50} participants engaged`,
                     "Successful completion",
@@ -99,6 +153,7 @@ const PastEvents = () => {
             })
           );
           
+          console.log('Final processed events:', eventsWithDetails);
           setPastEvents(eventsWithDetails);
           
           // Show informative message if no past events found
@@ -129,29 +184,28 @@ const PastEvents = () => {
   // Show loading state
   if (loading) {
     return (
-      <div className="events-page">
-        <Navigation />
-        <div className="container">
-          <div className="loading-state">
-            <i className="fas fa-spinner fa-spin"></i>
-            <p>Loading past events...</p>
+      <Layout>
+        <div className="events-page past-events">
+          <div className="container">
+            <div className="loading-state">
+              <i className="fas fa-spinner fa-spin"></i>
+              <p>Loading past events...</p>
+            </div>
           </div>
         </div>
-        <Footer />
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="events-page">
-      <Navigation />
-      
-      {/* Header */}
-      <header className="events-header">
+    <Layout>
+      <div className="events-page past-events">
+        {/* Header */}
+        <header className="events-header past-events-header">
         <div className="container">
           <div className="header-content">
             <h1>📅 Past Events</h1>
-            <p>Explore details, photos, and blogs from completed events</p>
+            <p>Relive the memories! Explore photos, blogs, and highlights from completed events</p>
           </div>
         </div>
       </header>
@@ -179,7 +233,21 @@ const PastEvents = () => {
               <option value="cultural">Cultural</option>
               <option value="sports">Sports</option>
               <option value="academic">Academic</option>
+              <option value="workshop">Workshop</option>
             </select>
+          </div>
+          
+          {/* Results Summary */}
+          <div className="results-summary">
+            <p>
+              Showing {filteredEvents.length} of {pastEvents.length} past events
+              {(searchTerm || selectedCategory !== "all") && (
+                <span className="filter-indicator">
+                  {searchTerm && ` for "${searchTerm}"`}
+                  {selectedCategory !== "all" && ` in ${selectedCategory}`}
+                </span>
+              )}
+            </p>
           </div>
         </div>
       </section>
@@ -192,18 +260,32 @@ const PastEvents = () => {
               {filteredEvents.map(event => (
                 <div key={event.id} className="event-card past-event">
                   <div className="event-image">
-                    <img src={event.image} alt={event.title} />
+                    <img 
+                      src={event.image} 
+                      alt={event.title}
+                      onError={(e) => {
+                        // Fallback to category-specific image if main image fails
+                        const categoryImages = {
+                          technical: "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=400&h=200&fit=crop&crop=center",
+                          cultural: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=200&fit=crop&crop=center",
+                          sports: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=200&fit=crop&crop=center",
+                          academic: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400&h=200&fit=crop&crop=center",
+                          workshop: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=200&fit=crop&crop=center"
+                        };
+                        e.target.src = categoryImages[event.category] || categoryImages.technical;
+                      }}
+                    />
                     <div className="event-status past">Completed</div>
                     <div className="event-rating">
                       <i className="fas fa-star"></i>
                       {event.rating}
                     </div>
+                    <div className="event-category-badge">{event.category}</div>
                   </div>
                   
                   <div className="event-content">
                     <div className="event-header">
                       <h3>{event.title}</h3>
-                      <div className="event-category">{event.category}</div>
                     </div>
                     
                     <div className="event-date">
@@ -224,20 +306,21 @@ const PastEvents = () => {
                     <div className="event-stats">
                       <div className="stat">
                         <i className="fas fa-users"></i>
-                        {event.attendees} Attendees
+                        <span>{event.attendees.toLocaleString()} Attendees</span>
                       </div>
                       <div className="stat">
                         <i className="fas fa-images"></i>
-                        {event.photos} Photos
+                        <span>{event.photos} Photos</span>
                       </div>
                       <div className="stat">
                         <i className="fas fa-blog"></i>
-                        {event.blogs} Blogs
+                        <span>{event.blogs} Blogs</span>
                       </div>
                     </div>
                     
                     <div className="event-organizer">
-                      <small>Organized by: {event.organizer}</small>
+                      <i className="fas fa-user-circle"></i>
+                      <span>Organized by: {event.organizer}</span>
                     </div>
                     
                     <div className="event-highlights">
@@ -251,8 +334,13 @@ const PastEvents = () => {
                     
                     <div className="event-actions">
                       <button 
-                        className="btn btn-secondary" 
+                        className="btn btn-gallery" 
                         onClick={() => {
+                          if (!event.id) {
+                            console.error('Event ID is missing:', event);
+                            showErrorToast('Unable to load event gallery - missing event ID');
+                            return;
+                          }
                           navigate(`/events/gallery/${event.id}`);
                         }}
                       >
@@ -260,8 +348,13 @@ const PastEvents = () => {
                         View Gallery ({event.photos})
                       </button>
                       <button 
-                        className="btn btn-outline" 
+                        className="btn btn-blogs" 
                         onClick={() => {
+                          if (!event.id) {
+                            console.error('Event ID is missing:', event);
+                            showErrorToast('Unable to load event blogs - missing event ID');
+                            return;
+                          }
                           navigate(`/events/blogs/${event.id}`);
                         }}
                       >
@@ -270,9 +363,8 @@ const PastEvents = () => {
                       </button>
                       <Link 
                         to="/feedback" 
-                        className="btn btn-primary"
+                        className="btn btn-feedback"
                         onClick={() => {
-                          // Pre-fill feedback form with event info
                           localStorage.setItem('feedbackEventId', event.id);
                           localStorage.setItem('feedbackEventTitle', event.title);
                         }}
@@ -290,13 +382,25 @@ const PastEvents = () => {
               <i className="fas fa-calendar-times"></i>
               <h3>No past events found</h3>
               {searchTerm || selectedCategory !== "all" ? (
-                <p>Try adjusting your search criteria</p>
+                <div>
+                  <p>No events match your search criteria.</p>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedCategory("all");
+                    }}
+                    style={{ marginTop: '16px' }}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
               ) : (
                 <div>
                   <p>No completed events are available yet.</p>
                   <p>Events will appear here after they have ended.</p>
                   <Link to="/events/present" className="btn btn-primary" style={{ marginTop: '16px' }}>
-                    View Upcoming Events
+                    View Current Events
                   </Link>
                 </div>
               )}
@@ -304,9 +408,8 @@ const PastEvents = () => {
           )}
         </div>
       </section>
-
-      <Footer />
-    </div>
+      </div>
+    </Layout>
   );
 };
 

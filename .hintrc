@@ -10,6 +10,19 @@
           "meta[name=theme-color]"
         ]
       }
+    ],
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "backdrop-filter",
+          "scrollbar-width",
+          "scrollbar-color",
+          "scrollbar-width: thin",
+          "user-select",
+          "border: 1px solid color-mix(in srgb, var(--danger-color) 20%, transparent)"
+        ]
+      }
     ]
   }
 }

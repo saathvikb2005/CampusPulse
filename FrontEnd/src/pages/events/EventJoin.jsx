@@ -44,6 +44,14 @@ const EventJoin = () => {
       return;
     }
 
+    // Validate eventId parameter
+    if (!eventId || eventId.trim() === '') {
+      console.error('🔍 EventJoin: No eventId provided');
+      setError('Invalid event ID. Please check the URL and try again.');
+      setLoading(false);
+      return;
+    }
+
     fetchEventData();
   }, [eventId, navigate]);
 
@@ -52,13 +60,25 @@ const EventJoin = () => {
     setError('');
 
     try {
+      console.log('🔍 Fetching event data for EventJoin:', eventId);
+      
       const [eventResponse, registrationsResponse] = await Promise.all([
         eventAPI.getById(eventId),
         eventAPI.getRegistrations(eventId).catch(() => ({ data: { registrations: [] } }))
       ]);
 
-      if (eventResponse.success && eventResponse.data) {
-        const eventData = eventResponse.data;
+      console.log('🔍 EventJoin raw API response:', eventResponse);
+
+      // Handle both response structures: {success: true, data: event} and {success: true, event: event}
+      let eventData = null;
+      if (eventResponse?.success) {
+        eventData = eventResponse.data || eventResponse.event || eventResponse;
+        console.log('🔍 EventJoin processed event data:', eventData);
+      } else {
+        eventData = eventResponse; // Fallback for different response structure
+      }
+
+      if (eventData && (eventData._id || eventData.id)) {
         setEvent(eventData);
 
         if (user) {
@@ -93,11 +113,28 @@ const EventJoin = () => {
           setError('This event is currently full.');
         }
       } else {
+        console.error('🔍 EventJoin: No valid event data found in response');
+        console.error('🔍 EventJoin: eventResponse:', eventResponse);
         setError('Event not found or unable to load event details.');
+        setEvent(null);
       }
     } catch (error) {
-      console.error('Error fetching event data:', error);
-      setError('Failed to load event details. Please try again.');
+      console.error('🔍 EventJoin error details:', error);
+      console.error('🔍 EventJoin error message:', error.message);
+      console.error('🔍 EventJoin error stack:', error.stack);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to load event details. Please try again.';
+      if (error.message?.includes('404')) {
+        errorMessage = 'Event not found. It may have been deleted or moved.';
+      } else if (error.message?.includes('500')) {
+        errorMessage = 'Server error while loading event. Please try again later.';
+      } else if (error.message?.includes('Network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      setError(errorMessage);
+      setEvent(null);
     } finally {
       setLoading(false);
     }
@@ -157,11 +194,13 @@ const EventJoin = () => {
 
       if (response.success) {
         showSuccessToast('🎉 Successfully registered for the event! Welcome aboard!');
-        navigate('/events/present', {
-          state: {
-            message: `Successfully registered for ${event.title}!`,
-            eventId: event._id
-          }
+        
+        // Use the comprehensive registration data from backend response
+        const confirmationData = response.data;
+        
+        // Navigate to confirmation page
+        navigate(`/events/register/${eventId}/confirmation`, {
+          state: { registration: confirmationData }
         });
       }
     } catch (error) {
@@ -192,7 +231,18 @@ const EventJoin = () => {
 
       if (response.success) {
         showSuccessToast('Added to waitlist! You\'ll be notified if a spot opens up.');
-        navigate('/events/present');
+        
+        // Use the registration data from backend response and mark as waitlist
+        const confirmationData = {
+          ...response.data,
+          status: 'waitlist',
+          confirmationNumber: response.data.confirmationNumber || `WL-${Date.now()}`
+        };
+        
+        // Navigate to confirmation page
+        navigate(`/events/register/${eventId}/confirmation`, {
+          state: { registration: confirmationData }
+        });
       }
     } catch (error) {
       console.error('Waitlist error:', error);
@@ -220,6 +270,30 @@ const EventJoin = () => {
       <div className="loading-container">
         <div className="loading-spinner"></div>
         <p>Loading event details...</p>
+      </div>
+    );
+  }
+
+  if (error && !event) {
+    return (
+      <div className="error-container">
+        <i className="fas fa-exclamation-triangle"></i>
+        <h3>Unable to Load Event</h3>
+        <p>{error}</p>
+        <div className="error-actions">
+          <button 
+            className="btn btn-secondary" 
+            onClick={fetchEventData}
+            disabled={loading}
+          >
+            <i className="fas fa-refresh"></i>
+            {loading ? 'Retrying...' : 'Try Again'}
+          </button>
+          <Link to="/events/present" className="btn btn-primary">
+            <i className="fas fa-arrow-left"></i>
+            Back to Live Events
+          </Link>
+        </div>
       </div>
     );
   }
