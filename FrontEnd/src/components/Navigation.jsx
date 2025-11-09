@@ -135,7 +135,7 @@ const Navigation = () => {
       
       // Call backend logout API first (if we still have a token)
       if (token) {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-1.onrender.com';
         await fetch(`${API_BASE_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {

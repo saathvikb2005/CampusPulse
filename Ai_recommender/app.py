@@ -55,7 +55,7 @@ def serialize_mongo_data(data):
 app = Flask(__name__)
 
 # Get allowed origins from environment
-allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3001,http://localhost:5000").split(",")
+allowed_origins = os.getenv("CORS_ORIGINS", "https://campuspulse-1.onrender.com,http://localhost:5173,http://localhost:3001,http://localhost:5000").split(",")
 # Allow requests from React app, backend, and production URLs
 CORS(app, resources={r"/*": {"origins": allowed_origins}})
 

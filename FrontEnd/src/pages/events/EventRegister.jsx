@@ -58,7 +58,7 @@ const EventRegister = () => {
 
       // Try to fetch fresh user details from API, but use currentUser as fallback
       try {
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-1.onrender.com';
         const userResponse = await fetch(`${API_BASE_URL}/api/users/profile`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

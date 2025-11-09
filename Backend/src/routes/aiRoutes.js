@@ -90,7 +90,8 @@ router.get('/recommendations', auth, async (req, res) => {
     console.log(`[AI Route] Calling Flask service with user phone: ${user.phone}`);
     
     try {
-      const flaskResponse = await axios.get(`http://localhost:5001/recommendations/${user.phone}`, {
+      const aiServiceUrl = process.env.AI_SERVICE_URL || 'https://campuspulse-ai.onrender.com';
+      const flaskResponse = await axios.get(`${aiServiceUrl}/recommendations/${user.phone}`, {
         timeout: 10000
       });
 

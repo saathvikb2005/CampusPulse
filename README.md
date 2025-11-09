@@ -10,7 +10,8 @@ A comprehensive, modern **Digital Event Management Portal** built with React.js 
 
 ### **Production URLs**
 - **Frontend**: https://campuspulse-frontend-five.vercel.app
-- **Backend API**: https://campuspulse-28.onrender.com
+- **Backend API**: https://campuspulse-1.onrender.com
+- **AI Service**: https://campuspulse-ai.onrender.com
 - **Database**: MongoDB Atlas (Cloud)
 - **Status**: 🟢 **Fully Operational**
 

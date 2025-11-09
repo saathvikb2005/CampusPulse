@@ -43,7 +43,7 @@ const UpcomingEvents = () => {
           type: event.isTeamEvent || event.type === 'team' ? "team" : "individual",
           description: event.description || 'No description available',
           image: event.images && event.images.length > 0 
-            ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${event.images[0].url}` 
+            ? `${import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-1.onrender.com'}${event.images[0].url}` 
             : event.image || "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400&h=200&fit=crop",
           location: event.location || event.venue || 'TBA',
           maxParticipants: event.maxParticipants || event.capacity || 50,

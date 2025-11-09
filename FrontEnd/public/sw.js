@@ -27,12 +27,14 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - with error handling
 self.addEventListener('fetch', (event) => {
-  // Skip caching for development server requests (localhost:5173, localhost:5000)
+  // Skip caching for development server requests and production API calls
   if (event.request.url.includes('localhost:5173') || 
       event.request.url.includes('localhost:5000') ||
+      event.request.url.includes('campuspulse-1.onrender.com') ||
+      event.request.url.includes('campuspulse-ai.onrender.com') ||
       event.request.url.includes('vite') ||
       event.request.url.includes('hot-update')) {
-    return; // Let Vite handle these requests
+    return; // Let Vite/Production API handle these requests
   }
 
   event.respondWith(

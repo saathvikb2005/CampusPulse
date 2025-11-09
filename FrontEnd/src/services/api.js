@@ -1,7 +1,7 @@
 // src/services/api.js - Backend API Integration Service
 
-// Development configuration - using local backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Production configuration - using deployed backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-1.onrender.com';
 
 // Debug log for development
 console.log('🔍 API Configuration:', {

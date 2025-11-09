@@ -23,9 +23,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: process.env.NODE_ENV === 'production' 
+          ? 'https://campuspulse-1.onrender.com'
+          : 'http://localhost:5000',
         changeOrigin: true,
-        secure: false
+        secure: process.env.NODE_ENV === 'production'
       }
     }
   },

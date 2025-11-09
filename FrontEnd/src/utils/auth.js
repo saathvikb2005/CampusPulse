@@ -4,8 +4,8 @@
  * Authentication and authorization utility functions - Backend Integrated
  */
 
-// Use environment variable or fallback to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+// Use environment variable or fallback to production for development
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://campuspulse-1.onrender.com';
 
 // Debug log for API URL
 console.log('🔧 Auth.js API Configuration:', {
