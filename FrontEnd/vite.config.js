@@ -16,8 +16,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['lucide-react'],
           charts: ['chart.js', 'react-chartjs-2'],
-          ai: ['@tensorflow/tfjs', 'brain.js', 'natural', 'ml-matrix'],
-          qr: ['qrcode', 'qrcode.react', '@zxing/library', 'html5-qrcode'],
+          qr: ['qrcode', 'qrcode.react', 'html5-qrcode'],
           pdf: ['jspdf', 'html2canvas']
         }
       }
