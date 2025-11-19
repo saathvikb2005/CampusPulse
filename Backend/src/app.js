@@ -49,6 +49,11 @@ const aiRoutes = require('./routes/aiRoutes');
 const app = express();
 const server = http.createServer(app);
 
+// CORS origins configuration
+const corsOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',')
+  : ["http://localhost:5173"];
+
 const io = socketIo(server, {
   cors: {
     origin: [
@@ -102,10 +107,6 @@ if (!isDev) {
 }
 
 // CORS configuration
-const corsOrigins = process.env.CORS_ORIGINS 
-  ? process.env.CORS_ORIGINS.split(',')
-  : ["http://localhost:5173"];
-
 app.use(cors({
   origin: [
     "https://campuspulse-frontend-five.vercel.app",
