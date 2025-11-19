@@ -53,7 +53,8 @@ const io = socketIo(server, {
   cors: {
     origin: [
       "https://campuspulse-frontend-five.vercel.app",
-      process.env.CORS_ORIGIN || "http://localhost:5173",
+      "https://campus-pulse-qwwj.vercel.app",
+      ...corsOrigins,
       "https://campuspulse-1.onrender.com",
       "https://campuspulse-ai.onrender.com"
     ],
@@ -101,10 +102,15 @@ if (!isDev) {
 }
 
 // CORS configuration
+const corsOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',')
+  : ["http://localhost:5173"];
+
 app.use(cors({
   origin: [
     "https://campuspulse-frontend-five.vercel.app",
-    process.env.CORS_ORIGIN || "http://localhost:5173",
+    "https://campus-pulse-qwwj.vercel.app",
+    ...corsOrigins,
     "https://campuspulse-1.onrender.com",
     "https://campuspulse-ai.onrender.com"
   ],
